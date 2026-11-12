@@ -4,7 +4,7 @@
  *   Absen    : API "abm" Absensi Tambang (ASLI, sudah live).
  *   Profil   : JSON ?mode=profiljson Input DO V257 (ASLI): foto, predikat, lencana, pencapaian, aktivitas, KPI (staf & driver).
  *   Kpi      : JSON ?mode=kpi Input DO (ASLI) — cadangan kalau profil gagal dimuat.
- *   Pusat    : API "pusat" DASHBOARD (ASLI, live V478): login semua karyawan, ringkasan per peran, unit, riwayat absensi, ganti PIN.
+ *   Pusat    : API "pusat" DASHBOARD (ASLI, live V478): login semua karyawan, ringkasan per peran, unit, ganti PIN (riwayat absensi sengaja TIDAK dipakai app).
  *              Data tiruan (tiruan.js) cuma cadangan kalau server menjawab pintu itu tidak ada (mis. versi lama dikembalikan).
  */
 (function () {
@@ -102,10 +102,7 @@
       if (pusatAsli) return rpc(K.DASH, 'pusat', 'ringkasanPusat', [bagian, !!paksa, '', sesi.tokenPusat], 90000);
       return new Promise(function (ok) { setTimeout(function () { ok(T.ringkasan(bagian, sesi.user)); }, 250); });
     },
-    riwayat: function (sesi, tgl) {
-      if (pusatAsli) return rpc(K.DASH, 'pusat', 'pusatAbsenRiwayat', [sesi.tokenPusat, tgl || '']);
-      return Promise.resolve(T.riwayat(sesi.user.nama, sesi.jabatan || ''));
-    }
+    /* v2.6 (Reza): app TIDAK menampilkan riwayat/rekap absensi siapa pun -> pusatAbsenRiwayat & pusatAbsenHariIni tidak pernah dipanggil dari app. */
   };
 
   window.WHL_API = { Simpan: Simpan, Absen: Absen, Kpi: Kpi, Profil: Profil, Pusat: Pusat };

@@ -1,6 +1,6 @@
 /* WHL App v2.2 — "rasa" aplikasi: suara, getar, animasi, keypad PIN, layar sukses, lembar tanya, onboarding, tarik-segarkan.
- * SEMUA SUARA ORISINAL: disintesis di HP dengan WebAudio (gelombang sinus/segitiga buatan kode ini), tidak ada file audio,
- * tidak ada suara dari aplikasi lain. Daftar & resepnya ada di DAFTAR-SUARA.txt.
+ * SUARA = SAMA DENGAN PUSAT WHL WEB (resep klik/pop/geser/tutup/aman/alarm disalin dari pusat.html, milik WHL sendiri), disintesis di HP
+ * dengan WebAudio, tanpa file audio. Dua suara khas app (pinSalah, achievement) dibuat serasi. Daftar: RASA-APLIKASI.txt.
  * Efek berat (konfeti, kabur latar, pegas) otomatis dimatikan kalau HP minta "kurangi gerakan" atau HP kelas bawah.
  */
 (function () {
@@ -28,25 +28,36 @@
   function audio() {
     if (ctx) return ctx;
     var A = window.AudioContext || window.webkitAudioContext; if (!A) return null;
-    try { ctx = new A(); induk = ctx.createGain(); induk.gain.value = 0.5; induk.connect(ctx.destination); } catch (e) { ctx = null; }
+    try { ctx = new A(); induk = ctx.createGain(); induk.gain.value = 1; induk.connect(ctx.destination); /* volume per nada sama dengan Pusat web */ } catch (e) { ctx = null; }
     return ctx;
   }
-  /** satu nada: f = Hz awal, f2 = Hz akhir (geser), mulai & lama dalam detik, kuat 0..1 */
-  function nada(f, mulai, lama, jenis, kuat, f2) {
+  /* nada() dan resep klik/pop/geser/tutup/aman/alarm DISALIN dari pusat.html (Pusat WHL web, milik WHL sendiri) supaya bunyinya sama persis.
+     Tanda tangan sama: nada(f1, f2, dur, tipe, vol, tunda). */
+  function nada(f1, f2, dur, tipe, vol, tunda) {
     var c = audio(); if (!c) return;
-    var o = c.createOscillator(), g = c.createGain(), t = c.currentTime + mulai;
-    o.type = jenis || 'sine'; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + lama);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(kuat, t + Math.min(0.012, lama / 3)); g.gain.exponentialRampToValueAtTime(0.0001, t + lama);
-    o.connect(g); g.connect(induk); o.start(t); o.stop(t + lama + 0.02);
+    var t = c.currentTime + (tunda || 0), o = c.createOscillator(), g = c.createGain();
+    o.type = tipe || 'sine'; o.frequency.setValueAtTime(f1, t); if (f2 && f2 !== f1) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.05, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(induk); o.start(t); o.stop(t + dur + 0.03);
   }
+  var WEB = {
+    klik: function () { nada(900, 620, 0.06, 'triangle', 0.04); },
+    pop: function () { nada(420, 880, 0.12, 'sine', 0.06); nada(880, 1320, 0.08, 'sine', 0.025, 0.06); },
+    geser: function () { nada(320, 540, 0.15, 'sine', 0.035); },
+    tutup: function () { nada(700, 380, 0.1, 'sine', 0.035); },
+    aman: function () { [523, 659, 784].forEach(function (f, i) { nada(f, f, 0.2, 'sine', 0.045, i * 0.09); }); },
+    alarm: function () { nada(740, 740, 0.16, 'triangle', 0.055); nada(740, 740, 0.16, 'triangle', 0.055, 0.24); }
+  };
+  /* Kejadian di app -> suara Pusat web. Dua terakhir tidak ada padanannya di web: dibuat serasi (gelombang & volume yang sama keluarga). */
   var RESEP = {
-    ketuk: function () { nada(920, 0, 0.045, 'sine', 0.10, 700); },
-    sheet: function () { nada(320, 0, 0.11, 'sine', 0.07, 560); },
-    sukses: function () { nada(784, 0, 0.14, 'triangle', 0.16); nada(988, 0.09, 0.14, 'triangle', 0.16); nada(1319, 0.18, 0.32, 'triangle', 0.18); nada(2637, 0.18, 0.28, 'sine', 0.04); },
-    gagal: function () { nada(370, 0, 0.16, 'triangle', 0.16, 330); nada(262, 0.14, 0.26, 'triangle', 0.16, 220); },
-    pinSalah: function () { nada(196, 0, 0.07, 'triangle', 0.18); nada(196, 0.11, 0.09, 'triangle', 0.18, 175); },
-    notifikasi: function () { nada(1047, 0, 0.22, 'sine', 0.13); nada(1397, 0.12, 0.36, 'sine', 0.12); },
-    achievement: function () { [523, 659, 784, 1047].forEach(function (f, i) { nada(f, i * 0.085, 0.2, 'triangle', 0.15); }); nada(1568, 0.36, 0.5, 'sine', 0.10); nada(3136, 0.40, 0.42, 'sine', 0.035); }
+    ketuk: WEB.klik,            /* web: klik  (tombol, tab, tema) */
+    sheet: WEB.geser,           /* web: geser (buka lembar / rincian) */
+    tutup: WEB.tutup,           /* web: tutup (tutup lembar) */
+    sukses: WEB.aman,           /* web: aman  (login berhasil, absen tercatat) */
+    gagal: WEB.alarm,           /* web: alarm (PIN salah di login web, error) */
+    notifikasi: WEB.pop,        /* web: pop   (saklar suara dinyalakan, kabar baru) */
+    pinSalah: function () { nada(300, 240, 0.09, 'triangle', 0.05); nada(300, 220, 0.12, 'triangle', 0.05, 0.13); },                 /* khas app: dua ketuk rendah, keluarga "alarm" tapi lebih pendek */
+    achievement: function () { [523, 659, 784, 1047].forEach(function (f, i) { nada(f, f, 0.2, 'sine', 0.045, i * 0.09); }); nada(1568, 2093, 0.3, 'sine', 0.025, 0.38); } /* khas app: "aman" + satu nada lebih tinggi & kilau */
   };
   function bunyi(nm) {
     if (!setel.suara || !RESEP[nm] || document.hidden || senyap()) return;
@@ -166,7 +177,7 @@
     var SL = [
       ['<svg viewBox="0 0 120 120"><rect x="34" y="14" width="52" height="92" rx="10"/><circle cx="60" cy="50" r="13"/><path d="M42 82c4-10 32-10 36 0"/><path d="M52 22h16"/></svg>', 'Absen dari HP sendiri', 'Di area site, cukup hadapkan wajah ke kamera. Wajah dipindai otomatis, tidak perlu antre di tablet.'],
       ['<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="40"/><path d="M60 20a40 40 0 0 1 34 61" class="tebal"/><path d="M46 62l10 10 20-23"/></svg>', 'Lihat nilai kerjamu', 'Profil, lencana, achievement dan KPI bulan ini ada di tab foto kamu di pojok kanan atas.'],
-      ['<svg viewBox="0 0 120 120"><rect x="16" y="20" width="38" height="34" rx="9"/><rect x="66" y="20" width="38" height="34" rx="9"/><rect x="16" y="66" width="38" height="34" rx="9"/><rect x="66" y="66" width="38" height="34" rx="9"/><path d="M28 37h14M78 37h14M28 83h14M85 76v14M78 83h14"/></svg>', 'Semua sistem WHL, satu pintu', 'Ringkasan hari ini di Beranda. Form dan aplikasi lain ada di tombol + dan tab Aplikasi.']
+      ['<svg viewBox="0 0 120 120"><rect x="16" y="20" width="38" height="34" rx="9"/><rect x="66" y="20" width="38" height="34" rx="9"/><rect x="16" y="66" width="38" height="34" rx="9"/><rect x="66" y="66" width="38" height="34" rx="9"/><path d="M28 37h14M78 37h14M28 83h14M85 76v14M78 83h14"/></svg>', 'Semua sistem WHL, satu pintu', 'Ringkasan hari ini di Beranda. Form dan aplikasi lain ada di tombol Input dan tab Aplikasi.']
     ];
     return new Promise(function (selesai) {
       var i = 0;

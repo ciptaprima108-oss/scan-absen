@@ -62,11 +62,6 @@
     String(bagian || Object.keys(RINGKAS).join(',')).split(',').forEach(function (b) { if (RINGKAS[b]) out[b] = JSON.parse(JSON.stringify(RINGKAS[b])); });
     return out;
   }
-  function riwayat(nama, jabatan) {
-    var bulan = [], d = new Date();
-    for (var i = 1; i <= Math.min(d.getDate(), 12); i++) bulan.push({ tgl: i, masuk: i % 7 === 0 ? '' : (i % 5 === 0 ? '07:14' : '06:5' + (i % 8)), pulang: i % 7 === 0 ? '' : '17:0' + (i % 6), status: i % 7 === 0 ? 'OFF' : (i % 5 === 0 ? 'Telat' : 'Tepat') });
-    return { ok: true, tgl: 'contoh', lingkup: 'diri', hadir: [{ nama: nama, jabatan: jabatan, masuk: '06:54', pulang: '', status: 'Tepat', lembur: '' }], belum: [], hariDiri: bulan };
-  }
   akar.WHL_TIRUAN = { RINGKAS: RINGKAS, KARTU_UMUM: KARTU_UMUM, KARTU_PERAN: KARTU_PERAN, APPS_PERAN: APPS_PERAN, UNIT_PERAN: UNIT_PERAN, NAMA_PERAN: NAMA_PERAN,
-    tebakPeran: tebakPeran, infoUser: infoUser, ringkasan: ringkasan, riwayat: riwayat };
+    tebakPeran: tebakPeran, infoUser: infoUser, ringkasan: ringkasan };
 })(typeof window !== 'undefined' ? window : globalThis);

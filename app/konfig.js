@@ -6,7 +6,7 @@
 (function () {
   var S = 'https://script.google.com/macros/s/';
   var K = {
-    VERSI: '2.5-beta',
+    VERSI: '2.6-beta',
     DASH: S + 'AKfycbzqJ0nKotpl-TjuTHLTMcOZpYZSeWdE9VWHFw0h712aoMagPDZJMQ--7W-kDtCxPvw/exec',     /* DASHBOARD: Pusat WHL */
     ABSEN: S + 'AKfycbyJBXvN79b4y9eunDSRigMXmDOS4kW3K5ZF0ZEbGCKT1-WPqi-zEica0r7M__-dqwqhDQ/exec',  /* Absensi Tambang: api abm */
     INPUTDO: S + 'AKfycbyKhvU4gKQZuD63XdBMpHuBO52c7XX1sYnfkG9eBbZheulntIPJGS8iFdpvhIx8ADSb/exec', /* Input DO: ?mode=kpi, profil */

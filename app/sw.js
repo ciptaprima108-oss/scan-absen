@@ -3,8 +3,8 @@
  * jawaban API (script.google.com), pengenal wajah (CDN), dan semua POST lewat langsung tanpa disimpan.
  * Cara ambil: jaringan dulu (maks 4 dtk) supaya versi baru langsung terpakai; kalau gagal / tidak ada sinyal -> salinan di HP.
  */
-const VERSI = '2fb58c5a28', CACHE = 'whl-cangkang-' + VERSI;
-const BERKAS = ["./","index.html","absen.html","galat.html","gaya.css","gaya-absen.css","konfig.js","tiruan.js","api.js","rasa.js","pasang.js","app.js","img/logo-whl.png","ikon/ikon-192.png","ikon/ikon-512.png","ikon/ikon-maskable-512.png","ikon/apple-touch-icon.png","manifest.webmanifest"];
+const VERSI = 'a8f4d13e7e', CACHE = 'whl-cangkang-' + VERSI;
+const BERKAS = ["./","index.html","absen.html","galat.html","gaya.css","gaya-absen.css","konfig.js","tiruan.js","api.js","rasa.js","pasang.js","app.js","img/logo-whl.png","img/logo-whl-hitam.png","ikon/ikon-192.png","ikon/ikon-512.png","ikon/ikon-maskable-512.png","ikon/apple-touch-icon.png","manifest.webmanifest"];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(BERKAS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((k) => Promise.all(k.filter((n) => n.startsWith('whl-cangkang-') && n !== CACHE).map((n) => caches.delete(n)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {
