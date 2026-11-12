@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="color-scheme" content="dark light">
+<title>WHL App</title>
+<link rel="stylesheet" href="gaya.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b131c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WHL">
+<link rel="apple-touch-icon" sizes="180x180" href="ikon/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="ikon/ikon-192.png">
+<style>html{background:#0b131c}</style>
+</head>
+<body>
+
+<!-- ===== LAYAR PEMBUKA ===== -->
+<div id="layarMuat" class="wrap" style="text-align:center;padding-top:28vh">
+  <img src="img/logo-whl.png" alt="Logo WHL" class="logo" style="width:120px;height:120px;margin:0 auto">
+  <p class="kecil" style="margin-top:18px"><span class="putar"></span> &nbsp;Menyiapkan...</p>
+</div>
+
+<!-- ===== LOGIN ===== -->
+<div id="layarLogin" class="sembunyi">
+  <div class="wrap">
+    <div class="kepala" style="margin-top:6vh"><img class="logo" src="img/logo-whl.png" alt="Logo WHL"><div><h1>PUSAT WHL</h1><p>PT. Whale Holder Logistic</p></div></div>
+    <div class="kartu">
+      <div class="judulK">Masuk</div>
+      <div class="kecil" style="margin-top:4px">Ketik nomor di ID card kamu. Sesudah itu masukkan PIN <b>Pusat WHL</b>.</div>
+      <label class="lb" for="inId">Nomor ID card / NRP</label>
+      <input id="inId" class="isian kapital" autocomplete="username" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="mis. WHL-01003">
+      <button id="tMasuk" class="tUtama" type="button">Lanjut</button>
+      <div id="pesanLogin" class="pesan"></div>
+    </div>
+    <div class="kecil" style="text-align:center">Sesi tersimpan di HP ini. PIN tidak disimpan.<br>WHL App v<span class="versi"></span></div>
+  </div>
+</div>
+
+<!-- ===== APLIKASI ===== -->
+<div id="layarApp" class="sembunyi">
+  <div class="wrap">
+    <div class="kepala">
+      <img class="logo" src="img/logo-whl.png" alt="Logo WHL">
+      <div><h1 id="judulTab">PUSAT WHL</h1><p id="subTab">PT. Whale Holder Logistic</p></div>
+      <div class="jam" id="jam">--.--</div>
+      <button class="bulat" id="tAkun" type="button" aria-label="Akun saya">?</button>
+    </div>
+    <div id="pitaContoh" class="pita sembunyi"><span>⚠️</span><span><b>Sebagian DATA CONTOH.</b> Server Pusat WHL sedang tidak menyediakan data untuk app, jadi ringkasan yang bertanda <i>contoh</i> bukan angka sungguhan. Absen, profil dan KPI tetap data asli.</span></div>
+    <div id="isi"></div>
+  </div>
+  <nav class="nav"><div>
+    <button type="button" data-tab="beranda"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Beranda</button>
+    <button type="button" data-tab="unit"><svg viewBox="0 0 24 24"><path d="M2 7h11v9H2zM13 10h5l4 3v3h-9z"/><circle cx="6.500" cy="17.500" r="1.800"/><circle cx="17.500" cy="17.500" r="1.800"/></svg>Unit<i class="tanda angka sembunyi" id="tandaUnit"></i></button>
+    <button type="button" class="lapor" id="tLapor"><span class="bl"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>Lapor</button>
+    <button type="button" data-tab="absen"><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10v1M15 10v1M9 15c1.800 1.300 4.200 1.300 6 0"/></svg>Absen<i class="tanda sembunyi" id="tandaAbsen"></i></button>
+    <button type="button" data-tab="apps"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.500" height="6.500" rx="1.500"/><rect x="13.500" y="4" width="6.500" height="6.500" rx="1.500"/><rect x="4" y="13.500" width="6.500" height="6.500" rx="1.500"/><rect x="13.500" y="13.500" width="6.500" height="6.500" rx="1.500"/></svg>Aplikasi</button>
+  </div></nav>
+</div>
+
+<div class="tirai" id="tirai"><div class="lembar" id="lembar"></div></div>
+<div class="roti" id="roti"></div>
+
+<script src="konfig.js"></script>
+<script src="tiruan.js"></script>
+<script src="api.js"></script>
+<script src="rasa.js"></script>
+<script src="pasang.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

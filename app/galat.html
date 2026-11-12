@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Tidak tersambung</title>
+<style>
+  html { background:#0b131c; }
+  html, body { margin:0; height:100%; color:#eef3f8; font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; }
+  body { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px;
+    background:radial-gradient(120% 60% at 50% -10%, #17304a 0%, rgba(23,48,74,0) 60%) no-repeat, #0b131c; }
+  img { width:96px; height:96px; opacity:.9; }
+  h1 { font-size:20px; font-weight:800; margin:18px 0 6px; }
+  p { color:#8fa2b7; font-size:14px; line-height:1.55; margin:0 0 22px; max-width:300px; }
+  button { font:inherit; font-size:17px; font-weight:800; border:0; border-radius:14px; padding:15px 34px;
+    background:linear-gradient(180deg,#56b0ff,#2f8ef0); color:#04203a; box-shadow:0 8px 22px rgba(47,142,240,.28); }
+  button:active { transform:scale(.98); }
+</style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b131c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WHL">
+<link rel="apple-touch-icon" sizes="180x180" href="ikon/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="ikon/ikon-192.png">
+<style>html{background:#0b131c}</style>
+</head>
+<body>
+  <img src="img/logo-whl.png" alt="Logo WHL">
+  <h1>Halaman tidak bisa dibuka</h1>
+  <p>Sepertinya internet putus atau sinyal lemah. Cek data / WiFi, lalu coba lagi.</p>
+  <button type="button" id="coba">Coba lagi</button>
+<script>
+  /* Coba lagi = buka ulang Pusat WHL lewat layar pembuka (yang juga mengecek internet). */
+  document.getElementById('coba').addEventListener('click', function () { window.location.replace('index.html'); });
+</script>
+</body>
+</html>
