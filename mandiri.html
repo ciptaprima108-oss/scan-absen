@@ -65,6 +65,10 @@
   .muat { display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--redup); margin-top:4px; }
   .putar { width:14px; height:14px; border:2px solid var(--garis); border-top-color:var(--aksen); border-radius:50%; animation:putar 1s linear infinite; flex:0 0 14px; }
   @keyframes putar { to { transform:rotate(360deg); } }
+  .muat.gagal { color:#ffadad; align-items:flex-start; flex-wrap:wrap; } .muat.gagal .putar { display:none; }
+  .tMini { background:var(--aksen); color:#04203a; font-weight:800; font-size:12.5px; padding:7px 12px; border-radius:10px; }
+  #muatL { margin-top:10px; }
+  .galat { margin-top:12px; padding:10px 12px; border-radius:12px; background:rgba(220,76,76,.16); border:1px solid rgba(220,76,76,.45); color:#ffb9b9; font-size:12.5px; line-height:1.4; word-break:break-word; }
 
   /* tombol absen */
   .tAbsen { width:100%; padding:20px; font-size:21px; font-weight:800; letter-spacing:.5px; background:linear-gradient(180deg,#2bc97c,#17995a); color:#fff; border-radius:20px; box-shadow:0 10px 26px rgba(31,174,105,.32); transition:transform .08s, box-shadow .2s, background .2s; }
@@ -126,6 +130,7 @@
     <div class="baris"><input id="inPin" class="isian pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="current-password" placeholder="••••"><button class="tLihat" id="tLihat" type="button">Lihat</button></div>
     <button id="tMasuk" class="tUtama" type="button">Masuk</button>
     <div id="pesanLogin" class="pesan"></div>
+    <div class="muat sembunyi" id="muatL"><div class="putar"></div><span id="muatTeksL"></span><button class="tMini sembunyi" id="tUlangL" type="button">Coba lagi</button></div>
     <div class="kecil" style="margin-top:6px">Belum punya PIN: buat dulu di Pusat WHL. Absen mandiri untuk staf yang ID card-nya ada foto wajah.</div>
   </div>
 
@@ -139,8 +144,8 @@
 
     <div class="syarat">
       <div class="kartu lok" id="lok"><div class="ik"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.500C5 14.800 12 21 12 21z"/><circle cx="12" cy="9.500" r="2.500"/></svg></div><div><b id="lokJudul">Mencari lokasi...</b><span id="lokKet">Izinkan lokasi (GPS) di HP ini</span></div><i class="tanda"></i></div>
-      <div class="kartu lok" id="wj"><div class="ik"><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10v1M15 10v1M12 10v3h-1M9 15.500c1.800 1.300 4.200 1.300 6 0"/></svg></div><div><b>Verifikasi wajah</b><span>Lihat lurus, kedip, lalu toleh sesuai perintah</span>
-        <div class="muat sembunyi" id="muat"><div class="putar"></div><span id="muatTeks">Memuat pengenal wajah...</span></div></div></div>
+      <div class="kartu lok" id="wj"><div class="ik"><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10v1M15 10v1M12 10v3h-1M9 15.500c1.800 1.300 4.200 1.300 6 0"/></svg></div><div><b>Verifikasi wajah</b><span id="wjKet">Lihat lurus, kedip, lalu toleh sesuai perintah</span>
+        <div class="muat sembunyi" id="muat"><div class="putar"></div><span id="muatTeks">Memuat pengenal wajah...</span><button class="tMini sembunyi" id="tUlang" type="button">Coba lagi</button></div></div></div>
     </div>
 
     <div id="hasil" class="hasil sembunyi"></div>
@@ -157,6 +162,7 @@
       <button class="tAbsen" id="tAbsen" type="button" disabled>ABSEN SEKARANG</button>
       <div class="kecil" style="margin-top:12px;text-align:center">Maks <span id="radTeks">100</span> m dari titik site. Selfie disimpan untuk pemeriksaan.</div>
     </div>
+    <div id="galat" class="galat sembunyi"></div>
     <div class="kaki"><button class="tKecil" id="tSegar" type="button">Segarkan</button><span style="flex:1"></span><button class="tKecil" id="tKeluar" type="button" style="color:#ffb4b4">Keluar</button></div>
   </div>
 </div>
@@ -164,11 +170,18 @@
 <script>
 (function () {
   "use strict";
+  /* penangkap error global: error apa pun DITAMPILKAN di layar (tidak diam) */
+  function tampilGalat(t) { var e = document.getElementById("galat"); if (e) { e.textContent = "Error halaman: " + String(t).slice(0, 220) + " (foto layar ini, kirim ke Reza)"; e.classList.remove("sembunyi"); } }
+  window.addEventListener("error", function (e) { tampilGalat((e.message || "error") + (e.lineno ? " @" + e.lineno : "")); });
+  window.addEventListener("unhandledrejection", function (e) { var r = e.reason; tampilGalat((r && r.message) || String(r)); });
   var API_EXEC = "https:" + "/" + "/script.google.com/macros/s/AKfycbyJBXvN79b4y9eunDSRigMXmDOS4kW3K5ZF0ZEbGCKT1-WPqi-zEica0r7M__-dqwqhDQ/exec";
-  var FACEAPI = "https:" + "/" + "/cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13";
+  /* pengenal wajah: 1) folder "wajah" di situs ini sendiri (tidak bergantung CDN), 2) jsdelivr, 3) unpkg */
+  var SUMBER_WAJAH = ["wajah", "https:" + "/" + "/cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13", "https:" + "/" + "/unpkg.com/@vladmandic/face-api@1.7.13"];
+  var BERKAS_WAJAH = ["dist/face-api.js", "model/tiny_face_detector_model-weights_manifest.json", "model/tiny_face_detector_model.bin", "model/face_landmark_68_model-weights_manifest.json", "model/face_landmark_68_model.bin", "model/face_recognition_model-weights_manifest.json", "model/face_recognition_model.bin"];
+  var TOTAL_WAJAH = 8358953;
   var KUNCI = "abmToken";
   var $ = function (i) { return document.getElementById(i); };
-  var S = { token: "", titik: null, akMaks: 50, pos: null, model: false, modelJanji: null, stream: null, jalan: false, batal: false };
+  var S = { token: "", titik: null, akMaks: 50, pos: null, model: false, modelJanji: null, modelGagal: false, persen: 0, backend: "", stream: null, jalan: false, batal: false };
   function simpan(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* */ } }
   function baca(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -200,7 +213,7 @@
   /* ---------- STATUS & GPS ---------- */
   function mulaiApp() {
     $("login").classList.add("sembunyi"); $("app").classList.remove("sembunyi");
-    muatStatus(); mulaiGps(); siapkanModel();
+    muatStatus(); mulaiGps(); siapkanModel().catch(function () { });
   }
   function muatStatus() {
     rpc("abmStatus", [S.token]).then(function (h) {
@@ -228,20 +241,111 @@
     var j = Math.round(jarakM(p.lat, p.lng, t.lat, t.lng)), ak = Math.round(p.ak);
     if (ak > S.akMaks) { tampilLok("jauh", "GPS belum akurat (±" + ak + " m)", "Tunggu sebentar di tempat terbuka (perlu ±" + S.akMaks + " m atau lebih baik)."); tombol.disabled = true; return; }
     if (j > t.radius) { tampilLok("jauh", "Di luar area: " + j + " m dari site", "Absen mandiri cuma dalam " + t.radius + " m dari titik site."); tombol.disabled = true; return; }
-    tampilLok("ok", "Di area site · " + j + " m", "Akurasi GPS ±" + ak + " m"); tombol.disabled = S.jalan;
+    tampilLok("ok", "Di area site · " + j + " m", "Akurasi GPS ±" + ak + " m"); tombol.disabled = S.jalan || !S.model;
   }
 
   /* ---------- PENGENAL WAJAH ---------- */
+  function batas(p, ms, pesan) { return new Promise(function (ok, gagal) { var t = setTimeout(function () { gagal(new Error(pesan)); }, ms); p.then(function (x) { clearTimeout(t); ok(x); }, function (e) { clearTimeout(t); gagal(e); }); }); }
+  function labelTombol() { var t = $("tAbsen"); if (!t) return; t.textContent = S.model ? "ABSEN SEKARANG" : S.modelGagal ? "PENGENAL WAJAH GAGAL DIMUAT" : "MEMUAT PENGENAL WAJAH " + S.persen + "%"; }
+  function setMuat(teks, gagal) { /* status pemuatan di kartu wajah (sesudah masuk) DAN di kartu login */
+    [["muat", "muatTeks", "tUlang"], ["muatL", "muatTeksL", "tUlangL"]].forEach(function (x) {
+      var e = $(x[0]); if (!e) return; e.classList.toggle("sembunyi", !teks); e.classList.toggle("gagal", !!gagal); $(x[1]).textContent = teks || ""; $(x[2]).classList.toggle("sembunyi", !gagal);
+    });
+    labelTombol();
+  }
+  /* unduh 1 berkas sambil menghitung byte; macet 25 dtk tanpa data = dibatalkan (pindah sumber berikutnya) */
+  function unduh(url, tambah) {
+    var ac = window.AbortController ? new AbortController() : null, t = null;
+    var jaga = function () { clearTimeout(t); t = setTimeout(function () { if (ac) ac.abort(); }, 25000); };
+    jaga();
+    return fetch(url, ac ? { signal: ac.signal } : {}).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      if (!r.body || !r.body.getReader) return r.arrayBuffer().then(function (b) { tambah(b.byteLength); return new Uint8Array(b); });
+      var rd = r.body.getReader(), potong = [], n = 0, baca1 = function () { return rd.read().then(function (x) { if (x.done) return; jaga(); potong.push(x.value); n += x.value.length; tambah(x.value.length); return baca1(); }); };
+      return baca1().then(function () { var u = new Uint8Array(n), o = 0; potong.forEach(function (p) { u.set(p, o); o += p.length; }); return u; });
+    }).then(function (u) { clearTimeout(t); return u; }, function (e) { clearTimeout(t); throw new Error(e && e.name === "AbortError" ? "unduhan macet (sinyal lemah)" : (e && e.message) || "gagal"); });
+  }
+  /* simpanan di HP (Cache Storage "abm-wajah-v1"): sudah ada = langsung dipakai tanpa internet; belum = unduh lalu simpan */
+  function ambil(url, tambah) {
+    var buka = (window.caches && caches.open) ? caches.open("abm-wajah-v1").catch(function () { return null; }) : Promise.resolve(null);
+    return buka.then(function (cache) {
+      var lama = cache ? cache.match(url).then(function (r) { return r ? r.arrayBuffer() : null; }).catch(function () { return null; }) : Promise.resolve(null);
+      return lama.then(function (b) {
+        if (b && b.byteLength > 0) { tambah(b.byteLength); return new Uint8Array(b); }
+        return unduh(url, tambah).then(function (u) {
+          if (cache) { try { cache.put(url, new Response(u.buffer.slice(u.byteOffset, u.byteOffset + u.byteLength), { headers: { "Content-Type": "application/octet-stream" } })).catch(function () { }); } catch (e) { /* simpanan opsional */ } }
+          return u;
+        });
+      });
+    });
+  }
+  function pasangSkrip(url) { return new Promise(function (ok, gagal) { if (window.faceapi) { ok(); return; } var sc = document.createElement("script"); sc.src = url; sc.onload = function () { if (window.faceapi) ok(); else gagal(new Error("library wajah rusak")); }; sc.onerror = function () { gagal(new Error("library wajah gagal dimuat")); }; document.head.appendChild(sc); }); }
+  function muatDari(dasar) {
+    var sudah = 0, maju = function (n) { sudah += n; S.persen = Math.min(99, Math.round(sudah * 100 / TOTAL_WAJAH)); setMuat("Mengunduh pengenal wajah " + (sudah / 1048576).toFixed(1).replace(".", ",") + " / " + (TOTAL_WAJAH / 1048576).toFixed(1).replace(".", ",") + " MB (" + S.persen + "%)"); };
+    /* 2 berkas sekaligus; hasil unduhan tersimpan di cache browser lalu dipakai face-api */
+    var isi = {}, antre = BERKAS_WAJAH.slice(), kerja = function () { var f = antre.shift(); if (!f) return Promise.resolve(); return ambil(dasar + "/" + f, maju).then(function (u) { isi[f.split("/").pop()] = u; return kerja(); }); };
+    return Promise.all([kerja(), kerja()]).then(function () {
+      setMuat("Menyiapkan pengenal wajah...");
+      /* library & model dipakai dari hasil unduhan di memori (tidak diunduh 2x) */
+      if (!window.__fetchAsli) { /* face-api menangkap window.fetch saat dimuat -> pasang perantara dulu: berkas wajah dijawab dari memori, lainnya diteruskan apa adanya */
+        window.__fetchAsli = window.fetch; window.__isiWajah = {};
+        window.fetch = function (u, o) { var k = String((u && u.url) || u).split("?")[0].split("/").pop(), b = window.__isiWajah[k]; return b ? Promise.resolve(new Response(b, { status: 200 })) : window.__fetchAsli.call(window, u, o); };
+      }
+      window.__isiWajah = isi;
+      var blob = URL.createObjectURL(new Blob([isi["face-api.js"]], { type: "text/javascript" }));
+      return batas(pasangSkrip(blob), 40000, "library wajah terlalu lama dimuat");
+    }).then(function () {
+      return pilihMesin();
+    }).then(function () {
+      var M = dasar + "/model/";
+      return batas(Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(M), faceapi.nets.faceLandmark68Net.loadFromUri(M), faceapi.nets.faceRecognitionNet.loadFromUri(M)]), 90000, "model wajah terlalu lama dimuat");
+    });
+  }
+  function pilihMesin() { /* WebGL (cepat) -> WASM -> CPU (lambat tapi selalu ada). Harus sebelum model dimuat. */
+    var tf = faceapi.tf; if (!tf || !tf.setBackend) return Promise.resolve();
+    var pilih = function (b, ms) { return batas(Promise.resolve().then(function () { return tf.setBackend(b); }).then(function (ok) { if (ok === false) throw new Error("backend " + b); return tf.ready(); }), ms, "backend " + b + " lama"); };
+    var adaGl = false; try { var c = document.createElement("canvas"); adaGl = !!(c.getContext("webgl2") || c.getContext("webgl")); } catch (e) { adaGl = false; }
+    var wasm = function () {
+      if (!tf.setWasmPaths || !window.WebAssembly) return Promise.reject(new Error("tanpa wasm"));
+      var v = (tf.version && (tf.version["tfjs-backend-wasm"] || tf.version.tfjs)) || tf.version_core; if (!v) return Promise.reject(new Error("versi wasm"));
+      tf.setWasmPaths("https:" + "/" + "/cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@" + v + "/dist/");
+      return pilih("wasm", 20000);
+    };
+    return (adaGl ? pilih("webgl", 20000) : Promise.reject(new Error("tanpa webgl"))).catch(wasm).catch(function () { return pilih("cpu", 20000); })
+      .then(function () { S.backend = (tf.getBackend && tf.getBackend()) || ""; });
+  }
+  function siapkanMesin() { /* pemanasan: deteksi pertama (kompilasi) dilakukan di sini, bukan saat orang sudah di depan kamera */
+    var c = document.createElement("canvas"); c.width = 160; c.height = 120; var cx = c.getContext("2d"); cx.fillStyle = "#777"; cx.fillRect(0, 0, 160, 120);
+    var q = faceapi.detectAllFaces(c, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }));
+    return batas(q.run ? q.run() : Promise.resolve(q), 45000, "pemanasan lama").catch(function () { });
+  }
   function siapkanModel() {
     if (S.modelJanji) return S.modelJanji;
-    var muat = $("muat"); muat.classList.remove("sembunyi"); $("muatTeks").textContent = "Memuat pengenal wajah (pertama kali ±7 MB)...";
-    S.modelJanji = new Promise(function (ok, gagal) {
-      var sc = document.createElement("script"); sc.src = FACEAPI + "/dist/face-api.js"; sc.onload = ok; sc.onerror = function () { gagal(new Error("library wajah gagal dimuat (internet?)")); }; document.head.appendChild(sc);
-    }).then(function () {
-      var M = FACEAPI + "/model/";
-      return Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(M), faceapi.nets.faceLandmark68Net.loadFromUri(M), faceapi.nets.faceRecognitionNet.loadFromUri(M)]);
-    }).then(function () { S.model = true; muat.classList.add("sembunyi"); }, function (e) { S.modelJanji = null; $("muatTeks").textContent = "Gagal: " + e.message + " · ketuk Segarkan"; throw e; });
+    S.modelGagal = false; S.persen = 0; setMuat("Memuat pengenal wajah...");
+    var i = 0, galat = "";
+    var coba = function () {
+      if (i >= SUMBER_WAJAH.length) throw new Error(galat || "tidak bisa dimuat");
+      var d = SUMBER_WAJAH[i++];
+      return muatDari(d).catch(function (e) { galat = (e && e.message) || String(e); if (i < SUMBER_WAJAH.length) setMuat("Sumber " + i + " gagal (" + galat + "), mencoba sumber cadangan..."); return coba(); });
+    };
+    S.modelJanji = Promise.resolve().then(coba).then(siapkanMesin).then(function () {
+      S.model = true; S.persen = 100; setMuat(""); if (S.backend && S.backend !== "webgl") { var k = $("wjKet"); if (k) k.textContent = "Lihat lurus, kedip, lalu toleh · mode hemat (HP tanpa akselerasi, agak lambat)"; } nilaiLokasi();
+    }, function (e) {
+      S.modelJanji = null; S.modelGagal = true;
+      setMuat("Pengenal wajah gagal dimuat: " + ((e && e.message) || e) + ". Cek internet lalu ketuk Coba lagi.", true); nilaiLokasi();
+      throw e;
+    });
     return S.modelJanji;
+  }
+  function tungguVideo(v) { /* face-api menunggu event yang tidak pernah datang kalau video belum punya gambar -> pastikan dulu videonya jalan */
+    var t0 = Date.now();
+    return new Promise(function (ok, gagal) { (function cek() {
+      if (v.readyState >= 2 && v.videoWidth > 0) { ok(); return; }
+      if (S.batal) { gagal(new Error("Dibatalkan.")); return; }
+      if (Date.now() - t0 > 12000) { gagal(new Error("Kamera tidak mengirim gambar. Tutup aplikasi lain yang memakai kamera, lalu coba lagi.")); return; }
+      if (v.paused) { var p = v.play(); if (p && p.catch) p.catch(function () { }); }
+      setTimeout(cek, 120);
+    })(); });
   }
   function hentiKamera() { if (S.stream) { S.stream.getTracks().forEach(function (t) { t.stop(); }); S.stream = null; } }
   function tidur(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -253,11 +357,15 @@
     var p = lm.positions, mataKi = p.slice(36, 42), mataKa = p.slice(42, 48), ki = titikRata(mataKi), ka = titikRata(mataKa), tengah = { x: (ki.x + ka.x) / 2, y: (ki.y + ka.y) / 2 };
     return { ear: (ear(mataKi) + ear(mataKa)) / 2, toleh: (p[30].x - tengah.x) / Math.max(1, jr(ki, ka)) };
   }
-  var OPS = null;
-  function deteksi(v, sidik) {
+  var OPS = null, KANVAS = null;
+  function deteksi(v, sidik) { /* dari salinan kanvas (bukan elemen video langsung) + batas waktu, supaya tidak pernah menggantung */
     OPS = OPS || new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
-    var q = faceapi.detectAllFaces(v, OPS).withFaceLandmarks();
-    return (sidik ? q.withFaceDescriptors() : q);
+    KANVAS = KANVAS || document.createElement("canvas");
+    var w = Math.min(480, v.videoWidth), h = Math.round(v.videoHeight * w / v.videoWidth);
+    if (KANVAS.width !== w || KANVAS.height !== h) { KANVAS.width = w; KANVAS.height = h; }
+    KANVAS.getContext("2d").drawImage(v, 0, 0, w, h);
+    var q = faceapi.detectAllFaces(KANVAS, OPS).withFaceLandmarks(); if (sidik) q = q.withFaceDescriptors();
+    return batas(q.run ? q.run() : Promise.resolve(q), 25000, "Pengenal wajah tidak merespons (HP terlalu berat?). Tutup aplikasi lain, lalu coba lagi.");
   }
   function fotoKecil(v) { var c = document.createElement("canvas"), w = 360, h = Math.round(v.videoHeight * w / v.videoWidth); c.width = w; c.height = h; c.getContext("2d").drawImage(v, 0, 0, w, h); return c.toDataURL("image/jpeg", 0.72).split(",")[1]; }
 
@@ -280,7 +388,10 @@
       return navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
     }).then(function (st) {
       S.stream = st; var v = $("video"); v.srcObject = st; var pl = v.play(); if (pl && pl.catch) pl.catch(function () { });
-      $("siap").classList.add("sembunyi"); $("kamPanel").classList.remove("sembunyi");
+      $("siap").classList.add("sembunyi"); $("kamPanel").classList.remove("sembunyi"); instruksi("Menyalakan kamera...", "Izinkan kamera kalau diminta", "");
+      return tungguVideo(v);
+    }).then(function () {
+      var v = $("video"); instruksi("Mencari wajah...", "Masukkan wajah ke dalam lingkaran", "");
       var tolehTeks = T.toleh === "kiri" ? "Toleh ke KIRI kamu" : "Toleh ke KANAN kamu";
       var urut = T.urut === "kedip-toleh" ? ["lurus", "kedip", "toleh", "balik"] : ["lurus", "toleh", "kedip", "balik"];
       var mulai = Date.now(), i = 0, stabil = 0, dasarEar = [], tutup = false;
@@ -348,8 +459,11 @@
   $("tAbsen").onclick = absen;
   $("tBatal").onclick = function () { S.batal = true; };
   $("tSegar").onclick = function () { muatStatus(); if (!S.modelJanji) siapkanModel().catch(function () { }); };
+  $("tUlang").onclick = $("tUlangL").onclick = function () { siapkanModel().catch(function () { }); };
   $("tKeluar").onclick = function () { var b = this; if (b.dataset.yakin !== "1") { b.dataset.yakin = "1"; b.textContent = "Ketuk lagi untuk keluar"; setTimeout(function () { b.dataset.yakin = ""; b.textContent = "Keluar"; }, 3500); return; } rpc("abmKeluar", [S.token]).catch(function () { }); keLogin(""); };
 
+  labelTombol();
+  siapkanModel().catch(function () { }); /* pramuat sejak layar login */
   S.token = baca(KUNCI);
   if (S.token) mulaiApp();
 })();
