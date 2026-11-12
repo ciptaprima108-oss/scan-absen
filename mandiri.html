@@ -92,7 +92,7 @@
   @keyframes putarCincin { from { transform:rotate(-90deg); } to { transform:rotate(270deg); } }
   .instruksi { font-size:22px; font-weight:800; line-height:1.2; min-height:54px; }
   .instruksi small { display:block; font-size:13.5px; font-weight:400; color:var(--redup); margin-top:5px; }
-  .langkah { display:flex; justify-content:center; gap:6px; margin:12px 0 14px; flex-wrap:wrap; }
+  .langkah { display:flex; justify-content:center; gap:6px; margin:12px 0 14px; flex-wrap:wrap; } .langkah:empty { margin:6px 0 10px; }
   .lk { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; color:var(--redup); padding:5px 10px 5px 5px; border-radius:999px; background:var(--panel2); border:1px solid transparent; transition:all .2s; }
   .lk i { font-style:normal; width:20px; height:20px; border-radius:50%; display:grid; place-items:center; font-size:11.5px; background:rgba(255,255,255,.08); }
   .lk.kini { color:#fff; border-color:rgba(255,255,255,.45); } .lk.kini i { background:#fff; color:#0b131c; }
@@ -144,7 +144,7 @@
 
     <div class="syarat">
       <div class="kartu lok" id="lok"><div class="ik"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.500C5 14.800 12 21 12 21z"/><circle cx="12" cy="9.500" r="2.500"/></svg></div><div><b id="lokJudul">Mencari lokasi...</b><span id="lokKet">Izinkan lokasi (GPS) di HP ini</span></div><i class="tanda"></i></div>
-      <div class="kartu lok" id="wj"><div class="ik"><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10v1M15 10v1M12 10v3h-1M9 15.500c1.800 1.300 4.200 1.300 6 0"/></svg></div><div><b>Verifikasi wajah</b><span id="wjKet">Lihat lurus, kedip, lalu toleh sesuai perintah</span>
+      <div class="kartu lok" id="wj"><div class="ik"><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10v1M15 10v1M12 10v3h-1M9 15.500c1.800 1.300 4.200 1.300 6 0"/></svg></div><div><b>Verifikasi wajah</b><span id="wjKet">Cukup lihat ke kamera, otomatis dipindai</span>
         <div class="muat sembunyi" id="muat"><div class="putar"></div><span id="muatTeks">Memuat pengenal wajah...</span><button class="tMini sembunyi" id="tUlang" type="button">Coba lagi</button></div></div></div>
     </div>
 
@@ -317,7 +317,9 @@
   function siapkanMesin() { /* pemanasan: deteksi pertama (kompilasi) dilakukan di sini, bukan saat orang sudah di depan kamera */
     var c = document.createElement("canvas"); c.width = 160; c.height = 120; var cx = c.getContext("2d"); cx.fillStyle = "#777"; cx.fillRect(0, 0, 160, 120);
     var q = faceapi.detectAllFaces(c, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }));
-    return batas(q.run ? q.run() : Promise.resolve(q), 45000, "pemanasan lama").catch(function () { });
+    /* pemanasan juga untuk titik wajah + sidik wajah (yang paling berat), supaya pindai pertama cepat */
+    var lanjut = function () { var p = []; try { if (faceapi.detectFaceLandmarks) p.push(faceapi.detectFaceLandmarks(c)); if (faceapi.computeFaceDescriptor) p.push(faceapi.computeFaceDescriptor(c)); } catch (e) { /* */ } return batas(Promise.all(p), 45000, "pemanasan lama").catch(function () { }); };
+    return batas(q.run ? q.run() : Promise.resolve(q), 45000, "pemanasan lama").catch(function () { }).then(lanjut);
   }
   function siapkanModel() {
     if (S.modelJanji) return S.modelJanji;
@@ -329,7 +331,7 @@
       return muatDari(d).catch(function (e) { galat = (e && e.message) || String(e); if (i < SUMBER_WAJAH.length) setMuat("Sumber " + i + " gagal (" + galat + "), mencoba sumber cadangan..."); return coba(); });
     };
     S.modelJanji = Promise.resolve().then(coba).then(siapkanMesin).then(function () {
-      S.model = true; S.persen = 100; setMuat(""); if (S.backend && S.backend !== "webgl") { var k = $("wjKet"); if (k) k.textContent = "Lihat lurus, kedip, lalu toleh · mode hemat (HP tanpa akselerasi, agak lambat)"; } nilaiLokasi();
+      S.model = true; S.persen = 100; setMuat(""); if (S.backend && S.backend !== "webgl") { var k = $("wjKet"); if (k) k.textContent = "Cukup lihat ke kamera · mode hemat (HP tanpa akselerasi, agak lambat)"; } nilaiLokasi();
     }, function (e) {
       S.modelJanji = null; S.modelGagal = true;
       setMuat("Pengenal wajah gagal dimuat: " + ((e && e.message) || e) + ". Cek internet lalu ketuk Coba lagi.", true); nilaiLokasi();
@@ -370,21 +372,32 @@
   function fotoKecil(v) { var c = document.createElement("canvas"), w = 360, h = Math.round(v.videoHeight * w / v.videoWidth); c.width = w; c.height = h; c.getContext("2d").drawImage(v, 0, 0, w, h); return c.toDataURL("image/jpeg", 0.72).split(",")[1]; }
 
   function instruksi(t, kecil, kelas) { $("instruksi").innerHTML = esc(t) + (kecil ? "<small>" + esc(kecil) + "</small>" : ""); $("oval").className = "oval" + (kelas ? " " + kelas : ""); }
-  var NAMA_LK = { lurus: "Lurus", kedip: "Kedip", toleh: "Toleh", balik: "Lurus" };
-  function gambarLangkah(daftar, i) { /* tampilan saja: chip langkah + busur progres di lingkaran wajah */
-    $("langkah").innerHTML = daftar.map(function (x, j) { return '<span class="lk ' + (j < i ? "ok" : j === i ? "kini" : "") + '"><i>' + (j < i ? "&#10003;" : (j + 1)) + "</i>" + NAMA_LK[x] + "</span>"; }).join("");
-    var b = $("busur"); if (b) b.style.strokeDashoffset = String(100 - Math.round(100 * Math.min(i, daftar.length) / daftar.length));
+  function gambarLangkah(n, i) { /* tampilan saja: busur progres di lingkaran wajah (tanpa chip langkah sejak absen-pindai-12nov) */
+    n = (n && n.length) || n || 1; $("langkah").innerHTML = "";
+    var b = $("busur"); if (b) b.style.strokeDashoffset = String(100 - Math.round(100 * Math.min(i, n) / n));
   }
+  /* potongan wajah 48x48 abu-abu (tanpa penghalusan): untuk cek "gambar diam" antar bingkai + ketajaman kasar */
+  var KECIL = null;
+  function kecil(bx) {
+    KECIL = KECIL || document.createElement("canvas"); KECIL.width = 48; KECIL.height = 48;
+    var cx = KECIL.getContext("2d", { willReadFrequently: true }); cx.imageSmoothingEnabled = false;
+    cx.drawImage(KANVAS, Math.max(0, bx.x), Math.max(0, bx.y), Math.max(1, bx.width), Math.max(1, bx.height), 0, 0, 48, 48);
+    var d = cx.getImageData(0, 0, 48, 48).data, px = new Float32Array(2304), i, s = 0, n = 0;
+    for (i = 0; i < 2304; i++) px[i] = d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114;
+    for (var y = 1; y < 47; y++) for (var x = 1; x < 47; x++) { var k = y * 48 + x; s += Math.abs(4 * px[k] - px[k - 1] - px[k + 1] - px[k - 48] - px[k + 48]); n++; }
+    return { px: px, tajam: s / n };
+  }
+  function bedaRata(a, b) { var s = 0; for (var i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]); return s / a.length; }
 
   function absen() {
     if (S.jalan) return;
     var p = S.pos; if (!p || !S.titik) return;
     S.jalan = true; S.batal = false; $("tAbsen").disabled = true; $("hasil").classList.add("sembunyi");
-    var T = null, sidik = [], foto = "", hidup = { kedip: false, toleh: "", urut: "" };
+    var T = null, sidik = [], foto = "", hidup = { mode: "pindai" };
     siapkanModel().then(function () { return rpc("abmMulai", [S.token]); }).then(function (t) {
       if (t.login === false) { keLogin("Sesi habis, masuk lagi."); throw new Error("diam"); }
       if (!t.ok) throw new Error(t.pesan);
-      T = t; hidup.urut = t.urut;
+      T = t;
       return navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
     }).then(function (st) {
       S.stream = st; var v = $("video"); v.srcObject = st; var pl = v.play(); if (pl && pl.catch) pl.catch(function () { });
@@ -392,38 +405,35 @@
       return tungguVideo(v);
     }).then(function () {
       var v = $("video"); instruksi("Mencari wajah...", "Masukkan wajah ke dalam lingkaran", "");
-      var tolehTeks = T.toleh === "kiri" ? "Toleh ke KIRI kamu" : "Toleh ke KANAN kamu";
-      var urut = T.urut === "kedip-toleh" ? ["lurus", "kedip", "toleh", "balik"] : ["lurus", "toleh", "kedip", "balik"];
-      var mulai = Date.now(), i = 0, stabil = 0, dasarEar = [], tutup = false;
+      /* absen-pindai-12nov (Reza): TANPA kedip/toleh. Wajah terlihat jelas -> otomatis ambil 3 bingkai berjarak ±0,3 dtk -> kirim. */
+      var mulai = Date.now(), ambil = [], lalu = null, tPakai = 0, statis = 0;
+      gambarLangkah(3, 0);
       var langkah = function () {
         if (S.batal) throw new Error("Dibatalkan.");
-        if (Date.now() - mulai > 60000) throw new Error("Waktu habis (60 detik). Ulangi dengan cahaya terang, wajah di dalam oval.");
-        var lk = urut[i]; gambarLangkah(urut, i);
-        var butuhSidik = (lk === "lurus" || lk === "balik") || (lk === "kedip" && tutup);
-        return deteksi(v, butuhSidik).then(function (d) {
-          if (!d.length) { instruksi("Wajah tidak terlihat", "Masukkan wajah ke dalam oval, cahaya terang", "salah"); stabil = 0; return tidur(150).then(langkah); }
-          if (d.length > 1) { instruksi("Hanya 1 wajah", "Orang lain keluar dari kamera dulu", "salah"); stabil = 0; return tidur(150).then(langkah); }
-          var f = d[0], u = ukur(f.landmarks);
-          if (lk === "lurus" || lk === "balik") {
-            instruksi(lk === "lurus" ? "Lihat lurus ke kamera" : "Kembali lihat lurus", "Tahan sebentar", Math.abs(u.toleh) < 0.12 ? "ok" : "");
-            if (Math.abs(u.toleh) < 0.12) { stabil++; dasarEar.push(u.ear); } else stabil = 0;
-            if (stabil >= 3 && f.descriptor) { sidik.push(Array.from(f.descriptor).map(function (x) { return Math.round(x * 1e4) / 1e4; })); if (lk === "lurus") foto = fotoKecil(v); i++; stabil = 0; }
-          } else if (lk === "kedip") {
-            var dasar = dasarEar.slice().sort(function (a, b) { return a - b; })[Math.floor(dasarEar.length / 2)] || u.ear;
-            instruksi("Kedipkan mata", "Pejam sebentar lalu buka", tutup ? "ok" : "");
-            if (!tutup && u.ear < dasar * 0.72) tutup = true;
-            else if (tutup && u.ear > dasar * 0.86 && f.descriptor) { hidup.kedip = true; sidik.push(Array.from(f.descriptor).map(function (x) { return Math.round(x * 1e4) / 1e4; })); i++; }
-          } else if (lk === "toleh") {
-            instruksi(tolehTeks, "Pelan-pelan, lalu nanti kembali lurus", "");
-            if ((T.toleh === "kiri" && u.toleh > 0.22) || (T.toleh === "kanan" && u.toleh < -0.22)) { hidup.toleh = T.toleh; instruksi(tolehTeks, "Bagus!", "ok"); i++; }
-          }
-          if (i >= urut.length) return null;
-          return tidur(60).then(langkah);
+        if (Date.now() - mulai > 30000) throw new Error(statis >= 8 ? "Gambar kamera tidak berubah sama sekali (seperti foto diam). Pakai kamera HP langsung, lalu ulangi." : "Wajah belum terbaca jelas (30 detik). Cari cahaya terang, dekatkan wajah, lalu ulangi.");
+        return deteksi(v, true).then(function (d) {
+          var ulang = function (t, k) { instruksi(t, k, "salah"); return tidur(150).then(langkah); };
+          var tahan = function (ms) { instruksi("Memindai wajah...", "Tahan sebentar", "ok"); return tidur(ms).then(langkah); };
+          if (!d.length) return ulang("Wajah tidak terlihat", "Masukkan wajah ke dalam lingkaran, cahaya terang");
+          if (d.length > 1) return ulang("Hanya 1 wajah", "Orang lain keluar dari kamera dulu");
+          var f = d[0], u = ukur(f.landmarks), bx = (f.detection && f.detection.box) || null;
+          if (bx && bx.width < KANVAS.width * 0.22) return ulang("Dekatkan wajah", "Wajah masih terlalu jauh");
+          if (Math.abs(u.toleh) > 0.2) return ulang("Hadapkan wajah ke kamera", "");
+          var kc = bx ? kecil(bx) : null;
+          if (kc && kc.tajam < 1.5) return ulang("Gambar buram", "Tahan HP sebentar, cari cahaya terang");
+          if (!f.descriptor || Date.now() - tPakai < 280) return tahan(80);
+          if (kc && lalu && bedaRata(kc.px, lalu) < 0.2) { statis++; tPakai = Date.now(); return tahan(120); } /* sama persis dengan bingkai sebelumnya = gambar diam -> tidak dipakai */
+          ambil.push(Array.from(f.descriptor).map(function (x) { return Math.round(x * 1e4) / 1e4; })); if (kc) lalu = kc.px; tPakai = Date.now();
+          if (ambil.length === 1) foto = fotoKecil(v);
+          gambarLangkah(3, ambil.length);
+          if (ambil.length >= 3) { sidik = ambil; hidup = { mode: "pindai", statis: statis, tajam: kc ? Math.round(kc.tajam * 10) / 10 : null, lebar: bx ? Math.round(bx.width) : null }; return null; }
+          return tahan(120);
         });
       };
+      instruksi("Memindai wajah...", "Lihat ke kamera", "");
       return langkah();
     }).then(function () {
-      hentiKamera(); instruksi("Mengirim...", "Mencocokkan wajah & lokasi", "ok"); gambarLangkah(["lurus", "kedip", "toleh", "balik"], 4); $("kam").classList.add("kirim");
+      hentiKamera(); instruksi("Mengirim...", "Mencocokkan wajah & lokasi", "ok"); gambarLangkah(3, 3); $("kam").classList.add("kirim");
       var p2 = S.pos, umur = Math.max(0, Math.round((Date.now() - p2.t) / 1000));
       return rpc("abmAbsen", [S.token, { nonce: T.nonce, hidup: hidup, wajah: sidik, foto: foto, gps: { lat: p2.lat, lng: p2.lng, akurasi: p2.ak, umurDetik: umur } }]);
     }).then(function (h) {
