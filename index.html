@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="referrer" content="no-referrer">
+  <title>Scan Absen WHL</title>
+  <style>
+    :root {
+      --bg: #0d1620; --panel: #15212e; --panel2: #1b2a3a; --garis: #2a3c50; --teks: #eef3f8; --redup: #93a5b9;
+      --hijau: #1fa463; --kuning: #e0a100; --merah: #d64545; --biru: #2f7fd8; --abu: #5b6b7d; --aksen: #3aa0ff;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--teks); font-family: "Segoe UI", Roboto, Arial, sans-serif; }
+    body { overflow: hidden; }
+    button { font: inherit; cursor: pointer; border: 0; border-radius: 12px; }
+    input { font: inherit; }
+    .sembunyi { display: none !important; }
+
+    /* ---------- LOGIN ---------- */
+    #login { height: 100%; display: flex; align-items: center; justify-content: center; padding: 24px; overflow: auto; }
+    .kotakLogin { width: 100%; max-width: 440px; background: var(--panel); border: 1px solid var(--garis); border-radius: 20px; padding: 28px 26px; }
+    .logo { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+    .logoWHL { background: url("data:image/png;base64,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") center / contain no-repeat; }
+    .logo .ik { width: 64px; height: 64px; flex: 0 0 64px; }
+    .atas .logoAtas { width: 40px; height: 40px; flex: 0 0 40px; }
+    .logo h1 { margin: 0; font-size: 22px; } .logo p { margin: 2px 0 0; color: var(--redup); font-size: 14px; }
+    label.lb { display: block; font-size: 14px; color: var(--redup); margin: 14px 0 6px; }
+    .isian { width: 100%; padding: 14px 16px; font-size: 19px; border-radius: 12px; border: 1px solid var(--garis); background: #0f1a25; color: var(--teks); outline: none; }
+    .isian:focus { border-color: var(--aksen); }
+    .baris { display: flex; gap: 8px; align-items: stretch; }
+    .baris .isian { flex: 1; }
+    .tLihat { background: var(--panel2); color: var(--redup); padding: 0 14px; font-size: 14px; }
+    .tUtama { width: 100%; margin-top: 20px; padding: 15px; font-size: 19px; font-weight: 700; background: var(--aksen); color: #04203a; }
+    .tUtama:disabled { opacity: .55; }
+    .pesan { margin-top: 14px; font-size: 15px; min-height: 20px; color: var(--kuning); line-height: 1.4; }
+    .pesan.ok { color: #7fe0a9; }
+    .catatanKecil { font-size: 13px; color: var(--redup); margin-top: 16px; line-height: 1.5; }
+    .kapital { text-transform: uppercase; } .kapital::placeholder { text-transform: none; }
+    .pin { letter-spacing: 8px; font-size: 24px; }
+    .infoBuka { background: #13314b; border: 1px solid #245580; color: #cfe6ff; border-radius: 12px; padding: 10px 12px; font-size: 14px; margin-bottom: 6px; }
+
+    /* ---------- APLIKASI ---------- */
+    #app { height: 100%; display: flex; flex-direction: column; }
+    .atas { display: flex; align-items: center; gap: 14px; padding: 10px 18px; background: #101c28; border-bottom: 1px solid var(--garis); flex-wrap: wrap; }
+    .atas .judul { font-weight: 800; font-size: 19px; letter-spacing: .5px; }
+    .atas .judul small { display: block; font-weight: 400; font-size: 13px; color: var(--redup); letter-spacing: 0; }
+    .jam { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; margin-left: auto; }
+    .op { background: var(--panel2); border: 1px solid var(--garis); border-radius: 999px; padding: 6px 12px; font-size: 14px; color: var(--redup); }
+    .op b { color: var(--teks); }
+    .tombolAtas { display: flex; gap: 8px; }
+    .tKecil { background: var(--panel2); color: var(--teks); padding: 9px 14px; font-size: 14px; border: 1px solid var(--garis); }
+    .tKecil.bahaya { color: #ffb4b4; }
+    .tKecil.yakin { background: var(--merah); color: #fff; border-color: var(--merah); }
+
+    .isi { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 46fr) minmax(0, 54fr); gap: 14px; padding: 14px; }
+    .kiri, .kanan { min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+    .kamera { position: relative; flex: 1; min-height: 200px; background: #000; border-radius: 18px; overflow: hidden; border: 1px solid var(--garis); }
+    .kamera video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .kamera video.cermin { transform: scaleX(-1); }
+    .bingkai { position: absolute; left: 50%; top: 50%; width: 58%; aspect-ratio: 1; max-height: 78%; transform: translate(-50%, -50%); border: 4px solid rgba(255,255,255,.85); border-radius: 18px; box-shadow: 0 0 0 9999px rgba(0,0,0,.28); }
+    .bingkai::after { content: ""; position: absolute; left: 6%; right: 6%; height: 3px; background: var(--aksen); top: 10%; animation: sapu 2.2s ease-in-out infinite; border-radius: 3px; }
+    @keyframes sapu { 0%, 100% { top: 10%; } 50% { top: 88%; } }
+    .kamKet { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 14px; font-size: 15px; background: linear-gradient(transparent, rgba(0,0,0,.75)); text-align: center; }
+    .kamTombol { position: absolute; right: 10px; top: 10px; background: rgba(0,0,0,.55); color: #fff; padding: 8px 12px; font-size: 13px; }
+    /* scan-absen-live-12nov: tanda LIVE, Foto QR, bunyi, kilat bingkai, riwayat barusan */
+    .kamLive { position: absolute; left: 10px; top: 10px; background: rgba(0,0,0,.6); color: #fff; padding: 6px 11px; font-size: 13px; font-weight: 700; border-radius: 999px; display: flex; align-items: center; gap: 7px; max-width: calc(100% - 170px); }
+    .kamLive i { width: 10px; height: 10px; flex: 0 0 10px; border-radius: 50%; background: #e44; display: inline-block; }
+    .kamLive.on i { background: #2ee07a; animation: kedip 1.2s ease-in-out infinite; }
+    .kamLive small { font-weight: 400; opacity: .8; }
+    @keyframes kedip { 50% { opacity: .25; } }
+    .kamFoto { position: absolute; right: 10px; top: 52px; background: rgba(0,0,0,.55); color: #fff; padding: 8px 12px; font-size: 13px; border-radius: 12px; cursor: pointer; }
+    .kamSuara { position: absolute; left: 10px; top: 46px; background: rgba(224,161,0,.9); color: #1d1500; padding: 5px 10px; font-size: 12px; font-weight: 700; border-radius: 999px; }
+    .kamera.kenaBaca .bingkai { border-color: var(--aksen); }
+    .kamera.kena .bingkai { border-color: #2ee07a; box-shadow: 0 0 0 9999px rgba(31,164,99,.30); }
+    .kamera.kenaMerah .bingkai { border-color: #ff5a5a; box-shadow: 0 0 0 9999px rgba(214,69,69,.30); }
+    .riwayat { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .riwayat:empty { display: none; }
+    .riwayat .rwJ { font-size: 13px; color: var(--redup); }
+    .riwayat .rw { font-size: 13px; padding: 5px 10px; border-radius: 999px; background: var(--panel); border: 1px solid var(--garis); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+    .riwayat .rw.hijau { border-color: var(--hijau); } .riwayat .rw.kuning { border-color: var(--kuning); } .riwayat .rw.biru { border-color: var(--biru); }
+    /* scan-luar-12nov: mode FOTO (kamera live diblokir) = tombol besar SCAN QR + tombol ke halaman scan live */
+    .fotoUtama { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -58%); width: min(78%, 360px); padding: 22px 16px; border-radius: 20px; background: var(--aksen); color: #04203a; text-align: center; cursor: pointer; box-shadow: 0 8px 30px rgba(0,0,0,.45); z-index: 2; }
+    .fotoUtama b { display: block; font-size: 30px; font-weight: 800; letter-spacing: 1px; }
+    .fotoUtama span { display: block; font-size: 14px; margin-top: 6px; line-height: 1.35; }
+    .fotoUtama:active { transform: translate(-50%, -58%) scale(.97); }
+    .tLuar { position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); background: #fff; color: #04203a; font-weight: 800; font-size: 15px; padding: 10px 16px; border-radius: 12px; text-decoration: none; white-space: nowrap; z-index: 2; }
+    .manual { display: flex; gap: 8px; }
+    .manual .isian { font-size: 18px; text-transform: uppercase; }
+    .manual button { background: var(--aksen); color: #04203a; font-weight: 700; padding: 0 22px; font-size: 18px; }
+
+    .hasil { border-radius: 18px; padding: 16px 20px; min-height: 128px; display: flex; flex-direction: column; justify-content: center; background: var(--panel); border: 1px solid var(--garis); transition: background .2s; }
+    .hasil .h1 { font-size: 34px; font-weight: 800; line-height: 1.1; }
+    .hasil .h2 { font-size: 21px; margin-top: 6px; }
+    .hasil .h3 { font-size: 15px; margin-top: 4px; opacity: .85; }
+    .hasil.hijau { background: var(--hijau); border-color: var(--hijau); color: #fff; }
+    .hasil.kuning { background: var(--kuning); border-color: var(--kuning); color: #1d1500; }
+    .hasil.biru { background: var(--biru); border-color: var(--biru); color: #fff; }
+    .hasil.merah { background: var(--merah); border-color: var(--merah); color: #fff; }
+    .hasil.abu { background: var(--abu); border-color: var(--abu); color: #fff; }
+    .hasil.tunggu .h1 { color: var(--redup); font-size: 24px; font-weight: 600; }
+
+    .angka { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .ak { background: var(--panel); border: 1px solid var(--garis); border-radius: 14px; padding: 10px 12px; }
+    .ak b { display: block; font-size: 32px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .ak span { font-size: 13px; color: var(--redup); }
+    .ak.h b { color: #6ee0a0; } .ak.t b { color: #ffcf4d; } .ak.b b { color: #ff9b9b; } .ak.l b { color: #8cc4ff; }
+    .tab { display: flex; gap: 8px; }
+    .tab button { flex: 1; padding: 12px 6px; background: var(--panel); color: var(--redup); border: 1px solid var(--garis); font-size: 16px; font-weight: 600; }
+    .tab button.aktif { background: #17324d; color: #fff; border-color: #2c5a85; }
+    .daftar { flex: 1; min-height: 0; overflow: auto; background: var(--panel); border: 1px solid var(--garis); border-radius: 16px; padding: 6px 10px; }
+    .brs { display: flex; align-items: center; gap: 10px; padding: 11px 6px; border-bottom: 1px solid var(--garis); }
+    .brs:last-child { border-bottom: 0; }
+    .brs .nm { flex: 1; min-width: 0; }
+    .brs .nm b { display: block; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brs .nm span { font-size: 13px; color: var(--redup); }
+    .chip { font-size: 13px; padding: 4px 9px; border-radius: 999px; background: var(--panel2); color: var(--redup); white-space: nowrap; font-weight: 600; }
+    .chip.hijau { background: rgba(31,164,99,.18); color: #7fe0a9; } .chip.kuning { background: rgba(224,161,0,.2); color: #ffd36a; }
+    .chip.biru { background: rgba(47,127,216,.22); color: #9ccaff; } .chip.merah { background: rgba(214,69,69,.2); color: #ffadad; }
+    .tAksi { padding: 9px 13px; font-size: 14px; font-weight: 700; background: var(--panel2); color: var(--teks); border: 1px solid var(--garis); white-space: nowrap; }
+    .tAksi.setuju { background: var(--hijau); color: #fff; border-color: var(--hijau); }
+    .tAksi.tolak { color: #ffadad; } .tAksi.yakin { background: var(--merah); color: #fff; border-color: var(--merah); }
+    .tAksi:disabled { opacity: .45; }
+    .kosong { color: var(--redup); text-align: center; padding: 28px 10px; font-size: 15px; }
+    .peringatan { background: rgba(224,161,0,.12); border: 1px solid rgba(224,161,0,.4); color: #ffd36a; border-radius: 12px; padding: 8px 12px; font-size: 13px; }
+    .kaki { font-size: 12px; color: var(--redup); text-align: right; }
+
+    /* ---------- MODAL ---------- */
+    .layar { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 18px; z-index: 50; }
+    .modal { width: 100%; max-width: 460px; background: var(--panel); border: 1px solid var(--garis); border-radius: 18px; padding: 22px; max-height: 92vh; overflow: auto; }
+    .modal h3 { margin: 0 0 6px; font-size: 20px; }
+    .modal .tombol2 { display: flex; gap: 10px; margin-top: 18px; }
+    .modal .tombol2 button { flex: 1; padding: 13px; font-size: 16px; font-weight: 700; }
+    .tBatal { background: var(--panel2); color: var(--teks); border: 1px solid var(--garis) !important; }
+
+    /* ---------- TABLET TEGAK (portrait) / layar sempit ---------- */
+    @media (max-width: 899px), (orientation: portrait) {
+      body { overflow: auto; }
+      #app { height: auto; min-height: 100%; }
+      .isi { grid-template-columns: 1fr; }
+      .kamera { flex: none; height: 38vh; min-height: 240px; }
+      .daftar { flex: none; height: 46vh; }
+      .jam { font-size: 28px; }
+      .tombolAtas { width: 100%; justify-content: flex-end; }
+    }
+    @media (max-width: 560px) {
+      .angka { grid-template-columns: repeat(2, 1fr); }
+      .hasil .h1 { font-size: 26px; }
+      .atas { padding: 10px 12px; }
+      .isi { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ======================= LOGIN ======================= -->
+<div id="login">
+  <div class="kotakLogin">
+    <div class="logo"><div class="ik logoWHL" role="img" aria-label="Logo WHL"></div><div><h1>Absen Briefing</h1><p>PT. Whale Holder Logistic · khusus Fanza, Reza, Rike</p></div></div>
+    <div id="infoBuka" class="infoBuka sembunyi"></div>
+
+    <div id="fMasuk">
+      <label class="lb" for="inKartu">Nomor ID card / NRP</label>
+      <input id="inKartu" class="isian kapital" autocomplete="username" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="mis. WHL-01003">
+      <label class="lb" for="inPin">PIN (4 angka, sama dengan Pusat WHL)</label>
+      <div class="baris"><input id="inPin" class="isian pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="current-password" placeholder="••••"><button class="tLihat" type="button" data-lihat="inPin">Lihat</button></div>
+      <button id="tMasuk" class="tUtama" type="button">Masuk</button>
+    </div>
+
+    <div id="pesanLogin" class="pesan"></div>
+    <div class="catatanKecil">Masuk pakai <b>nomor ID card + PIN yang sama dengan aplikasi Pusat WHL</b>. Cuma operator absen (Fanza, Reza, Rike). Belum punya PIN / lupa PIN: atur di Pusat WHL dulu. Salah PIN 5 kali = dikunci 15 menit. Tablet tetap masuk sampai tombol <b>Keluar</b> ditekan, atau PIN diganti di Pusat.</div>
+  </div>
+</div>
+
+<!-- ======================= APLIKASI ======================= -->
+<div id="app" class="sembunyi">
+  <div class="atas">
+    <div class="logoAtas logoWHL" role="img" aria-label="Logo WHL"></div>
+    <div class="judul">ABSEN BRIEFING WHL<small id="tglTampil">-</small></div>
+    <div class="jam" id="jam">--.--</div>
+    <div class="op">Operator: <b id="opNama">-</b></div>
+    <div class="tombolAtas">
+      <a class="tKecil" id="tDasbor" href="#" target="_top" style="display:none;text-decoration:none;border-radius:12px" title="Buka Dashboard Absensi WHL (rekap, roster, lembur, izin)">Dashboard</a>
+      <button class="tKecil" id="tPenuh" type="button">Layar penuh</button>
+      <button class="tKecil" id="tGanti" type="button">Akun</button>
+      <button class="tKecil bahaya" id="tKeluar" type="button">Keluar</button>
+    </div>
+  </div>
+
+  <div class="isi">
+    <div class="kiri">
+      <div class="kamera" id="kamera">
+        <video id="video" playsinline muted autoplay></video>
+        <div class="bingkai"></div>
+        <button class="kamTombol" id="tKamera" type="button">Ganti kamera</button>
+        <label class="kamFoto" for="inFoto" title="Cadangan kalau kamera live tidak jalan: foto QR pakai kamera tablet">Foto QR</label><input id="inFoto" type="file" accept="image/*" capture="environment" class="sembunyi">
+        <div class="kamLive" id="kamLive"><i></i><span>Kamera mati</span></div>
+        <div class="kamSuara" id="kamSuara">Ketuk layar sekali untuk bunyi</div>
+        <label class="fotoUtama sembunyi" id="fotoUtama" for="inFoto"><b>SCAN QR</b><span>Ketuk di sini: kamera terbuka, foto QR di belakang ID card, otomatis tercatat</span></label>
+        <a class="tLuar sembunyi" id="tLuar" href="#" target="_top">Buka scan kamera LIVE</a>
+        <div class="kamKet" id="kamKet">Menyalakan kamera...</div>
+      </div>
+      <div class="manual">
+        <input id="inId" class="isian" placeholder="Ketik ID kartu / NRP (cadangan)" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <button id="tCatat" type="button">Catat</button>
+      </div>
+      <div class="hasil tunggu" id="hasil"><div class="h1">Arahkan QR di belakang ID card ke kamera</div><div class="h3">Otomatis terbaca, tidak perlu tekan tombol · scan pertama = Masuk · scan lagi (2 jam kemudian) = Pulang</div></div>
+      <div class="riwayat" id="riwayat"></div>
+    </div>
+
+    <div class="kanan">
+      <div class="angka">
+        <div class="ak h"><b id="aHadir">0</b><span>Hadir</span></div>
+        <div class="ak t"><b id="aTelat">0</b><span>Telat (&gt; 30 mnt)</span></div>
+        <div class="ak b"><b id="aBelum">0</b><span>Belum hadir</span></div>
+        <div class="ak l"><b id="aLembur">0</b><span>Lembur menunggu</span></div>
+      </div>
+      <div id="peringatan" class="peringatan sembunyi"></div>
+      <div class="tab" id="tab">
+        <button type="button" data-tab="hadir" class="aktif">Hadir</button>
+        <button type="button" data-tab="belum">Belum</button>
+        <button type="button" data-tab="lembur">Lembur</button>
+      </div>
+      <div class="daftar" id="daftar"><div class="kosong">Memuat...</div></div>
+      <div class="kaki" id="kaki">-</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= MODAL ======================= -->
+<div class="layar sembunyi" id="mGanti">
+  <div class="modal">
+    <h3>Akun operator</h3>
+    <div class="catatanKecil" style="margin-top:0">PIN tablet ini = PIN aplikasi <b>Pusat WHL</b>. Ganti PIN / lupa PIN: buka Pusat WHL. Sesudah PIN diganti, tablet ini keluar sendiri (paling lama ±1 jam) dan perlu masuk lagi dengan PIN baru.</div>
+    <div class="tombol2"><button class="tBatal" type="button" data-tutup="mGanti">Tutup</button></div>
+    <button class="tKecil bahaya" id="tKeluarSemua" type="button" style="width:100%;margin-top:14px">Keluarkan akun saya dari semua perangkat</button>
+  </div>
+</div>
+<div class="layar sembunyi" id="mLembur">
+  <div class="modal">
+    <h3>Tandai lembur</h3>
+    <div class="catatanKecil" id="lNama" style="margin-top:0"></div>
+    <label class="lb" for="lAlasan">Alasan (mis. unit breakdown, muat malam)</label><input id="lAlasan" class="isian" maxlength="120">
+    <div class="pesan" id="lPesan"></div>
+    <div class="tombol2"><button class="tBatal" type="button" data-tutup="mLembur">Batal</button><button class="tUtama" style="margin:0" id="lSimpan" type="button">Simpan</button></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var API_EXEC = "https:" + "/" + "/script.google.com/macros/s/AKfycbyJBXvN79b4y9eunDSRigMXmDOS4kW3K5ZF0ZEbGCKT1-WPqi-zEica0r7M__-dqwqhDQ/exec"; /* alamat /exec web app Absensi Tambang */
+  var KUNCI_TOKEN = "brfToken", KUNCI_KAMERA = "brfKamera", KUNCI_KAMERA_ID = "brfKameraId"; /* scan-absen-live-12nov: kamera pilihan diingat per tablet */
+  var S = { token: "", data: null, tab: "hadir", selisih: 0, sibuk: false, kodeAkhir: "", waktuAkhir: 0, jedaSampai: 0, stream: null, det: null, kanvas: null, hadap: "user", ac: null, wake: null, tHasil: null, user: "" };
+
+  function simpan(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* abaikan */ } }
+  function baca(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function perangkat() { var u = navigator.userAgent || ""; return /iPad|Tablet|Android(?!.*Mobile)/i.test(u) ? "tablet" : /Mobile|Android|iPhone/i.test(u) ? "hp" : "komputer"; }
+  function rpc(nama, args, ok, gagal) {
+    /* scan.html: dibuka langsung (bukan iframe Google) -> kamera live boleh. Panggil web app Absensi lewat doPost {api:"brf"}. */
+    fetch(API_EXEC, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ api: "brf", fn: nama, args: args || [] }), redirect: "follow", cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (b) { if (b && b.ok) { var h = b.hasil; ok && ok(h == null ? {} : h); } else (gagal || function () {})((b && b.pesan) || "Server menolak"); })
+      .catch(function (e) { (gagal || function () {})((e && e.message) || String(e)); });
+  }
+  /* tombol klik dua kali (pengganti confirm) */
+  function duaKali(btn, teksYakin, kelasYakin, aksi) {
+    if (btn.dataset.yakin === "1") { btn.dataset.yakin = ""; aksi(); return; }
+    var asli = btn.textContent; btn.dataset.yakin = "1"; btn.textContent = teksYakin; btn.classList.add(kelasYakin);
+    setTimeout(function () { if (btn.dataset.yakin === "1") { btn.dataset.yakin = ""; btn.textContent = asli; btn.classList.remove(kelasYakin); } }, 3500);
+  }
+
+  /* ---------------- SUARA ---------------- */
+  function siapSuara() { /* scan-absen-live-12nov: ketukan pertama juga menyalakan bunyi yang tertahan browser */
+    try { if (!S.ac) { var K = window.AudioContext || window.webkitAudioContext; if (K) { S.ac = new K(); S.ac.onstatechange = tandaSuara; } } if (S.ac && S.ac.state === "suspended") S.ac.resume().then(tandaSuara, tandaSuara); } catch (e) { S.ac = null; }
+    tandaSuara();
+  }
+  function tandaSuara() { var b = $("kamSuara"); if (b) b.classList.toggle("sembunyi", !!(S.ac && S.ac.state === "running")); }
+  function nada(f, mulai, lama, vol) {
+    if (!S.ac) return; var o = S.ac.createOscillator(), g = S.ac.createGain(), t = S.ac.currentTime + mulai;
+    o.type = "sine"; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.35, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + lama);
+    o.connect(g); g.connect(S.ac.destination); o.start(t); o.stop(t + lama + 0.05);
+  }
+  function bunyi(warna) {
+    siapSuara(); if (!S.ac) return; try { if (S.ac.state === "suspended") S.ac.resume(); } catch (e) { /* */ }
+    if (warna === "hijau") { nada(880, 0, 0.12); nada(1320, 0.14, 0.18); }
+    else if (warna === "kuning") { nada(660, 0, 0.16); nada(660, 0.22, 0.16); }
+    else if (warna === "biru") { nada(1175, 0, 0.12); nada(784, 0.14, 0.2); }
+    else if (warna === "merah") { nada(220, 0, 0.45, 0.45); }
+    else { nada(600, 0, 0.1, 0.2); }
+  }
+
+  /* ---------------- LOGIN ---------------- */
+  function pesanLogin(t, ok) { var p = $("pesanLogin"); p.textContent = t || ""; p.className = "pesan" + (ok ? " ok" : ""); }
+  function tampilLogin() {
+    $("app").classList.add("sembunyi"); $("login").classList.remove("sembunyi");
+    matikanKamera();
+    rpc("brfInfoLogin", [], function (h) {
+      var el = $("infoBuka");
+      if (h.ok && !h.siap) { el.textContent = "Sambungan ke Pusat WHL belum diatur. Minta Reza mengisi rahasia bersama (Properti skrip BRF_PUSAT_RAHASIA)."; el.classList.remove("sembunyi"); }
+      else el.classList.add("sembunyi");
+    });
+  }
+  function masuk() {
+    var k = $("inKartu").value.trim().toUpperCase(), p = $("inPin").value.replace(/\D/g, "");
+    $("inKartu").value = k;
+    if (!k) { pesanLogin("Isi nomor ID card / NRP."); $("inKartu").focus(); return; }
+    if (p.length !== 4) { pesanLogin("PIN harus 4 angka."); $("inPin").focus(); return; }
+    $("tMasuk").disabled = true; pesanLogin("Memeriksa ke Pusat WHL...", true);
+    rpc("brfLogin", [k, p, perangkat()], function (h) {
+      $("tMasuk").disabled = false;
+      if (h.ok) { selesaiLogin(h.token); return; }
+      $("inPin").value = ""; pesanLogin(h.pesan || "Gagal masuk.");
+    }, function (e) { $("tMasuk").disabled = false; pesanLogin("Koneksi gagal: " + e); });
+  }
+  function selesaiLogin(tok) {
+    S.token = tok; simpan(KUNCI_TOKEN, tok); $("inPin").value = ""; pesanLogin("");
+    $("login").classList.add("sembunyi"); $("app").classList.remove("sembunyi");
+    muatHariIni(); nyalakanKamera(); jagaLayar();
+  }
+  function sesiHabis() { S.token = ""; simpan(KUNCI_TOKEN, null); tampilLogin(); pesanLogin("Sesi habis, silakan masuk lagi."); }
+
+  /* ---------------- JAM ---------------- */
+  var HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"], BULAN = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+  function jalanJam() {
+    var d = new Date(Date.now() + S.selisih), w = new Date(d.getTime() + (7 * 60 + d.getTimezoneOffset()) * 60000); /* tampil WIB */
+    var p = function (n) { return ("0" + n).slice(-2); };
+    $("jam").textContent = p(w.getHours()) + "." + p(w.getMinutes()) + "." + p(w.getSeconds());
+    $("tglTampil").textContent = HARI[w.getDay()] + ", " + w.getDate() + " " + BULAN[w.getMonth()] + " " + w.getFullYear() + " · jam kerja ikut shift roster";
+  }
+
+  /* ---------------- DATA HARI INI ---------------- */
+  function muatHariIni() {
+    if (!S.token) return;
+    rpc("brfHariIni", [S.token], function (h) {
+      if (h.login === false) { sesiHabis(); return; }
+      if (!h.ok) { $("kaki").textContent = "Gagal memuat: " + (h.pesan || "-"); return; }
+      S.data = h; if (h.ms) S.selisih = h.ms - Date.now();
+      $("opNama").textContent = h.operator || "-";
+      $("aHadir").textContent = h.angka.hadir; $("aTelat").textContent = h.angka.telat; $("aBelum").textContent = h.angka.belum; $("aLembur").textContent = h.angka.lembur;
+      var w = [];
+      if (!h.roster) w.push("Roster hari ini tidak terbaca" + (h.rosterError ? " (" + h.rosterError + ")" : "") + ": semua dianggap tanpa roster, tidak dinilai telat.");
+      if (h.rosterTanpaNrp && h.rosterTanpaNrp.length) w.push("Di roster tapi belum ada NRP: " + h.rosterTanpaNrp.map(function (x) { return x.nama; }).join(", ") + ".");
+      if (h.dataKartuError) w.push(h.dataKartuError);
+      $("peringatan").textContent = w.join(" "); $("peringatan").classList.toggle("sembunyi", !w.length);
+      $("kaki").textContent = "Hari kerja " + h.tgl + " · diperbarui " + h.jam.replace(":", ".");
+      gambarDaftar();
+    }, function (e) { $("kaki").textContent = "Koneksi gagal, coba lagi otomatis. (" + e + ")"; });
+  }
+  function gambarDaftar() {
+    var h = S.data, el = $("daftar"); if (!h) return;
+    var html = "";
+    if (S.tab === "hadir") {
+      if (!h.hadir.length) html = '<div class="kosong">Belum ada yang absen hari ini.</div>';
+      h.hadir.forEach(function (o) {
+        var st = o.status === "Telat" ? '<span class="chip kuning">Telat ' + esc(o.masuk.replace(":", ".")) + "</span>" : o.status === "Tepat" ? '<span class="chip hijau">Masuk ' + esc(o.masuk.replace(":", ".")) + "</span>" : '<span class="chip">Masuk ' + esc(o.masuk.replace(":", ".")) + " · " + esc(o.status) + "</span>";
+        var pl = o.pulang ? '<span class="chip biru">Pulang ' + esc(o.pulang.replace(":", ".")) + "</span>" : o.autoOff ? '<span class="chip">' + (o.pulangAuto ? 'pulang ' + esc(o.pulangAuto.replace(":", ".")) + ' (otomatis)' : 'shift selesai') + '</span>' : '<span class="chip hijau">bertugas</span>'; /* fixbugi-6nov #9 */
+        var lb = o.lembur ? '<span class="chip ' + (o.lembur === "DISETUJUI" ? "hijau" : "kuning") + '">lembur ' + esc(o.lembur.toLowerCase()) + "</span>" : (!o.pulang && !o.besok ? '<button class="tAksi" type="button" data-lembur="' + esc(o.kunci) + '" data-nama="' + esc(o.nama) + '">Lembur</button>' : "");
+        html += '<div class="brs"><div class="nm"><b>' + esc(o.nama) + "</b><span>" + esc(o.jabatan) + (o.besok ? " · shift tgl " + esc(String(o.tgl).slice(8)) : "") + "</span></div>" + st + pl + lb + "</div>";
+      });
+    } else if (S.tab === "belum") {
+      if (!h.belum.length) html = '<div class="kosong">Semua yang terjadwal hari ini sudah hadir.</div>';
+      h.belum.forEach(function (o) {
+        html += '<div class="brs"><div class="nm"><b>' + esc(o.nama) + "</b><span>" + esc(o.jabatan) + '</span></div><button class="tAksi" type="button" data-manual="' + esc(o.kunci) + '">Absen manual</button></div>';
+      });
+    } else {
+      if (!h.lembur.length) html = '<div class="kosong">Tidak ada lembur yang menunggu konfirmasi.</div>';
+      h.lembur.forEach(function (x) {
+        var ket = (x.jamSelesai ? "selesai " + x.jamSelesai.replace(":", ".") + (x.durasi ? " · " + x.durasi + " mnt" : "") : "masih kerja") + " · " + (x.sumber === "operator" ? "ditandai operator" : "dari scan pulang") + (x.alasan ? " · " + x.alasan : "");
+        var tb = x.diriSendiri ? '<span class="chip">minta yang lain</span>' : '<button class="tAksi setuju" type="button" data-setuju="' + esc(x.ref) + '">Setujui</button><button class="tAksi tolak" type="button" data-tolak="' + esc(x.ref) + '">Tolak</button>';
+        html += '<div class="brs"><div class="nm"><b>' + esc(x.nama) + "</b><span>" + esc(x.tgl) + " · " + esc(ket) + "</span></div>" + tb + "</div>";
+      });
+    }
+    el.innerHTML = html;
+  }
+
+  /* ---------------- SCAN ---------------- */
+  function tampilHasil(h) {
+    var el = $("hasil"), w = h.warna || (h.ok ? "hijau" : "merah");
+    el.className = "hasil " + w;
+    var judul = h.nama ? esc(h.nama) : (h.ok ? "Tercatat" : "Tidak bisa dicatat");
+    var sub = h.ok && !h.abaikan ? esc((h.tipe || "") + " " + String(h.jam || "").replace(":", ".") + (h.status === "Telat" ? " · TELAT" : h.status && h.status !== "Tepat" ? " · " + h.status : "")) : esc(h.pesan || "");
+    var kecil = h.ok && !h.abaikan ? esc((h.jabatan || "") + (h.lembur ? " · lembur menunggu konfirmasi" : "") + (h.pesan && h.pesan.indexOf("roster") >= 0 ? " · " + h.pesan.split(" · ").slice(-1)[0] : "")) : esc(h.jabatan || "");
+    el.innerHTML = '<div class="h1">' + judul + '</div><div class="h2">' + sub + '</div><div class="h3">' + kecil + "</div>";
+    bunyi(w); tandaKena(w); getar(w);
+    if (h.ok && !h.abaikan && h.nama) tambahRiwayat(h, w); /* scan-absen-live-12nov: nama yang barusan absen */
+    clearTimeout(S.tHasil);
+    S.tHasil = setTimeout(function () { el.className = "hasil tunggu"; el.innerHTML = '<div class="h1">Arahkan QR di belakang ID card ke kamera</div><div class="h3">Otomatis terbaca, tidak perlu tekan tombol · scan pertama = Masuk · scan lagi (2 jam kemudian) = Pulang</div>'; }, 7000);
+  }
+  function kunciKode(k) { var m = String(k || "").match(/[?&]id=([^&#]+)/), s = m ? m[1] : String(k || ""); try { s = decodeURIComponent(s); } catch (e) { /* */ } return s.toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+  function kirim(kode, manual, paksa) {
+    kode = String(kode || "").trim(); if (!kode || S.sibuk) return;
+    var kini = Date.now(), kunci = kunciKode(kode);
+    if (!manual && !paksa && kunci === S.kodeAkhir && kini - S.waktuAkhir < 10000) { S.waktuAkhir = kini; return; } /* scan-absen-live-12nov: kartu yang sama masih di depan kamera = tidak dikirim lagi (jauhkan 10 dtk dulu) */
+    S.kodeAkhir = kunci; S.waktuAkhir = kini; S.sibuk = true; S.jedaSampai = kini + 2500; tandaKena("");
+    var el = $("hasil"); el.className = "hasil tunggu"; el.innerHTML = '<div class="h1">Mencatat...</div>';
+    rpc("brfScan", [S.token, kode, { manual: !!manual }], function (h) {
+      S.sibuk = false;
+      if (h.login === false) { sesiHabis(); return; }
+      tampilHasil(h); if (h.ok && !h.abaikan) muatHariIni();
+    }, function (e) { S.sibuk = false; tampilHasil({ ok: false, warna: "merah", pesan: "Koneksi gagal, scan ulang. (" + e + ")" }); });
+  }
+  function catatManual() { var v = $("inId").value.trim().toUpperCase(); if (!v) return; $("inId").value = ""; kirim(v, true); }
+
+  /* ---------------- KAMERA LIVE (scan-absen-live-12nov, Hesti) ----------------
+     Baca QR terus-menerus tanpa tekan tombol. 2 pembaca: BarcodeDetector bawaan (kalau benar mendukung qr_code)
+     + jsQR (selalu dimuat sebagai cadangan, potong kotak tengah supaya QR kecil tetap terbaca).
+     Kamera mati/terputus dinyalakan ulang sendiri. Tombol Foto QR = cadangan kalau kamera live tidak diizinkan. */
+  var KM = { gen: 0, mode: "", jsqrMuat: false, cb: [], bdGagal: 0, frame: 0, terakhirFrame: 0, perangkat: [], tWatch: null, tKena: null, ulang: 0, riwayat: [] };
+  function muatJsQR(cb) {
+    if (window.jsQR) { if (cb) cb(true); return; }
+    if (cb) KM.cb.push(cb);
+    if (KM.jsqrMuat) return;
+    KM.jsqrMuat = true;
+    var sumber = ["https:" + "/" + "/cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js", "https:" + "/" + "/unpkg.com/jsqr@1.4.0/dist/jsQR.js"], i = 0;
+    var selesai = function () { KM.jsqrMuat = false; KM.jsqrCoba = Date.now(); var c = KM.cb; KM.cb = []; c.forEach(function (f) { try { f(!!window.jsQR); } catch (e) { /* */ } }); };
+    var coba = function () {
+      if (window.jsQR || i >= sumber.length) { selesai(); return; }
+      var sc = document.createElement("script"); sc.src = sumber[i++]; sc.async = true; sc.onload = selesai; sc.onerror = coba;
+      document.head.appendChild(sc);
+    };
+    coba();
+  }
+  function siapBD(cb) {
+    S.det = null;
+    if (!("BarcodeDetector" in window)) { cb(); return; }
+    var buat = function () { try { S.det = new window.BarcodeDetector({ formats: ["qr_code"] }); } catch (e) { S.det = null; } cb(); };
+    try {
+      if (window.BarcodeDetector.getSupportedFormats) window.BarcodeDetector.getSupportedFormats().then(function (f) { if (f && f.indexOf("qr_code") >= 0) buat(); else cb(); }, function () { cb(); });
+      else buat();
+    } catch (e) { cb(); }
+  }
+  function tandaLive(m) {
+    if (KM.mode === m) return; KM.mode = m;
+    var el = $("kamLive"); if (!el) return;
+    var teks = { bd: "LIVE · membaca otomatis", jsqr: "LIVE · membaca otomatis", ganda: "LIVE · membaca otomatis", tunggu: "Memuat pembaca QR...", gagal: "Pembaca QR gagal dimuat (internet?)", mati: "Kamera mati", foto: "MODE FOTO · ketuk SCAN QR" }[m] || m;
+    var mesin = { bd: "pembaca bawaan", jsqr: "jsQR", ganda: "bawaan + jsQR" }[m] || "";
+    el.className = "kamLive" + (mesin ? " on" : "");
+    el.innerHTML = "<i></i><span>" + esc(teks) + (mesin ? " <small>(" + esc(mesin) + ")</small>" : "") + "</span>";
+  }
+  function tandaKena(w) {
+    var k = $("kamera"); if (!k) return;
+    k.classList.remove("kena", "kenaMerah", "kenaBaca"); void k.offsetWidth;
+    k.classList.add(w === "merah" ? "kenaMerah" : w ? "kena" : "kenaBaca");
+    clearTimeout(KM.tKena); KM.tKena = setTimeout(function () { k.classList.remove("kena", "kenaMerah", "kenaBaca"); }, w ? 1500 : 6000);
+  }
+  function getar(w) { try { if (navigator.vibrate) navigator.vibrate(w === "merah" ? [180, 90, 180] : 90); } catch (e) { /* */ } }
+  function tambahRiwayat(h, w) {
+    KM.riwayat.unshift({ nama: String(h.nama), tipe: String(h.tipe || ""), jam: String(h.jam || "").replace(":", "."), w: w });
+    KM.riwayat = KM.riwayat.slice(0, 6);
+    var el = $("riwayat"); if (!el) return;
+    el.innerHTML = '<span class="rwJ">Barusan:</span>' + KM.riwayat.map(function (r) { return '<span class="rw ' + esc(r.w) + '"><b>' + esc(r.nama) + "</b> " + esc(r.tipe.toLowerCase()) + " " + esc(r.jam) + "</span>"; }).join("");
+  }
+  function matikanKamera() {
+    KM.gen++; clearInterval(KM.tWatch); KM.tWatch = null;
+    if (S.stream) { S.stream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) { /* */ } }); S.stream = null; }
+    tandaLive("mati");
+  }
+  function nyalakanKamera() {
+    matikanKamera();
+    var gen = KM.gen, ket = $("kamKet");
+    muatJsQR(); /* cadangan selalu disiapkan, juga untuk Foto QR */
+    if (kameraDilarang()) { modeFoto("kebijakan"); return; } /* scan-luar-12nov: iframe Google tanpa izin kamera -> langsung mode foto */
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { modeFoto("tidak-ada"); return; }
+    S.hadap = baca(KUNCI_KAMERA) || "user";
+    var devId = baca(KUNCI_KAMERA_ID);
+    ket.textContent = "Menyalakan kamera...";
+    siapBD(function () {
+      if (gen !== KM.gen) return;
+      var ukuran = { width: { ideal: 1280 }, height: { ideal: 720 } };
+      var buka = function (c, cadangan) {
+        navigator.mediaDevices.getUserMedia({ video: c, audio: false }).then(function (st) {
+          if (gen !== KM.gen) { st.getTracks().forEach(function (t) { t.stop(); }); return; }
+          S.stream = st; var v = $("video"); v.srcObject = st; modeFoto(null);
+          var tr = st.getVideoTracks()[0], set = (tr && tr.getSettings) ? tr.getSettings() : {};
+          v.classList.toggle("cermin", set.facingMode ? set.facingMode === "user" : S.hadap === "user");
+          try { var cap = tr.getCapabilities ? tr.getCapabilities() : {}; if (cap.focusMode && cap.focusMode.indexOf("continuous") >= 0) tr.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(function () { }); } catch (e) { /* */ }
+          var p = v.play(); if (p && p.catch) p.catch(function () { });
+          KM.frame = 0; KM.terakhirFrame = Date.now(); KM.bdGagal = 0;
+          ket.textContent = "Tempel QR ID card di kotak · otomatis terbaca" + (set.width ? " · " + set.width + "x" + set.height : "");
+          daftarKamera();
+          KM.tWatch = setInterval(function () { jaga(gen); }, 4000);
+          cari(gen);
+        }).catch(function (e) {
+          if (gen !== KM.gen) return;
+          var n = (e && e.name) || "";
+          if (!cadangan && n !== "NotAllowedError" && n !== "SecurityError") { simpan(KUNCI_KAMERA_ID, null); buka(true, true); return; }
+          modeFoto(n || "error"); /* scan-luar-12nov: pesan sesuai penyebab + tombol SCAN QR */
+        });
+      };
+      buka(devId ? Object.assign({ deviceId: { exact: devId } }, ukuran) : Object.assign({ facingMode: { ideal: S.hadap } }, ukuran), false);
+    });
+  }
+  function potongTengah(v, sisi) { /* kotak tengah (= bingkai) dengan resolusi asli kamera, supaya QR kecil tetap cukup piksel */
+    var vw = v.videoWidth, vh = v.videoHeight, s = Math.round(Math.min(vw, vh) * 0.8), x = Math.round((vw - s) / 2), y = Math.round((vh - s) / 2), o = Math.min(sisi, s);
+    S.kanvas = S.kanvas || document.createElement("canvas"); S.kanvas.width = o; S.kanvas.height = o;
+    var cx = S.kanvas.getContext("2d", { willReadFrequently: true }); cx.drawImage(v, x, y, s, s, 0, 0, o, o);
+    return cx.getImageData(0, 0, o, o);
+  }
+  function bacaJsQR(v) {
+    if (!window.jsQR) return "";
+    var img = potongTengah(v, KM.frame % 2 ? 480 : 720);
+    var q = window.jsQR(img.data, img.width, img.height, { inversionAttempts: KM.frame % 4 === 3 ? "attemptBoth" : "dontInvert" });
+    return q && q.data ? q.data : "";
+  }
+  function cari(gen) {
+    if (gen !== KM.gen || !S.stream) return;
+    var v = $("video"), lagi = function (ms) { setTimeout(function () { cari(gen); }, ms); };
+    if (S.sibuk || Date.now() < S.jedaSampai || !v.videoWidth || v.readyState < 2 || document.hidden) { lagi(300); return; }
+    KM.frame++; KM.terakhirFrame = Date.now(); if (KM.frame === 40) KM.ulang = 0;
+    if (!S.det && !window.jsQR) {
+      tandaLive(KM.jsqrMuat ? "tunggu" : "gagal");
+      if (!KM.jsqrMuat && Date.now() - (KM.jsqrCoba || 0) > 15000) muatJsQR();
+      lagi(500); return;
+    }
+    var pakaiJs = function () {
+      var t = ""; try { t = bacaJsQR(v); } catch (e) { t = ""; }
+      tandaLive(S.det && KM.bdGagal < 5 ? "ganda" : "jsqr");
+      if (t) kirim(t);
+      lagi(160);
+    };
+    if (S.det && KM.bdGagal < 5) {
+      S.det.detect(v).then(function (r) {
+        KM.bdGagal = 0;
+        var t = r && r.length && r[0].rawValue;
+        if (t) { tandaLive(window.jsQR ? "ganda" : "bd"); kirim(t); lagi(250); return; }
+        if (window.jsQR && KM.frame % 2 === 0) pakaiJs(); else { tandaLive(window.jsQR ? "ganda" : "bd"); lagi(150); }
+      }).catch(function () { KM.bdGagal++; if (window.jsQR) pakaiJs(); else lagi(400); });
+      return;
+    }
+    pakaiJs();
+  }
+  function jaga(gen) { /* kamera putus / gambar beku > 20 dtk -> nyalakan ulang sendiri */
+    if (gen !== KM.gen || document.hidden || $("app").classList.contains("sembunyi")) return;
+    var tr = S.stream && S.stream.getVideoTracks()[0], v = $("video"), kini = Date.now();
+    var putus = !tr || tr.readyState === "ended" || (!S.sibuk && kini > S.jedaSampai && kini - KM.terakhirFrame > 20000);
+    if (putus) {
+      KM.ulang++;
+      if (KM.ulang > 6) { matikanKamera(); $("kamKet").textContent = "Kamera terus terputus. Tekan Ganti kamera atau muat ulang halaman."; return; }
+      $("kamKet").textContent = "Kamera terputus, menyalakan ulang..."; nyalakanKamera(); return;
+    }
+    if (v && v.paused) { var p = v.play(); if (p && p.catch) p.catch(function () { }); }
+  }
+  function daftarKamera() {
+    try {
+      navigator.mediaDevices.enumerateDevices().then(function (d) {
+        KM.perangkat = d.filter(function (x) { return x.kind === "videoinput" && x.deviceId; });
+        $("tKamera").textContent = KM.perangkat.length > 1 ? "Ganti kamera (" + KM.perangkat.length + ")" : "Ganti kamera";
+      }).catch(function () { });
+    } catch (e) { /* */ }
+  }
+  function gantiKamera() {
+    var L = KM.perangkat, tr = S.stream && S.stream.getVideoTracks()[0];
+    var kini = tr && tr.getSettings ? tr.getSettings().deviceId : baca(KUNCI_KAMERA_ID);
+    if (L.length > 1) {
+      var i = -1; L.forEach(function (x, j) { if (x.deviceId === kini) i = j; });
+      var nx = L[(i + 1) % L.length]; simpan(KUNCI_KAMERA_ID, nx.deviceId);
+      simpan(KUNCI_KAMERA, /front|depan|user/i.test(nx.label || "") ? "user" : "environment");
+    } else { simpan(KUNCI_KAMERA_ID, null); simpan(KUNCI_KAMERA, (baca(KUNCI_KAMERA) || "user") === "user" ? "environment" : "user"); }
+    KM.ulang = 0; nyalakanKamera();
+  }
+  /* scan-luar-12nov: kamera live DIBLOKIR di halaman Google (iframe tanpa izin kamera, Android & iPhone sama) ->
+     mode FOTO jadi alur utama: kotak kamera berubah jadi tombol besar SCAN QR (kamera HP terbuka, foto, otomatis tercatat)
+     + tombol "Buka scan kamera LIVE" ke halaman scan luar (Properti skrip BRF_URL_SCAN). */
+  var DI_LUAR = true;
+  function kameraDilarang() { try { var fp = document.permissionsPolicy || document.featurePolicy; return !!(fp && fp.allowsFeature && !fp.allowsFeature("camera")); } catch (e) { return false; } }
+  function modeFoto(alasan) {
+    var el = $("fotoUtama"), lu = $("tLuar"); if (!el) return;
+    if (alasan === null) { KM.diblokir = false; el.classList.add("sembunyi"); if (lu) lu.classList.add("sembunyi"); return; }
+    KM.diblokir = true; matikanKamera(); el.classList.remove("sembunyi"); tandaLive("foto");
+    var ada = !DI_LUAR && !!KM.urlLuar; if (lu) { lu.classList.toggle("sembunyi", !ada); if (ada) lu.href = KM.urlLuar; }
+    var t;
+    if (alasan === "kebijakan" || (!DI_LUAR && (alasan === "NotAllowedError" || alasan === "SecurityError"))) t = "Kamera live tidak bisa jalan di halaman Google ini (dibatasi Google, BUKAN setelan HP, tidak perlu diubah).";
+    else if (alasan === "NotAllowedError" || alasan === "SecurityError") t = "Izin kamera ditolak. Android Chrome: ketuk gembok di kolom alamat > Izin > Kamera > Izinkan. iPhone: Pengaturan > Safari > Kamera > Izinkan (atau ikon aA > Pengaturan Situs Web > Kamera). Lalu muat ulang.";
+    else if (alasan === "NotFoundError") t = "Kamera tidak ditemukan di perangkat ini.";
+    else if (alasan === "tidak-ada") t = "Browser ini tidak menyediakan kamera live.";
+    else t = "Kamera live tidak bisa dibuka (" + alasan + ").";
+    $("kamKet").textContent = t + (ada ? " Ketuk Buka scan kamera LIVE, atau" : "") + " Ketuk SCAN QR untuk foto QR.";
+  }
+  /* Foto QR: dibaca di HP/tablet ini saja (foto tidak dikirim/disimpan). Dicoba beberapa ukuran & potongan tengah supaya foto 12 MP dari jauh tetap terbaca. */
+  function bacaFoto(file) {
+    if (!file) return;
+    var ket = $("kamKet"), url = URL.createObjectURL(file), img = new Image(), el = $("hasil");
+    ket.textContent = "Membaca foto..."; el.className = "hasil tunggu"; el.innerHTML = '<div class="h1">Membaca QR dari foto...</div>';
+    var selesai = function (t) {
+      URL.revokeObjectURL(url);
+      if (t) { ket.textContent = KM.diblokir ? "QR terbaca. Ketuk SCAN QR lagi untuk orang berikutnya." : "QR terbaca dari foto"; kirim(t, false, true); }
+      else { ket.textContent = "QR tidak terbaca di foto. Dekatkan (±20 cm), terang, tidak silau, lalu SCAN QR lagi. Atau ketik ID."; tampilHasil({ ok: false, warna: "merah", pesan: "QR tidak terbaca di foto, coba lagi lebih dekat & terang." }); }
+    };
+    var cobaJs = function () {
+      muatJsQR(function () {
+        if (!window.jsQR) { selesai(""); return; }
+        var W = img.naturalWidth || img.width, Hh = img.naturalHeight || img.height, c = document.createElement("canvas"), cx = c.getContext("2d", { willReadFrequently: true });
+        var coba = [[0, 0, W, Hh, 1000], [W * 0.2, Hh * 0.2, W * 0.6, Hh * 0.6, 1200], [0, 0, W, Hh, 1800], [W * 0.1, Hh * 0.1, W * 0.8, Hh * 0.8, 1600], [W * 0.3, Hh * 0.3, W * 0.4, Hh * 0.4, 1000]], i = 0;
+        var satu = function () {
+          if (i >= coba.length) { selesai(""); return; }
+          var k = coba[i++], sk = Math.min(1, k[4] / Math.max(k[2], k[3])), w = Math.max(1, Math.round(k[2] * sk)), h = Math.max(1, Math.round(k[3] * sk)), q = null;
+          try { c.width = w; c.height = h; cx.drawImage(img, k[0], k[1], k[2], k[3], 0, 0, w, h); q = window.jsQR(cx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: "attemptBoth" }); } catch (e) { q = null; }
+          if (q && q.data) { selesai(q.data); return; }
+          setTimeout(satu, 0);
+        };
+        satu();
+      });
+    };
+    img.onload = function () { siapBD(function () { if (S.det) S.det.detect(img).then(function (r) { if (r && r.length && r[0].rawValue) selesai(r[0].rawValue); else cobaJs(); }).catch(cobaJs); else cobaJs(); }); };
+    img.onerror = function () { URL.revokeObjectURL(url); ket.textContent = "Foto tidak bisa dibuka. Coba lagi."; };
+    img.src = url;
+  }
+  /* scanner USB (mengetik + Enter) saat tidak sedang mengetik di kotak isian */
+  var buf = "", tBuf = null;
+  document.addEventListener("keydown", function (e) {
+    if ($("app").classList.contains("sembunyi")) return;
+    var a = document.activeElement; if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) return;
+    if (e.key === "Enter") { if (buf.length >= 3) kirim(buf); buf = ""; return; }
+    if (e.key && e.key.length === 1) { buf += e.key; clearTimeout(tBuf); tBuf = setTimeout(function () { buf = ""; }, 600); }
+  });
+  /* layar tetap menyala */
+  function jagaLayar() { try { if (navigator.wakeLock && !S.wake) navigator.wakeLock.request("screen").then(function (w) { S.wake = w; w.addEventListener("release", function () { S.wake = null; }); }).catch(function () { }); } catch (e) { /* */ } }
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && S.token) {
+      jagaLayar(); muatHariIni(); KM.terakhirFrame = Date.now();
+      var tr = S.stream && S.stream.getVideoTracks()[0]; /* scan-absen-live-12nov: balik dari layar lain / layar mati -> kamera dinyalakan lagi */
+      if (!$("app").classList.contains("sembunyi") && !KM.diblokir && (!tr || tr.readyState === "ended")) { KM.ulang = 0; nyalakanKamera(); }
+    }
+  });
+
+  /* ---------------- MODAL & TOMBOL ---------------- */
+  function buka(id) { $(id).classList.remove("sembunyi"); }
+  function tutup(id) { $(id).classList.add("sembunyi"); }
+  document.addEventListener("click", function (e) {
+    siapSuara();
+    var t = e.target.closest("button"); if (!t) return;
+    if (t.dataset.tutup) { tutup(t.dataset.tutup); return; }
+    if (t.dataset.lihat) { var i = $(t.dataset.lihat); i.type = i.type === "password" ? "text" : "password"; t.textContent = i.type === "password" ? "Lihat" : "Tutup"; return; }
+    if (t.dataset.tab) { S.tab = t.dataset.tab; Array.prototype.forEach.call($("tab").children, function (b) { b.classList.toggle("aktif", b === t); }); gambarDaftar(); return; }
+    if (t.dataset.lembur) { S.lemburKunci = t.dataset.lembur; $("lNama").textContent = t.dataset.nama; $("lAlasan").value = ""; $("lPesan").textContent = ""; buka("mLembur"); return; }
+    if (t.dataset.manual) { var k = t.dataset.manual; duaKali(t, "Ketuk lagi", "yakin", function () { kirim(k, true); }); return; }
+    if (t.dataset.setuju) { konfirmasi(t, t.dataset.setuju, true); return; }
+    if (t.dataset.tolak) { var r = t.dataset.tolak; duaKali(t, "Yakin tolak?", "yakin", function () { konfirmasi(t, r, false); }); return; }
+  });
+  function konfirmasi(btn, ref, setuju) {
+    btn.disabled = true;
+    rpc("brfLemburKonfirmasi", [S.token, ref, setuju], function (h) {
+      if (h.login === false) { sesiHabis(); return; }
+      if (!h.ok) { btn.disabled = false; tampilHasil({ ok: false, warna: "merah", pesan: h.pesan }); return; }
+      muatHariIni();
+    }, function () { btn.disabled = false; });
+  }
+  $("lSimpan").onclick = function () {
+    var b = this; b.disabled = true; $("lPesan").textContent = "Menyimpan...";
+    rpc("brfLemburTandai", [S.token, S.lemburKunci, $("lAlasan").value.trim()], function (h) {
+      b.disabled = false; if (h.login === false) { sesiHabis(); return; }
+      if (!h.ok) { $("lPesan").textContent = h.pesan || "Gagal."; return; }
+      tutup("mLembur"); S.tab = "lembur"; Array.prototype.forEach.call($("tab").children, function (x) { x.classList.toggle("aktif", x.dataset.tab === "lembur"); }); muatHariIni();
+    }, function (e) { b.disabled = false; $("lPesan").textContent = "Koneksi gagal: " + e; });
+  };
+  $("tGanti").onclick = function () { buka("mGanti"); };
+  $("tKeluarSemua").onclick = function () { var b = this; duaKali(b, "Ketuk lagi: keluar dari semua perangkat", "yakin", function () { rpc("brfKeluar", [S.token, true], function () { tutup("mGanti"); sesiHabis(); pesanLogin("Akun keluar dari semua perangkat.", true); }); }); };
+  $("tKeluar").onclick = function () { var b = this; duaKali(b, "Ketuk lagi untuk keluar", "yakin", function () { var tok = S.token; rpc("brfKeluar", [tok, false], function () { }); S.token = ""; simpan(KUNCI_TOKEN, null); tampilLogin(); }); };
+  /* rabain-scan-8nov: tombol "Dashboard" -> Dashboard Absensi WHL (web app yang sama); alamat dari server */
+  rpc("absUrlWeb", [], function (u) { if (typeof u === "string" && u) { $("tDasbor").href = u; $("tDasbor").style.display = "inline-block"; } }, function () {});
+  if (!DI_LUAR) rpc("brfUrlScan", [], function (u) { if (typeof u === "string" && u) { KM.urlLuar = u; if (KM.diblokir) { $("tLuar").href = u; $("tLuar").classList.remove("sembunyi"); } } }, function () {}); /* scan-luar-12nov */
+  $("tPenuh").onclick = function () { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch (e) { /* */ } };
+  $("tKamera").onclick = gantiKamera; /* scan-absen-live-12nov: putar semua kamera tablet */
+  $("inFoto").addEventListener("change", function () { var f = this.files && this.files[0]; this.value = ""; bacaFoto(f); });
+  $("tMasuk").onclick = masuk;
+  $("inPin").addEventListener("keydown", function (e) { if (e.key === "Enter") masuk(); });
+  $("inKartu").addEventListener("keydown", function (e) { if (e.key === "Enter") $("inPin").focus(); });
+  $("inKartu").addEventListener("focusout", function () { this.value = this.value.trim().toUpperCase(); });
+  $("tCatat").onclick = catatManual;
+  $("inId").addEventListener("keydown", function (e) { if (e.key === "Enter") catatManual(); });
+
+  /* ---------------- MULAI ---------------- */
+  setInterval(jalanJam, 1000); jalanJam();
+  setInterval(function () { if (S.token && !document.hidden) muatHariIni(); }, 30000);
+  S.token = baca(KUNCI_TOKEN);
+  if (S.token) selesaiLogin(S.token); else tampilLogin();
+})();
+</script>
+</body>
+</html>
