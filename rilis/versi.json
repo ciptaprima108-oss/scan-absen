@@ -1,0 +1,14 @@
+{
+ "versi": "3.3",
+ "versionCode": 303,
+ "wajib": false,
+ "catatan": [
+  "Perbarui app langsung dari dalam app (Akun > Cek pembaruan)",
+  "Suara notifikasi keras + uji bunyi",
+  "Proyeksi target KM di Beranda"
+ ],
+ "apk": "WHL-App-v3.3.apk",
+ "ukuran": 9013537,
+ "sha256": "7be382f4164131104029a2b7bd146493b32b1c08d6479593e6fc6116d0deda3c",
+ "dibuat": "2026-11-13 08:59"
+}
