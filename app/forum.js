@@ -113,6 +113,7 @@
   function gambarDaftar() {
     var h = kepala('Forum WHL', pendek(INFO.nama) + ' · ' + (PERAN_NM[INFO.peran] || INFO.peran) + (INFO.admin ? ' · admin' : ''), 'tutup', chipUji()) + '<div class="ksnIsi">';
     if (KF.mode === 'emulator') h += '<div class="ksnInfo kuning">Mode uji: tersambung ke emulator di laptop (project <b>' + esc(KF.firebase.projectId) + '</b>), bukan server sungguhan.</div>';
+    if (window.WHL_ONLINE) h += window.WHL_ONLINE.htmlForum(); /* v3.9: siapa online (semua staf) */
     h += RUANG.map(function (x) {
       var n = BARU[x.id] || 0, c = CUPLIK[x.id];
       return '<button type="button" class="app fmR" data-ruang="' + x.id + '"><span class="ik">' + ikRuang(x) + '</span><span class="tx"><b>' + esc(x.nama) + '</b><small>' + (c ? esc(pendek(c.nama)) + ': ' + esc(c.teks).slice(0, 70) : esc(x.ket)) + '</small></span>' + (n ? '<span class="fmN">' + (n > 20 ? '20+' : n) + '</span>' : (c ? '<em class="fmJ">' + jam(c.waktu) + '</em>' : '')) + '</button>';

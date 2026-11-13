@@ -274,3 +274,36 @@ html[data-tema="gelap"] .fmKp .fmAva { background:var(--tint2); color:#fff; }
 .rilisIk .ilus { width:52px; height:52px; }
 html[data-tema="gelap"] .ilus3d ellipse[opacity=".16"] { opacity:.45; }
 .fmKp .fmAva .ilus { width:32px; height:32px; } .fmKp .fmAva { background:#fff; }
+
+/* ============ v3.9 masuk biometrik ============ */
+.bioKartu { text-align:center; padding:26px 20px 20px; border-radius:26px; box-shadow:0 20px 50px rgba(4,20,50,.35); }
+.bioAva { width:76px; height:76px; border-radius:50%; margin:0 auto 10px; display:grid; place-items:center; background:linear-gradient(140deg,var(--utama),var(--utama2)); color:#fff; font-size:28px; font-weight:800; box-shadow:0 10px 24px -8px var(--utama); }
+.bioNama { display:block; font-size:21px; margin:2px 0; }
+.bioTombol { display:flex; align-items:center; justify-content:center; gap:10px; margin-top:18px; } .bioTombol .ikn { width:24px; height:24px; }
+.bioBaris { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+.bioKembali { width:100%; margin-bottom:12px; background:rgba(255,255,255,.14); color:#fff; border-color:rgba(255,255,255,.3); }
+/* ============ v3.9 detail banner ============ */
+.bnrDIsi { padding-bottom:40px; }
+.bnrDFoto { position:relative; display:block; width:100%; aspect-ratio:2/1; border-radius:22px; overflow:hidden; padding:0; box-shadow:var(--bayang); background:#0D2A55; }
+.bnrDFoto img { width:100%; height:100%; object-fit:cover; display:block; }
+.bnrDFoto span { position:absolute; right:10px; bottom:10px; display:inline-flex; align-items:center; gap:5px; background:rgba(5,20,45,.6); color:#fff; font-size:12px; font-weight:700; padding:5px 10px; border-radius:99px; } .bnrDFoto span .ikn { width:14px; height:14px; }
+.bnrDJudul { font-size:22px; font-weight:800; margin:16px 2px 2px; letter-spacing:-.01em; } .bnrDSub { color:var(--redup); font-weight:600; margin:0 2px; }
+.bnrDTgl { display:inline-flex; align-items:center; gap:6px; margin:10px 2px 4px; background:var(--tint); color:var(--utama); font-weight:700; font-size:13px; padding:6px 12px; border-radius:99px; } .bnrDTgl .ikn { width:16px; height:16px; }
+.bnrDTeks { margin-top:12px; font-size:15px; line-height:1.6; } .bnrDTeks p { margin:0 0 8px; } .bnrDTeks ul { margin:0 0 8px; padding-left:20px; } .bnrDTeks li { margin:2px 0; }
+.bnrDH { font-size:16px; margin:18px 4px 8px; display:flex; } .bnrDH span { margin-left:auto; color:var(--redup); font-size:13px; font-weight:700; }
+.bnrDPes { padding:4px 12px; } .bnrDPes > div { display:flex; align-items:center; gap:10px; padding:8px 0; } .bnrDPes > div + div { border-top:1px solid var(--garis); }
+.bnrDPes .bulat { width:34px; height:34px; flex:0 0 34px; font-size:13px; } .bnrDPes b { flex:1; font-size:14.5px; font-weight:700; } .bnrDPes em { font-style:normal; color:var(--samar); font-size:12px; }
+.bnrDOleh { text-align:center; margin-top:14px; }
+.bnrTA { font-size:15px; line-height:1.45; resize:vertical; min-height:110px; }
+.bnrZoom { position:fixed; inset:0; z-index:60; background:rgba(3,10,22,.94); display:grid; place-items:center; touch-action:none; overflow:hidden; }
+.bnrZoom img { max-width:100%; max-height:100%; transform-origin:center; transition:transform .05s; user-select:none; }
+.bnrZoom button { position:absolute; top:calc(14px + env(safe-area-inset-top)); right:14px; width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,.18); color:#fff; font-size:20px; }
+/* ============ v3.9 status online (pimpinan) ============ */
+.titikOn { display:inline-block; width:9px; height:9px; border-radius:50%; background:#22c55e; margin-right:6px; box-shadow:0 0 0 3px rgba(34,197,94,.2); }
+.onKartu { padding:12px 10px; } .onGeser { display:flex; gap:12px; overflow-x:auto; scrollbar-width:none; padding:2px 2px 4px; } .onGeser::-webkit-scrollbar { display:none; }
+.onOrang { flex:0 0 64px; text-align:center; } .onOrang b { display:block; font-size:11.5px; line-height:1.2; margin-top:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .onOrang small { font-size:10.5px; color:var(--redup); }
+.onAva { position:relative; width:50px; height:50px; margin:0 auto; border-radius:50%; display:grid; place-items:center; font-weight:800; font-size:16px; color:#fff; background:linear-gradient(140deg,#7CC0FF,#1565C0); }
+.onAva i { position:absolute; right:1px; bottom:1px; width:13px; height:13px; border-radius:50%; background:#94a3b8; border:2.5px solid var(--panel); } .on .onAva i, .onAva.on i { background:#22c55e; }
+.onForum { padding:10px 14px; margin-bottom:12px; } .onJudul { display:flex; align-items:baseline; gap:8px; margin-bottom:4px; } .onJudul small { margin-left:auto; color:var(--redup); font-size:11.5px; }
+.onBaris { display:flex; align-items:center; gap:10px; padding:7px 0; } .onBaris + .onBaris { border-top:1px solid var(--garis); } .onBaris .onAva { width:38px; height:38px; font-size:13px; margin:0; flex:none; }
+.onBaris div { flex:1; min-width:0; } .onBaris b { display:block; font-size:14px; } .onBaris small { font-size:12px; color:var(--redup); } .onBaris em { font-style:normal; font-size:12px; color:var(--redup); white-space:nowrap; }

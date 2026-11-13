@@ -37,7 +37,7 @@
         var F = window.WHL_FORUM && window.WHL_FORUM.fs();
         if (!F && ++n < 60) return; clearInterval(i); if (!F) return ok(false);
         F.db.collection('banner').get().then(function (s) {
-          var L = []; s.forEach(function (d) { var x = d.data(); x.id = d.id; delete x.waktu; L.push(x); });
+          var L = []; s.forEach(function (d) { var x = d.data(); x.id = d.id; try { x.dibuat = x.waktu && x.waktu.toDate ? x.waktu.toDate().toISOString() : ''; } catch (e) { x.dibuat = ''; } delete x.waktu; L.push(x); });
           DARI = L; try { Simpan.taruh(SIMPAN, JSON.stringify(L.filter(aktif).slice(0, 6))); } catch (e) { /* */ } ok(true);
         }, function () { ok(false); });
       }, 500);
@@ -62,7 +62,7 @@
     g.addEventListener('scroll', function () { var i = Math.round(g.scrollLeft / Math.max(1, g.clientWidth)); Array.prototype.forEach.call(t.children, function (x, j) { x.classList.toggle('on', j === i); }); }, { passive: true });
     var diam = 0; g.addEventListener('touchstart', function () { diam = Date.now(); }, { passive: true });
     putar = setInterval(function () { if (!document.body.contains(g)) { clearInterval(putar); return; } if (document.hidden || Date.now() - diam < 8000 || L.length < 2) return; var i = Math.round(g.scrollLeft / Math.max(1, g.clientWidth)); ke((i + 1) % L.length); }, 5000);
-    g.onclick = function (ev) { var b = ev.target.closest('[data-bnr]'); if (!b) return; var x = L[+b.getAttribute('data-bnr')]; if (x) tuju(x.tujuan || {}); };
+    g.onclick = function (ev) { var b = ev.target.closest('[data-bnr]'); if (!b) return; var x = L[+b.getAttribute('data-bnr')]; if (!x) return; if (x.gambar) detail(x); else tuju(x.tujuan || {}); };
     var k = document.querySelector('[data-bnr-kelola]'); if (k) k.onclick = kelola;
   }
   function tuju(t) {
@@ -70,9 +70,58 @@
     if (t.jenis === 'forum') CTX.forum(t.nilai || 'umum'); else if (t.jenis === 'tab') CTX.tab(t.nilai || 'beranda'); else if (t.jenis === 'url' && /^https:\/\//.test(t.nilai || '')) CTX.web(t.nilai); else if (t.jenis === 'aksi') CTX.aksi(t.nilai);
   }
 
+  /* ---------- v3.9 HALAMAN DETAIL banner: foto besar (cubit untuk zoom), judul, tanggal, isi lengkap, peserta, pemasang, tombol tujuan ---------- */
+  var detailEl = null;
+  function tglTeks(t) { var m = String(t || '').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return ''; var B = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']; return (+m[3]) + ' ' + B[+m[2] - 1] + ' ' + m[1]; }
+  function isiHtml(t) {
+    var baris = String(t || '').split(/\r?\n/), h = '', daftar = false;
+    baris.forEach(function (b) {
+      var x = b.trim(), poin = /^([-•*]|\d+[.)])\s+/.test(x);
+      if (poin) { if (!daftar) { h += '<ul>'; daftar = true; } h += '<li>' + esc(x.replace(/^([-•*]|\d+[.)])\s+/, '')) + '</li>'; return; }
+      if (daftar) { h += '</ul>'; daftar = false; }
+      h += x ? '<p>' + esc(x) + '</p>' : '';
+    });
+    return h + (daftar ? '</ul>' : '');
+  }
+  function tutupDetail() { if (!detailEl) return; var d = detailEl; detailEl = null; d.classList.remove('tampil'); setTimeout(function () { d.remove(); }, 200); }
+  function detail(b) {
+    tutupDetail(); R.bunyi('sheet');
+    var d = document.createElement('div'); d.className = 'lapis ksnLapis bnrDetail'; detailEl = d;
+    var t = b.tujuan || {}, P = Array.isArray(b.peserta) ? b.peserta : [], tg = b.mulai ? tglTeks(b.mulai) + (b.sampai && b.sampai !== b.mulai ? ' – ' + tglTeks(b.sampai) : '') : '';
+    var tombol = t.jenis === 'forum' ? 'Buka ruang forum ' + (t.nilai || 'umum') : t.jenis === 'tab' ? 'Buka ' + ({ akun: 'Akun', kotak: 'Kotak masuk', unit: 'Unit hari ini', absen: 'Absen', apps: 'semua layanan' }[t.nilai] || t.nilai) : t.jenis === 'url' ? 'Buka halaman terkait' : '';
+    d.innerHTML = '<div class="ksnKp"><button type="button" class="kb" data-d="tutup" aria-label="Kembali">‹</button><div class="nm">Pengumuman<b>' + esc(b.judul) + '</b></div></div>'
+      + '<div class="ksnIsi bnrDIsi"><button type="button" class="bnrDFoto" data-d="zoom" aria-label="Perbesar foto"><img src="' + esc(b.gambar) + '" alt=""><span>' + IK('cari') + ' Ketuk untuk perbesar</span></button>'
+      + '<h2 class="bnrDJudul">' + esc(b.judul) + '</h2>' + (b.sub ? '<div class="bnrDSub">' + esc(b.sub) + '</div>' : '')
+      + (tg ? '<div class="bnrDTgl">' + IK('jam') + esc(tg) + '</div>' : '')
+      + (b.isi ? '<div class="kartu bnrDTeks">' + isiHtml(b.isi) + '</div>' : '')
+      + (P.length ? '<h3 class="bnrDH">Peserta <span>' + P.length + ' orang</span></h3><div class="kartu bnrDPes">' + P.map(function (n, i) { return '<div><span class="bulat">' + esc(String(n).trim().split(/\s+/).slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase()) + '</span><b>' + esc(n) + '</b><em>' + (i + 1) + '</em></div>'; }).join('') + '</div>' : '')
+      + (tombol ? '<button type="button" class="tUtama" data-d="tuju">' + esc(tombol) + '</button>' : '')
+      + '<div class="kecil bnrDOleh">Dipasang oleh ' + esc(b.oleh || 'admin') + (b.dibuat ? ' · ' + esc(tglTeks(b.dibuat)) : '') + '</div></div>';
+    document.body.appendChild(d); requestAnimationFrame(function () { d.classList.add('tampil'); });
+    d.addEventListener('click', function (ev) {
+      var x = ev.target.closest('[data-d]'); if (!x) return; var k = x.getAttribute('data-d');
+      if (k === 'tutup') { R.bunyi('tutup'); tutupDetail(); } else if (k === 'zoom') zoom(b.gambar); else if (k === 'tuju') { tutupDetail(); tuju(t); }
+    });
+  }
+  /* penampil foto: cubit 2 jari untuk zoom, geser saat diperbesar, ketuk 2x = 2,5x / kembali */
+  function zoom(src) {
+    var v = document.createElement('div'); v.className = 'bnrZoom'; v.innerHTML = '<img src="' + esc(src) + '" alt=""><button type="button" aria-label="Tutup">✕</button>'; document.body.appendChild(v);
+    var img = v.querySelector('img'), sk = 1, x = 0, y = 0, P = {}, awal = null, lalu = 0;
+    function terap() { img.style.transform = 'translate(' + x + 'px,' + y + 'px) scale(' + sk + ')'; }
+    v.addEventListener('pointerdown', function (e) { P[e.pointerId] = { x: e.clientX, y: e.clientY }; var k = Object.keys(P); if (k.length === 2) { var a = P[k[0]], b2 = P[k[1]]; awal = { j: Math.hypot(a.x - b2.x, a.y - b2.y), s: sk }; } else awal = { gx: e.clientX - x, gy: e.clientY - y };
+      var t = Date.now(); if (t - lalu < 300 && k.length === 1) { sk = sk > 1 ? 1 : 2.5; x = y = 0; terap(); } lalu = t; });
+    v.addEventListener('pointermove', function (e) { if (!P[e.pointerId]) return; P[e.pointerId] = { x: e.clientX, y: e.clientY }; var k = Object.keys(P);
+      if (k.length === 2 && awal && awal.j) { var a = P[k[0]], b2 = P[k[1]]; sk = Math.max(1, Math.min(5, awal.s * Math.hypot(a.x - b2.x, a.y - b2.y) / awal.j)); terap(); }
+      else if (k.length === 1 && sk > 1 && awal && awal.gx != null) { x = e.clientX - awal.gx; y = e.clientY - awal.gy; terap(); } });
+    function lepas(e) { delete P[e.pointerId]; if (!Object.keys(P).length) { awal = null; if (sk <= 1) { x = y = 0; terap(); } } }
+    v.addEventListener('pointerup', lepas); v.addEventListener('pointercancel', lepas);
+    v.querySelector('button').onclick = function () { v.remove(); };
+  }
+
   /* ---------- KELOLA BANNER (admin) ---------- */
   function tutup() { if (!lapisEl) return; var d = lapisEl; lapisEl = null; d.classList.remove('tampil'); setTimeout(function () { d.remove(); }, 200); if (CTX && CTX.perbarui) CTX.perbarui(); }
   function lapis(h) {
+    if (lapisEl && !document.body.contains(lapisEl)) lapisEl = null;
     if (!lapisEl) { lapisEl = document.createElement('div'); lapisEl.className = 'lapis ksnLapis bnrLapis'; document.body.appendChild(lapisEl); requestAnimationFrame(function () { lapisEl.classList.add('tampil'); }); lapisEl.addEventListener('click', klik); lapisEl.addEventListener('change', pilihFoto); }
     lapisEl.innerHTML = '<div class="ksnKp"><button type="button" class="kb" data-k="tutup" aria-label="Kembali">‹</button><div class="nm">Khusus admin<b>Kelola banner</b></div></div><div class="ksnIsi">' + h + '</div>';
   }
@@ -99,7 +148,10 @@
       + '<label class="tKecil bnrPilih">' + IK('kotak') + ' Pilih gambar dari galeri<input type="file" accept="image/*" id="bnrFile" hidden></label><div class="kecil" id="bnrInfo" style="margin:6px 2px 0">Gambar dikompres di HP ini sampai ≤300 KB.</div>'
       + '<label class="lb" for="bnrJudul">Judul</label><input class="isian" id="bnrJudul" maxlength="80" value="' + esc(b && b.judul || '') + '">'
       + '<label class="lb" for="bnrSub">Keterangan (boleh kosong)</label><input class="isian" id="bnrSub" maxlength="140" value="' + esc(b && b.sub || '') + '">'
-      + '<label class="lb" for="bnrTuju">Kalau diketuk</label><select class="isian" id="bnrTuju">' + [['tidak', 'Tidak ke mana-mana'], ['forum', 'Buka ruang forum'], ['tab', 'Buka layar app'], ['url', 'Buka alamat web (https)']].map(function (o) { return '<option value="' + o[0] + '"' + (t.jenis === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>'
+      + '<label class="lb" for="bnrIsi">Isi / catatan lengkap (tampil di halaman detail)</label><textarea class="isian bnrTA" id="bnrIsi" maxlength="3000" rows="5" placeholder="Mis.\n- Bahas unit storing KM 40\n- Wajib APD lengkap">' + esc(b && b.isi || '') + '</textarea>'
+      + '<label class="lb" for="bnrPeserta">Peserta (satu nama per baris, maks 80)</label><textarea class="isian bnrTA" id="bnrPeserta" rows="5" placeholder="Nama peserta...">' + esc((b && Array.isArray(b.peserta) ? b.peserta : []).join('\n')) + '</textarea>'
+      + '<button type="button" class="tKecil bnrPilih" data-k="ambilPeserta">' + IK('absen') + ' Ambil dari yang sedang bertugas (absen hari ini)</button><div class="kecil" id="bnrPesertaInfo" style="margin:6px 2px 0">Daftar bisa diedit dulu sebelum disimpan. Hanya nama yang kamu simpan di banner ini yang terlihat staf.</div>'
+      + '<label class="lb" for="bnrTuju">Tombol di halaman detail</label><select class="isian" id="bnrTuju">' + [['tidak', 'Tanpa tombol'], ['forum', 'Buka ruang forum'], ['tab', 'Buka layar app'], ['url', 'Buka alamat web (https)']].map(function (o) { return '<option value="' + o[0] + '"' + (t.jenis === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>'
       + '<input class="isian" id="bnrNilai" placeholder="umum / pengawas · akun / kotak / unit · https://..." value="' + esc(t.nilai || '') + '" style="margin-top:8px">'
       + '<div class="baris" style="margin-top:4px"><div style="flex:1"><label class="lb" for="bnrMulai">Mulai</label><input class="isian" type="date" id="bnrMulai" value="' + esc(b && b.mulai || '') + '"></div><div style="flex:1"><label class="lb" for="bnrSampai">Sampai</label><input class="isian" type="date" id="bnrSampai" value="' + esc(b && b.sampai || '') + '"></div></div>'
       + '<div class="baris" style="align-items:flex-end"><div style="flex:1"><label class="lb" for="bnrUrut">Urutan (0–99)</label><input class="isian" type="number" min="0" max="99" id="bnrUrut" value="' + esc(b && b.urut != null ? b.urut : 1) + '"></div><label class="tKecil" style="display:flex;align-items:center;gap:8px;padding:0 14px;min-height:52px"><input type="checkbox" id="bnrAktif"' + (!b || b.aktif !== false ? ' checked' : '') + '> Tampilkan</label></div>'
@@ -131,7 +183,9 @@
     if (!FOTO) return salah('Pilih gambar dulu.'); if (!jd) return salah('Judul belum diisi.');
     if (tj === 'url' && !/^https:\/\//.test(nl)) return salah('Alamat web harus diawali https://');
     if (!(ur >= 0 && ur <= 99)) ur = 1;
-    var d = { judul: jd.slice(0, 80), sub: nilai('bnrSub').slice(0, 140), gambar: FOTO, tujuan: { jenis: tj, nilai: tj === 'tidak' ? '' : nl.slice(0, 300) }, mulai: nilai('bnrMulai') || null, sampai: nilai('bnrSampai') || null,
+    var pes = nilai('bnrPeserta').split(/\r?\n/).map(function (x) { return x.trim().replace(/\s+/g, ' ').slice(0, 60); }).filter(Boolean);
+    if (pes.length > 80) return salah('Peserta maksimal 80 nama (sekarang ' + pes.length + ').');
+    var d = { judul: jd.slice(0, 80), sub: nilai('bnrSub').slice(0, 140), isi: nilai('bnrIsi').slice(0, 3000), peserta: pes, gambar: FOTO, tujuan: { jenis: tj, nilai: tj === 'tidak' ? '' : nl.slice(0, 300) }, mulai: nilai('bnrMulai') || null, sampai: nilai('bnrSampai') || null,
       aktif: document.getElementById('bnrAktif').checked, urut: ur, oleh: F.info.nama, waktu: F.FV.serverTimestamp() };
     p.textContent = 'Menyimpan...';
     var ref = EDIT ? F.db.collection('banner').doc(EDIT.id) : F.db.collection('banner').doc();
@@ -143,6 +197,15 @@
     else if (k === 'baru') form(null); else if (k === 'daftar') gambarDaftar();
     else if (k === 'ubah') form(DARI.filter(function (x) { return x.id === id; })[0]);
     else if (k === 'simpan') simpan();
+    else if (k === 'ambilPeserta') {
+      var inf = document.getElementById('bnrPesertaInfo'); inf.textContent = 'Mengambil daftar yang sedang bertugas...';
+      if (!CTX || !CTX.bertugas) { inf.textContent = 'Belum tersedia di versi ini.'; return; }
+      CTX.bertugas().then(function (L) {
+        var ta = document.getElementById('bnrPeserta'), ada = ta.value.split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean), baru = 0;
+        (L || []).forEach(function (n) { if (ada.indexOf(n) < 0) { ada.push(n); baru++; } });
+        ta.value = ada.slice(0, 80).join('\n'); inf.textContent = baru + ' nama ditambahkan (' + ada.length + ' total). Hapus yang tidak ikut briefing sebelum simpan.';
+      }, function (e) { inf.textContent = 'Gagal mengambil: ' + (e && e.message || e) + '. Isi manual dulu.'; });
+    }
     else if (k === 'hapus') {
       if (hapusSiap !== id) { hapusSiap = id; gambarDaftar(); setTimeout(function () { if (hapusSiap === id) { hapusSiap = ''; if (lapisEl && !document.getElementById('bnrJudul')) gambarDaftar(); } }, 4000); return; }
       hapusSiap = ''; window.WHL_FORUM.fs().db.collection('banner').doc(id).delete().then(function () { R.bunyi('sukses'); muat().then(gambarDaftar); }, function (e) { R.bunyi('gagal'); alertLembut('Gagal menghapus: ' + e.message); });
@@ -150,5 +213,5 @@
   }
   function alertLembut(t) { var p = document.getElementById('bnrPesan'); if (p) p.textContent = t; else if (CTX && CTX.roti) CTX.roti(t); }
 
-  window.WHL_BANNER = { html: html, pasang: pasang, muat: muat, kelola: kelola, admin: admin, _uji: { form: form, setDari: function (L) { DARI = L; } } };
+  window.WHL_BANNER = { detail: detail, html: html, pasang: pasang, muat: muat, kelola: kelola, admin: admin, _uji: { form: form, setDari: function (L) { DARI = L; } } };
 })();

@@ -29,13 +29,84 @@
   });
 
   /* ---------- sesi ---------- */
+  var KUNCI_TERBUKA = 'whlV2SesiTerbuka';
   function simpanSesi() {
     try { if (SESI && SESI.tokenAbm) localStorage.setItem(KUNCI_ABM, SESI.tokenAbm); else localStorage.removeItem(KUNCI_ABM); } catch (e) { /* */ }
-    return Simpan.taruh(KUNCI_SESI, SESI ? JSON.stringify(SESI) : null);
+    /* v3.9: akun dengan masuk biometrik -> sesi hanya hidup selama app terbuka (sessionStorage); di HP tersimpan TERENKRIPSI (biometrik.js) */
+    try { if (SESI && SESI.bio) sessionStorage.setItem(KUNCI_TERBUKA, JSON.stringify(SESI)); else sessionStorage.removeItem(KUNCI_TERBUKA); } catch (e) { /* */ }
+    return Simpan.taruh(KUNCI_SESI, SESI && !SESI.bio ? JSON.stringify(SESI) : null);
   }
   function keLogin(pesan) {
     SESI = null; D = {}; ABSEN = null; KPI = null; PROFIL = null; KSN = null; if (window.WHL_KSN) window.WHL_KSN.lupa(); if (window.WHL_FORUM) window.WHL_FORUM.keluar(); FORUM = null; lepasPush(); simpanSesi();
-    $('pesanLogin').textContent = pesan || ''; sibuk(false); layar('layarLogin');
+    $('pesanLogin').textContent = pesan || ''; sibuk(false); layar('layarLogin'); gambarBioLogin();
+  }
+
+  /* ---------- v3.9 MASUK BIOMETRIK (Face ID / Touch ID / sidik jari HP) ---------- */
+  var BIO = null, bioGanti = false;
+  function bioLabel() { return BIO && BIO.label ? BIO.label : 'biometrik HP'; }
+  function bioJudul() { return /Face ID/.test(bioLabel()) ? 'Face ID' : 'sidik jari / wajah'; }
+  function gambarBioLogin() {
+    var el = $('bioMasuk'); if (!el || !window.WHL_BIO) return;
+    window.WHL_BIO.daftar().then(function (L) {
+      var x = L[0];
+      if (!x || bioGanti) { el.innerHTML = L.length && bioGanti ? '<button type="button" class="tKecil bioKembali" data-bio="kembali">← Kembali ke ' + esc(String(x.nama).split(' ')[0]) + '</button>' : ''; $('kartuLogin').classList.remove('sembunyi'); return; }
+      $('kartuLogin').classList.add('sembunyi');
+      el.innerHTML = '<div class="kartu bioKartu"><span class="bioAva">' + esc(inisial(x.nama)) + '</span><div class="kecil">Masuk sebagai</div><b class="bioNama">' + esc(x.nama) + '</b><div class="kecil">' + esc(x.id) + '</div>'
+        + '<button type="button" class="tUtama bioTombol" data-bio="masuk">' + IK('absen') + ' Masuk dengan ' + esc(x.mode === 'android' ? 'sidik jari / wajah' : 'Face ID') + '</button>'
+        + '<div class="bioBaris"><button type="button" class="tKecil" data-bio="pin">Pakai PIN</button><button type="button" class="tKecil" data-bio="ganti">Ganti akun</button></div>'
+        + '<div class="pesan" id="bioPesan"></div></div>';
+    });
+  }
+  function bioMasuk() {
+    window.WHL_BIO.daftar().then(function (L) {
+      var x = L[0]; if (!x) return; var ps = $('bioPesan'); if (ps) ps.textContent = '';
+      window.WHL_BIO.buka(x.id).then(function (teks) {
+        var s = JSON.parse(teks); s.bio = true; SESI = s; simpanSesi(); R.bunyi('sukses'); R.getar('sukses'); mulaiApp();
+      }, function (e) {
+        var m = String(e && e.message || e);
+        if (/dibatalkan/.test(m)) return;
+        if (/berubah|hilang|tidak ada|tidak bisa dipakai/.test(m)) window.WHL_BIO.hapus(x.id).then(function () { $('inId').value = x.id; bioGanti = false; gambarBioLogin(); });
+        R.bunyi('gagal'); if (ps) ps.textContent = 'Biometrik gagal: ' + m + '. Pakai PIN.';
+      });
+    });
+  }
+  /* sesi server habis / PIN diganti / akun nonaktif / keluar -> kunci biometrik akun itu dibuang */
+  function bioGugur(id) { if (window.WHL_BIO && id) return window.WHL_BIO.hapus(id); return Promise.resolve(); }
+  function bioTawarkan() {
+    if (!window.WHL_BIO || !SESI || SESI.mode !== 'asli' || SESI.bio) return;
+    var id = SESI.idProfil || SESI.idKetik, k = window.WHL_BIO.kunciAkun(id);
+    Promise.all([window.WHL_BIO.tersedia(), Simpan.ambil('whlBioTolak_' + k), window.WHL_BIO.info(id)]).then(function (r) {
+      BIO = r[0]; if (!r[0].ada || r[1] || r[2]) return;
+      setTimeout(function () {
+        R.tanya({ judul: 'Masuk pakai ' + bioJudul() + ' berikutnya?', ket: 'Tidak perlu ketik PIN tiap buka app. Yang memeriksa ' + bioLabel() + ' adalah HP kamu sendiri; data wajah / sidik jari tidak dikirim ke mana pun. Bisa dimatikan di Akun.', ya: 'Aktifkan', tidak: 'Nanti saja' }).then(function (y) {
+          if (y) bioAktifkan(); else Simpan.taruh('whlBioTolak_' + k, '1');
+        });
+      }, 1600);
+    });
+  }
+  function bioAktifkan() {
+    if (!SESI) return; var id = SESI.idProfil || SESI.idKetik, salin = JSON.parse(JSON.stringify(SESI)); delete salin.bio;
+    return window.WHL_BIO.aktifkan(id, SESI.namaLengkap || SESI.user.nama, JSON.stringify(salin)).then(function (mode) {
+      SESI.bio = true; SESI.bioMode = mode; simpanSesi(); R.bunyi('sukses'); R.getar('sukses');
+      roti(mode === 'gerbang' ? 'Aktif. Catatan: peramban ini belum mendukung kunci passkey penuh, Face ID dipakai sebagai gerbang app.' : 'Masuk biometrik aktif. Buka app berikutnya cukup ' + bioJudul() + '.');
+      if (tab === 'akun') gambar();
+    }, function (e) { if (!/dibatalkan/.test(String(e && e.message))) { R.bunyi('gagal'); roti('Biometrik belum bisa diaktifkan: ' + (e && e.message || e)); } });
+  }
+  function bioMatikan() {
+    if (!SESI) return; var id = SESI.idProfil || SESI.idKetik;
+    bioGugur(id).then(function () { SESI.bio = false; delete SESI.bioMode; simpanSesi(); roti('Masuk biometrik dimatikan. App tetap masuk otomatis di HP ini.'); if (tab === 'akun') gambar(); });
+  }
+  function barisOnline() {
+    if (!window.WHL_ONLINE || !forumTampil()) return '';
+    var on = window.WHL_ONLINE.tampil();
+    return '<div class="baris" style="align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--garis)"><div style="flex:1"><b>Tampilkan status online saya</b><div class="kecil">Kalau nyala, staf lain bisa melihat kamu sedang online / baru aktif.</div></div><button type="button" class="saklar' + (on ? ' on' : '') + '" data-aksi="online" role="switch" aria-checked="' + on + '" aria-label="Tampilkan status online"><i></i></button></div>';
+  }
+  function barisBio() {
+    if (!window.WHL_BIO || !SESI || SESI.mode !== 'asli') return '';
+    var ada = BIO && BIO.ada;
+    return '<div class="baris" style="align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--garis)"><div style="flex:1"><b>Masuk pakai ' + esc(bioJudul()) + '</b><div class="kecil">'
+      + (SESI.bio ? 'Aktif. Tiap app dibuka, cukup ' + esc(bioLabel()) + '. Gugur sendiri kalau PIN diganti atau sesi habis.' : ada ? 'Tanpa ketik PIN tiap buka app. Data biometrik tetap di HP.' : esc((BIO && BIO.alasan) || 'Memeriksa...')) + '</div></div>'
+      + '<button type="button" class="saklar' + (SESI.bio ? ' on' : '') + '" data-aksi="bio" role="switch" aria-checked="' + !!SESI.bio + '" aria-label="Masuk biometrik"' + (ada || SESI.bio ? '' : ' disabled') + '><i></i></button></div>';
   }
 
   /* ---------- LOGIN: nomor kartu -> keypad PIN (pola app bank: PIN diketik di keypad sendiri, bukan keyboard HP) ---------- */
@@ -90,6 +161,9 @@
     return simpanSesi().then(function () { return Simpan.ambil('whlV2Kenal'); }).then(function (kenal) {
       mulaiApp();
       if (kenal || lewatiKenal) { R.bunyi('sukses'); R.getar('sukses'); } else { Simpan.taruh('whlV2Kenal', '1'); R.onboarding(); }
+      bioGanti = false;
+      /* masuk pakai PIN: kalau akun ini sudah pakai biometrik -> simpan ulang sesi baru (minta biometrik sekali); kalau belum -> tawarkan */
+      if (window.WHL_BIO) window.WHL_BIO.info(s.idProfil || s.idKetik).then(function (x) { if (x) setTimeout(function () { R.tanya({ judul: 'Perbarui masuk biometrik?', ket: 'Sesi baru dari PIN disimpan untuk masuk biometrik berikutnya.', ya: 'Perbarui', tidak: 'Matikan' }).then(function (y) { if (y) bioAktifkan(); else bioGugur(s.idProfil || s.idKetik); }); }, 1500); else if (!kenal) setTimeout(bioTawarkan, 9000); else bioTawarkan(); });
     });
   }
 
@@ -164,6 +238,7 @@
     if (t === 'beranda') RIWAYAT = [];
     if (tab === 'kotak' && t !== 'kotak') bacaSemuaKotak();
     if (t === 'akun' && SESI && API.Pusat.asli() && !PUSH.aktif) setTimeout(function () { pasangPush(false); }, 300);
+    if (t === 'akun' && window.WHL_BIO && !BIO) window.WHL_BIO.tersedia().then(function (h) { BIO = h; if (tab === 'akun') gambar(); });
     if (!pluginPush() && !mundur && t !== tab) try { history.pushState({ whl: t }, ''); } catch (e) { /* */ } // keluar dari Kotak masuk = semua dianggap sudah dibaca
     var arah = URUT.indexOf(t) >= URUT.indexOf(tab) ? 'masukKanan' : 'masukKiri', pindah = t !== tab;
     tab = t; try { sessionStorage.setItem('whlV2Tab', t); } catch (e) { /* */ }
@@ -459,8 +534,10 @@
   }
   setInterval(function () { if (SESI && !document.hidden && API.Pusat.asli()) muatRingkasan(false); }, 300000); // app terbuka: segarkan ringkasan tiap 5 menit
 
-  function muatForum() { if (!SESI || !window.WHL_FORUM || !API.Pusat.asli()) return; window.WHL_FORUM.mulai(ctxForum()).then(function (h) { FORUM = h; gambar(); if (h && h.ok && window.WHL_BANNER) window.WHL_BANNER.muat().then(function (ada) { if (ada && tab === 'beranda') gambar(); }); }); }
-  function ctxBanner() { return { roti: roti, perbarui: function () { if (tab === 'beranda') gambar(); }, tab: function (t) { keTab(t); }, web: bukaWeb,
+  function muatForum() { if (!SESI || !window.WHL_FORUM || !API.Pusat.asli()) return; window.WHL_FORUM.mulai(ctxForum()).then(function (h) { FORUM = h; gambar(); if (h && h.ok && window.WHL_BANNER) window.WHL_BANNER.muat().then(function (ada) { if (ada && tab === 'beranda') gambar(); }); if (h && h.ok && window.WHL_ONLINE) window.WHL_ONLINE.mulai({ sesi: function () { return SESI; }, perbarui: function () { if (tab === 'beranda') gambar(); } }); }); }
+  /* v3.9: nama staf yang sedang bertugas (absen hari ini) untuk mengisi peserta banner — hanya dipakai admin di Kelola banner */
+  function bertugasNama() { return API.Pusat.ringkasan(SESI, 'bertugas', true).then(function (r) { var P = (r && r.bertugas && r.bertugas.petugas) || []; return P.map(function (x) { return String(x.nama || '').trim(); }).filter(Boolean); }); }
+  function ctxBanner() { return { bertugas: bertugasNama, roti: roti, perbarui: function () { if (tab === 'beranda') gambar(); }, tab: function (t) { keTab(t); }, web: bukaWeb,
     forum: function (r) { if (window.WHL_FORUM) window.WHL_FORUM.bukaKe(ctxForum(), r); }, aksi: function (n) { if (n === 'ksn' && window.WHL_KSN) window.WHL_KSN.buka(ctxKsn()); } }; }
   function forumTampil() { return !!window.WHL_FORUM && API.Pusat.asli() && !(FORUM && FORUM.ditolak); }
   function forumBaru() { return window.WHL_FORUM && window.WHL_FORUM.siap() ? window.WHL_FORUM.totalBaru() : 0; }
@@ -471,7 +548,7 @@
     if (!SESI) return Promise.resolve(); sedangMuat = true;
     return API.Pusat.ringkasan(SESI, 'pos,gps,target,subcon,insiden,do,solar', paksa) /* v2.6: tanpa 'absen' & 'bertugas' (kehadiran orang lain tidak ditampilkan di app) */.then(function (r) {
       sedangMuat = false;
-      if (r && r.login === false) { keLogin('Sesi habis. Silakan masuk lagi.'); return; }
+      if (r && r.login === false) { if (SESI && SESI.bio) bioGugur(SESI.idProfil || SESI.idKetik); keLogin('Sesi habis. Silakan masuk lagi pakai PIN.'); return; }
       if (r && r.user && SESI.mode === 'asli') { SESI.user = r.user; simpanSesi(); }
       var pertama = !D.serverJam, lama = D.pos && D.pos.tiket ? Number(D.pos.tiket.nunggu) || 0 : null;
       D = r || {}; gambar(pertama); cekTindakBaru();
@@ -677,6 +754,7 @@
     /* v2.16 pola super-app: grid layanan -> kartu sorotan geser -> ringkasan. Perlu ditindak ada di kartu sorotan + Aktivitas + Kotak masuk. */
     if (window.WHL_BANNER) h += window.WHL_BANNER.html(); /* v3.6 banner pengumuman (karusel) */
     h += '<div class="kartu kLayanan">' + layanan() + '</div>';
+    if (window.WHL_ONLINE) h += window.WHL_ONLINE.htmlBeranda(); /* v3.9: siapa online (semua staf) */
     h += sorotan();
     if (D.serverJam && (kartu.indexOf('ritase') >= 0 || bolehPimpinan())) h += kartuProyeksi(); /* v3.0: proyeksi target di atas, seperti Pusat web */
     if (ABSEN && ABSEN.tanpa && u.peran !== 'driver') h += '<div class="kartu absenK"><b>Absen mandiri belum aktif</b>' + tombolAbsen() + '</div>';
@@ -1016,7 +1094,7 @@
       + '<div class="baris" style="align-items:center"><div style="flex:1"><b>Tema</b><div class="kecil">Gelap / terang</div></div><button type="button" class="tKecil" data-aksi="tema">' + (document.documentElement.getAttribute('data-tema') === 'gelap' ? '☀️ Terang' : '🌙 Gelap') + '</button></div>'
       + '<div class="baris" style="align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--garis)"><div style="flex:1"><b>Suara</b><div class="kecil">Bunyi ketuk, berhasil, gagal</div></div><button type="button" class="saklar' + (R.setel.suara ? ' on' : '') + '" data-aksi="suara" role="switch" aria-checked="' + R.setel.suara + '" aria-label="Suara"><i></i></button></div>'
       + '<div class="baris" style="align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--garis)"><div style="flex:1"><b>Getar</b><div class="kecil">Getar saat berhasil / PIN salah</div></div><button type="button" class="saklar' + (R.setel.getar ? ' on' : '') + '" data-aksi="getarSetel" role="switch" aria-checked="' + R.setel.getar + '" aria-label="Getar"><i></i></button></div>'
-      + barisSuaraKeras() + pushBaris() + (bolehUnit() && !PUSH.aktif && jembatan() ? '<div class="baris" style="align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--garis)"><div style="flex:1"><b>Cek tiket berkala</b><div class="kecil">Storing, tiket gantung, tunggu mekanik. Dicek ±15 menit sekali walau app ditutup' + (jembatan() ? '' : ' (hanya di app Android)') + '.</div></div><button type="button" class="saklar' + (NOTIF.tiket ? ' on' : '') + '" data-aksi="notifTiket" role="switch" aria-checked="' + !!NOTIF.tiket + '" aria-label="Notifikasi tiket"><i></i></button></div>'
+      + barisBio() + barisOnline() + barisSuaraKeras() + pushBaris() + (bolehUnit() && !PUSH.aktif && jembatan() ? '<div class="baris" style="align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--garis)"><div style="flex:1"><b>Cek tiket berkala</b><div class="kecil">Storing, tiket gantung, tunggu mekanik. Dicek ±15 menit sekali walau app ditutup' + (jembatan() ? '' : ' (hanya di app Android)') + '.</div></div><button type="button" class="saklar' + (NOTIF.tiket ? ' on' : '') + '" data-aksi="notifTiket" role="switch" aria-checked="' + !!NOTIF.tiket + '" aria-label="Notifikasi tiket"><i></i></button></div>'
         + (NOTIF.tiket && jembatan() ? '<button type="button" class="tKecil" data-aksi="ujiNotif" style="width:100%;margin-top:10px">Periksa tiket sekarang</button><div class="kecil" style="margin-top:6px">Notifikasi hanya muncul untuk tiket BARU sejak pemeriksaan sebelumnya. Android bisa menunda pemeriksaan saat hemat baterai; izinkan WHL "tanpa batasan baterai" supaya lebih tepat waktu.</div>' : '') : '')
       + '<div class="baris" style="align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--garis)"><div style="flex:1"><b>Ganti PIN</b><div class="kecil">' + (API.Pusat.asli() ? 'PIN Pusat WHL (dipakai di semua tempat)' : 'Sementara lewat Pusat WHL versi web') + '</div></div><button type="button" class="tKecil" data-aksi="gantiPin">' + (API.Pusat.asli() ? 'Ganti' : 'Buka web') + '</button></div>'
       + (window.WHL_PASANG && window.WHL_PASANG.bisa() ? '<div class="baris" style="align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--garis)"><div style="flex:1"><b>Pasang di layar utama</b><div class="kecil">Buka WHL seperti aplikasi</div></div><button type="button" class="tKecil" data-aksi="pasang">Caranya</button></div>' : '')
@@ -1052,7 +1130,7 @@
     R.mintaPin({ judul: 'Aktifkan absen', ket: 'Isi PIN Pusat WHL sekali lagi untuk absen di HP ini.' }, function (pin) {
       return API.Absen.login(SESI.idKetik, pin).then(function (h) {
         if (!h.ok) return h.pesan || 'Gagal.';
-        SESI.tokenAbm = h.token; SESI.abmPesan = ''; SESI.jabatan = h.jabatan || SESI.jabatan; simpanSesi(); return null;
+        SESI.tokenAbm = h.token; SESI.abmPesan = ''; SESI.jabatan = h.jabatan || SESI.jabatan; simpanSesi(); if (SESI.bio) setTimeout(bioAktifkan, 800); return null;
       });
     }).then(function (jadi) { if (jadi) { ABSEN = null; gambar(); muatAbsen(); R.bunyi('sukses'); R.getar('sukses'); roti('Absen mandiri aktif.'); } });
   }
@@ -1065,6 +1143,7 @@
         if (p !== baru) return 'PIN tidak sama. Ketik ulang.';
         return API.Pusat.gantiPin(SESI.tokenPusat, lama, baru).then(function (r) {
           if (!r.ok) return r.pesan || 'Gagal mengganti PIN.';
+          if (SESI.bio) { bioGugur(SESI.idProfil || SESI.idKetik); SESI.bio = false; } /* v3.9: PIN diganti -> masuk biometrik gugur */
           SESI.tokenPusat = r.token; SESI.tokenAbm = '';
           return API.Absen.login(SESI.idKetik, baru).then(function (h) { if (h.ok) SESI.tokenAbm = h.token; else SESI.abmPesan = h.pesan || ''; }, function () { SESI.abmPesan = 'Aktifkan lagi absen mandiri.'; }).then(function () { simpanSesi(); return null; });
         });
@@ -1083,6 +1162,10 @@
     if (t.closest('#navForum') && window.WHL_FORUM && window.WHL_FORUM.terbuka()) { window.WHL_FORUM.keDaftar(); return; }
     if (t.closest('#tLapor')) { R.getar(); lembarLapor(); return; }
     if (t.closest('#tAkun')) { keTab('akun'); return; }
+    b = t.closest('[data-bio]'); if (b) { var bk = b.getAttribute('data-bio');
+      if (bk === 'masuk') bioMasuk(); else if (bk === 'pin') { window.WHL_BIO.daftar().then(function (L) { if (L[0]) { $('inId').value = L[0].id; bioGanti = true; gambarBioLogin(); lanjut(); } }); }
+      else if (bk === 'ganti') { bioGanti = true; $('inId').value = ''; gambarBioLogin(); setTimeout(function () { $('inId').focus(); }, 200); } else if (bk === 'kembali') { bioGanti = false; gambarBioLogin(); }
+      return; }
     if (t.closest('#tKembali')) { R.getar(); window.WHL_KEMBALI(); return; }
     if (t.closest('#tKotakAtas')) { R.getar(); keTab('kotak'); return; }
     if (t.closest('#tCari')) { keTab('apps'); setTimeout(function () { var c = $('cariApp'); if (c) c.focus(); }, 60); return; }
@@ -1105,6 +1188,8 @@
     else if (a === 'tema') { var baru = document.documentElement.getAttribute('data-tema') === 'gelap' ? 'terang' : 'gelap'; pasangTema(baru); Simpan.taruh(KUNCI_TEMA, baru); gambar(); }
     else if (a === 'suara') { R.aturSetel('suara', !R.setel.suara); pasangSuara(); gambar(); if (R.setel.suara) R.bunyi('notifikasi'); }
     else if (a === 'kotakHapus') { KOTAK = []; simpanKotak(); gambar(); aturTanda(); roti('Notifikasi dibersihkan.'); }
+    else if (a === 'online') { var on2 = !window.WHL_ONLINE.tampil(); window.WHL_ONLINE.aturTampil(on2); gambar(); roti(on2 ? 'Status online kamu ditampilkan.' : 'Status online disembunyikan.'); }
+    else if (a === 'bio') { if (SESI && SESI.bio) bioMatikan(); else bioAktifkan(); }
     else if (a === 'cekRilis') { if (window.WHL_RILIS) window.WHL_RILIS.cekManual(roti); }
     else if (a === 'suaraKeras') {
       var kn = !suaraKeras(); R.aturSetel('keras', kn); var jb2 = window.AndroidDownloader; if (jb2 && jb2.aturSuaraKeras) try { jb2.aturSuaraKeras(kn); } catch (e) { /* */ }
@@ -1128,7 +1213,8 @@
         if (SESI && PUSH.token && API.Pusat.punya('pusatLepasPerangkat')) API.Pusat.lepasPerangkat(SESI, PUSH.token).catch(function () { });
         try { if (webPesan) webPesan.deleteToken().catch(function () { }); } catch (e) { /* */ }
         KOTAK = []; simpanKotak(); Simpan.taruh('whlBanner', null);
-        keLogin('');
+        if (SESI) bioGugur(SESI.idProfil || SESI.idKetik); /* v3.9 */
+        var habis = function () { keLogin(''); }; if (window.WHL_ONLINE) { var tunda = setTimeout(habis, 2500); window.WHL_ONLINE.berhenti().then(function () { clearTimeout(tunda); habis(); }); } else habis();
       });
     }
   });
@@ -1159,6 +1245,7 @@
     Promise.all([Simpan.ambil(KUNCI_SESI), API.Pusat.deteksi()]).then(function (r) {
       var s = null; try { s = JSON.parse(r[0] || 'null'); } catch (e) { s = null; }
       var pesan = ''; try { pesan = sessionStorage.getItem('whlV2Pesan') || ''; sessionStorage.removeItem('whlV2Pesan'); } catch (e) { /* */ }
+      if (!s || !s.user) { var t0 = null; try { t0 = JSON.parse(sessionStorage.getItem(KUNCI_TERBUKA) || 'null'); } catch (e) { t0 = null; } if (t0 && t0.user) s = t0; }
       if (!s || !s.user) { keLogin(pesan); return; }
       if (s.user.peran === 'driver') { keLogin('App ini khusus staf WHL. Driver tetap memakai jalur yang biasa (tablet / Pusat WHL web).'); return; }
       if (s.mode === 'tiruan' && r[1]) { keLogin('Pusat WHL sudah tersambung ke app. Masuk sekali lagi ya.'); return; }
@@ -1198,6 +1285,10 @@
           if (/^rilis/.test(q.layar)) fetch(location.origin + '/api/uji?rilis=baru');
           if (q.layar === 'rilis') setTimeout(function () { window.WHL_RILIS.cekManual(roti); }, 1500);
           if (q.layar === 'rilisUnduh') setTimeout(function () { window.WHL_RILIS.cek(true).then(function (h) { if (!h.ada) return; window.WHL_RILIS.tawarkan(h.info); var t = document.querySelector('.rilisProg'); if (t) t.hidden = false; window.WHL_UNDUH('progres', '64'); }); }, 1500);
+          if (q.layar === 'bannerDetail') setTimeout(function () { var c = document.createElement('canvas'); c.width = 1200; c.height = 600; var x = c.getContext('2d'); var gr = x.createLinearGradient(0, 0, 1200, 600); gr.addColorStop(0, '#0D2A55'); gr.addColorStop(1, '#1E88E5'); x.fillStyle = gr; x.fillRect(0, 0, 1200, 600); x.fillStyle = '#FFC857'; x.beginPath(); x.arc(1000, 170, 110, 0, 7); x.fill(); x.fillStyle = '#fff'; x.font = 'bold 70px sans-serif'; x.fillText('BRIEFING SORE', 70, 290); x.font = '42px sans-serif'; x.fillText('13/11/2026 · Brief sore team', 70, 360);
+            window.WHL_BANNER.pasang(ctxBanner()); window.WHL_BANNER.detail({ judul: 'Briefing sore 13/11/2026', sub: 'Brief sore team', gambar: c.toDataURL('image/jpeg', 0.8), mulai: '2026-11-13', isi: 'Pokok bahasan:\n- Unit storing KM 40 (WHL 902) dikawal mekanik malam\n- Wajib APD lengkap di area loading\n- Target ritase malam 120 rit\nCatatan: laporan kendala lewat Forum ruang Pengawas.', peserta: ['BUDI CONTOH SANTOSO', 'MEKANIK CONTOH', 'ANDI PENGAWAS', 'RINA HSE', 'DEDI FUELMAN'], oleh: 'REZA CONTOH', dibuat: '2026-11-13T09:30:00Z', tujuan: { jenis: 'forum', nilai: 'pengawas' } }); }, 1500);
+          if (q.layar === 'bioLogin') { Simpan.taruh('whlBioDaftar', JSON.stringify([{ k: 'WHL09001', id: 'WHL-09001', nama: 'BUDI CONTOH SANTOSO', mode: 'prf' }])).then(function () { setTimeout(function () { keLogin(''); }, 600); }); }
+          if (q.layar === 'bioTawar') setTimeout(function () { BIO = { ada: true, label: 'Face ID / Touch ID', jenis: 'web' }; R.tanya({ judul: 'Masuk pakai Face ID berikutnya?', ket: 'Tidak perlu ketik PIN tiap buka app. Yang memeriksa Face ID / Touch ID adalah HP kamu sendiri; data wajah / sidik jari tidak dikirim ke mana pun. Bisa dimatikan di Akun.', ya: 'Aktifkan', tidak: 'Nanti saja' }); }, 1500);
           if (q.layar === 'kelolaBanner') setTimeout(function () { var t0 = Date.now(), i = setInterval(function () { if (window.WHL_BANNER.admin() || Date.now() - t0 > 20000) { clearInterval(i); window.WHL_BANNER.pasang(ctxBanner()); window.WHL_BANNER.kelola(); setTimeout(function () { window.WHL_BANNER._uji.form(null); }, 2500); } }, 400); }, 800);
           if (q.layar === 'lainnya') setTimeout(lembarLainnya, 1500);
           if (q.layar === 'proyeksi') setTimeout(function () { var pq = document.querySelector('.proy'); if (pq) window.scrollTo(0, pq.getBoundingClientRect().top + window.scrollY - 90); }, 2200);
