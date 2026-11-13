@@ -4,32 +4,36 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#1565C0">
 <title>WHL App</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="gaya.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="gaya.css?v=3.4">
+<link rel="stylesheet" href="tema-whl.css?v=3.4">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0b131c">
+<meta name="theme-color" content="#1565C0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="WHL">
 <link rel="apple-touch-icon" sizes="180x180" href="ikon/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="ikon/ikon-192.png">
-<style>html{background:#0b131c}</style>
+<style>html{background:#f4f7fb}</style>
 </head>
 <body>
 
 <!-- ===== LAYAR PEMBUKA ===== -->
-<div id="layarMuat" class="wrap" style="text-align:center;padding-top:28vh">
-  <img src="img/logo-whl.png" alt="Logo WHL" class="logo" style="width:120px;height:120px;margin:0 auto">
-  <p class="kecil" style="margin-top:18px"><span class="putar"></span> &nbsp;Menyiapkan...</p>
+<div id="layarMuat" class="pembuka">
+  <span class="pbLogo"><img src="img/logo-whl-biru.png" alt="Logo WHL"></span>
+  <b>WHL</b><small>PT. Whale Holder Logistic</small><small class="pbVersi">Versi <span class="versi"></span></small>
+  <p class="kecil"><span class="putar"></span> &nbsp;Menyiapkan...</p>
 </div>
 
 <!-- ===== LOGIN ===== -->
 <div id="layarLogin" class="sembunyi">
+  <div class="lgPita"></div>
   <div class="wrap">
-    <div class="lgKepala"><span class="av besar"><img src="img/logo-whl-hitam.png" alt="Logo WHL"></span><h1>Pusat WHL</h1><p>PT. Whale Holder Logistic</p></div>
+    <div class="lgKepala"><span class="av besar"><img src="img/logo-whl-biru.png" alt="Logo WHL"></span><h1>Pusat WHL</h1><p>PT. Whale Holder Logistic</p></div>
     <div class="kartu">
       <div class="judulK">Masuk dulu ya</div>
       <div class="kecil" style="margin-top:4px">Ketik nomor di ID card kamu. Sesudah itu masukkan PIN <b>Pusat WHL</b>.</div>
@@ -38,46 +42,58 @@
       <button id="tMasuk" class="tUtama" type="button">Lanjut</button>
       <div id="pesanLogin" class="pesan"></div>
     </div>
-    <div class="kecil" style="text-align:center">Sesi tersimpan di HP ini. PIN tidak disimpan.<br>WHL App v<span class="versi"></span></div>
+    <div class="kecil" style="text-align:center">Sesi tersimpan di HP ini. PIN tidak disimpan.<br><b>WHL App versi <span class="versi"></span></b></div>
   </div>
 </div>
 
 <!-- ===== APLIKASI ===== -->
 <div id="layarApp" class="sembunyi">
-  <!-- Kepala gaya Pusat WHL web: biru tua bergradasi, sudut bawah membulat, sapaan besar, pil status -->
+  <!-- v2.16 tampilan super-app WHL: kepala biru WHL + sapaan + kolom cari (beranda); bilah putih ringkas di tab lain -->
   <div class="kpl" id="kpl">
     <div class="kp-top">
-      <span class="av"><img src="img/logo-whl-hitam.png" alt="Logo WHL"></span>
+      <button class="kb kembali" id="tKembali" type="button" aria-label="Kembali" hidden>&#8249;</button>
+      <span class="av"><img src="img/logo-whl-biru.png" alt="Logo WHL"></span>
       <div class="nm">PT. Whale Holder Logistic<b id="judulTab">Pusat WHL</b></div>
       <span class="sp"></span>
       <button class="kb" id="btnSuara" type="button" aria-label="Suara">🔊</button>
       <button class="kb" id="btnTema" type="button" aria-label="Tema terang / gelap">🌙</button>
+      <button class="kb lonceng" id="tKotakAtas" type="button" aria-label="Kotak masuk"><span data-ikon="lonceng"></span><i class="tanda angka sembunyi" id="tandaLonceng"></i></button>
       <button class="kb akun" id="tAkun" type="button" aria-label="Akun saya">?</button>
     </div>
-    <div id="kpSapa"><div class="sapa" id="sapa"></div><div class="sub" id="subTab"></div><div class="pills" id="pills"></div><div id="kpDiri"></div></div>
+    <div id="kpSapa">
+      <div class="sapa" id="sapa"></div><div class="sub" id="subTab"></div>
+      <button type="button" class="cariPil" id="tCari"><span data-ikon="cari"></span><span>Cari aplikasi atau menu</span></button>
+      <div class="pills" id="pills"></div><div id="kpDiri"></div>
+    </div>
     <span id="jam" class="sembunyi"></span>
   </div>
   <div class="wrap isiWrap">
     <div id="pitaContoh" class="pita sembunyi"><span>⚠️</span><span><b>Sebagian DATA CONTOH.</b> Server Pusat WHL sedang tidak menyediakan data untuk app, jadi ringkasan yang bertanda <i>contoh</i> bukan angka sungguhan. Absen, profil dan KPI tetap data asli.</span></div>
     <div id="isi"></div>
   </div>
+  <div id="melayang" class="melayang sembunyi"></div>
   <nav class="nav"><div>
-    <button type="button" data-tab="beranda"><span class="ne">🏠</span>Beranda</button>
-    <button type="button" data-tab="unit"><span class="ne">🚛</span>Unit<i class="tanda angka sembunyi" id="tandaUnit"></i></button>
-    <button type="button" class="lapor" id="tLapor"><span class="bl">➕</span>Input</button>
-    <button type="button" data-tab="absen"><span class="ne">🗓️</span>Absen<i class="tanda sembunyi" id="tandaAbsen"></i></button>
-    <button type="button" data-tab="apps"><span class="ne">🧭</span>Aplikasi</button>
+    <button type="button" data-tab="beranda"><span class="ne" data-ikon="beranda"></span>Beranda</button>
+    <button type="button" data-tab="aktivitas"><span class="ne" data-ikon="aktivitas"></span>Aktivitas<i class="tanda angka sembunyi" id="tandaUnit"></i><i class="tanda sembunyi" id="tandaAbsen"></i></button>
+    <button type="button" data-ke="forum" id="navForum"><span class="ne" data-ikon="forum"></span>Forum<i class="tanda angka sembunyi" id="tandaApps"></i></button>
+    <button type="button" data-tab="kotak"><span class="ne" data-ikon="kotak"></span>Kotak masuk<i class="tanda angka sembunyi" id="tandaKotak"></i></button>
+    <button type="button" data-tab="akun"><span class="ne" data-ikon="akun"></span>Akun</button>
   </div></nav>
 </div>
 
 <div class="tirai" id="tirai"><div class="lembar" id="lembar"></div></div>
 <div class="roti" id="roti"></div>
 
-<script src="konfig.js"></script>
-<script src="tiruan.js"></script>
-<script src="api.js"></script>
-<script src="rasa.js"></script>
-<script src="pasang.js"></script>
-<script src="app.js"></script>
+<script src="konfig.js?v=3.4"></script>
+<script src="tiruan.js?v=3.4"></script>
+<script src="api.js?v=3.4"></script>
+<script src="rasa.js?v=3.4"></script>
+<script src="ikon.js?v=3.4"></script>
+<script src="kuesioner.js?v=3.4"></script>
+<script src="skema-rute.js?v=3.4"></script>
+<script src="forum-konfig.js?v=3.4"></script>
+<script src="forum.js?v=3.4"></script>
+<script src="pasang.js?v=3.4"></script>
+<script src="app.js?v=3.4"></script>
 </body>
 </html>

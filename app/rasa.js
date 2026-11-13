@@ -6,7 +6,7 @@
 (function () {
   'use strict';
   var Simpan = window.WHL_API.Simpan, KUNCI = 'whlV2Rasa';
-  var setel = { suara: true, getar: true };
+  var setel = { suara: true, getar: true, keras: true };
   var kurangGerak = false; try { kurangGerak = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { /* */ }
   var kentang = (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) || (navigator.deviceMemory && navigator.deviceMemory <= 2);
   var hemat = kurangGerak || !!kentang;
@@ -18,8 +18,10 @@
     var ukur = function (t) { if (!t0) t0 = t; n++; if (t - t0 < 600) requestAnimationFrame(ukur); else if (n / ((t - t0) / 1000) < 45 && !document.hidden) { hemat = true; document.documentElement.classList.add('hemat'); } };
     setTimeout(function () { requestAnimationFrame(ukur); }, 1500);
   }
-  Simpan.ambil(KUNCI).then(function (v) { try { var o = JSON.parse(v || 'null'); if (o) { setel.suara = o.suara !== false; setel.getar = o.getar !== false; } } catch (e) { /* */ } });
-  function aturSetel(k, v) { setel[k] = !!v; Simpan.taruh(KUNCI, JSON.stringify(setel)); }
+  Simpan.ambil(KUNCI).then(function (v) { try { var o = JSON.parse(v || 'null'); if (o) { setel.suara = o.suara !== false; setel.getar = o.getar !== false; setel.keras = o.keras !== false; aturGain(); } } catch (e) { /* */ } });
+  function aturSetel(k, v) { setel[k] = !!v; Simpan.taruh(KUNCI, JSON.stringify(setel)); if (k === 'keras') aturGain(); }
+  /* v3.0: "Suara notifikasi keras" (bawaan nyala) -> suara di dalam app 3,5x lebih keras, dijaga kompresor supaya tidak pecah */
+  function aturGain() { if (induk) induk.gain.value = setel.keras === false ? 1 : 3.5; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
   /* ---------- SUARA (WebAudio, orisinal) ---------- */
@@ -28,7 +30,7 @@
   function audio() {
     if (ctx) return ctx;
     var A = window.AudioContext || window.webkitAudioContext; if (!A) return null;
-    try { ctx = new A(); induk = ctx.createGain(); induk.gain.value = 1; induk.connect(ctx.destination); /* volume per nada sama dengan Pusat web */ } catch (e) { ctx = null; }
+    try { ctx = new A(); induk = ctx.createGain(); var kp = ctx.createDynamicsCompressor(); kp.threshold.value = -10; kp.ratio.value = 8; induk.connect(kp); kp.connect(ctx.destination); aturGain(); /* resep nada sama dengan Pusat web; volume induk diatur setel.keras */ } catch (e) { ctx = null; }
     return ctx;
   }
   /* nada() dan resep klik/pop/geser/tutup/aman/alarm DISALIN dari pusat.html (Pusat WHL web, milik WHL sendiri) supaya bunyinya sama persis.

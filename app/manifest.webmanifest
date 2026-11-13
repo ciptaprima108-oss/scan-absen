@@ -1,7 +1,7 @@
 {
  "name": "WHL",
  "short_name": "WHL",
- "description": "Pusat WHL: absen, profil & KPI, ringkasan harian PT. Whale Holder Logistic",
+ "description": "WHL: Pusat WHL, absen, forum, notifikasi, profil & KPI PT. Whale Holder Logistic",
  "lang": "id",
  "dir": "ltr",
  "start_url": "./index.html",
@@ -9,8 +9,8 @@
  "id": "./index.html",
  "display": "standalone",
  "orientation": "portrait",
- "background_color": "#0b131c",
- "theme_color": "#0b131c",
+ "background_color": "#f4f7fb",
+ "theme_color": "#1565C0",
  "icons": [
   {
    "src": "ikon/ikon-192.png",

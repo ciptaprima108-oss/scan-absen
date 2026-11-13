@@ -85,18 +85,28 @@
   };
 
   /* ---------- Pusat WHL (ASLI kalau server sudah punya api "pusat", kalau belum: TIRUAN) ---------- */
-  var pusatAsli = null; // null = belum dicek
+  var pusatAsli = null, pusatFn = []; // null = belum dicek; pusatFn = daftar fungsi dari pusatPing
   var Pusat = {
     /** true = api pusat tersedia di server. Dicek sekali tiap app dibuka. Tidak mengirim data apa pun. */
     deteksi: function () {
       if (pusatAsli !== null) return Promise.resolve(pusatAsli);
       /* API pusat LIVE sejak DASHBOARD V478 (12 Nov 2026). Data contoh HANYA kalau server menjawab jelas bahwa pintunya tidak ada;
          kalau cuma jaringan putus / lambat, tetap dianggap asli (panggilan berikutnya akan memberi pesan koneksi yang jelas). */
-      return rpc(K.DASH, 'pusat', 'pusatPing', [], 20000).then(function (h) { pusatAsli = !!(h && h.api === 'pusat'); return pusatAsli; }, function (e) { pusatAsli = !/tidak dikenal|token/i.test(String(e && e.message)); return pusatAsli; });
+      return rpc(K.DASH, 'pusat', 'pusatPing', [], 20000).then(function (h) { pusatAsli = !!(h && h.api === 'pusat'); pusatFn = (h && h.fn) || []; return pusatAsli; }, function (e) { pusatAsli = !/tidak dikenal|token/i.test(String(e && e.message)); return pusatAsli; });
+    },
+    /** v2.18: ping ulang (tiap app dibuka lagi / buka Akun) supaya fungsi server yang baru dideploy langsung kebaca.
+        Gagal jaringan = daftar lama dipertahankan. */
+    cekUlang: function () {
+      return rpc(K.DASH, 'pusat', 'pusatPing', [], 20000).then(function (h) { if (h && h.api === 'pusat') { pusatAsli = true; pusatFn = h.fn || []; } return pusatAsli; }, function () { return pusatAsli; });
     },
     asli: function () { return pusatAsli === true; },
+    punya: function (fn) { return pusatFn.indexOf(fn) >= 0; }, /* mis. punya('pusatForumToken') = forum sudah dipasang di server */
     cekKartu: function (id) { return rpc(K.DASH, 'pusat', 'pusatCekKartu', [id]); },
     login: function (id, pin) { return rpc(K.DASH, 'pusat', 'pusatLogin', [id, pin]); },
+    forumToken: function (sesi) { return rpc(K.DASH, 'pusat', 'pusatForumToken', [sesi.tokenPusat]); }, /* forum-12nov: custom token Firebase */
+    /* notif-push-13nov: daftarkan token FCM HP ini + minta server kirim notifikasi forum (server memeriksa pesan di Firestore dulu) */
+    daftarPerangkat: function (sesi, fcm, platform) { return rpc(K.DASH, 'pusat', 'pusatDaftarPerangkat', [sesi.tokenPusat, fcm, platform]); },
+    forumNotif: function (sesi, ruang, pesanId, jenis) { return rpc(K.DASH, 'pusat', 'pusatForumNotif', [sesi.tokenPusat, ruang, pesanId, jenis || 'pesan']); },
     gantiPin: function (token, lama, baru) { return rpc(K.DASH, 'pusat', 'pusatGantiPin', [token, lama, baru]); },
     ringkasan: function (sesi, bagian, paksa) {
       if (pusatAsli) return rpc(K.DASH, 'pusat', 'ringkasanPusat', [bagian, !!paksa, '', sesi.tokenPusat], 90000);
