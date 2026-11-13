@@ -1,14 +1,15 @@
 {
- "versi": "3.4",
- "versionCode": 304,
+ "versi": "3.6",
+ "versionCode": 306,
  "wajib": false,
  "catatan": [
-  "Bisa dipasang lebih luas: tanda tangan v1+v2+v3, cocok Android 7 sampai 15/16",
-  "Tombol kembali di kepala layar",
-  "Notifikasi web untuk iPhone (app web)"
+  "Suara notifikasi khas WHL: \"Pesan WHL\" / \"Tiket WHL\" + jingle",
+  "Banner pengumuman di Beranda",
+  "Forum lebih hidup: latar bermotif, gelembung berekor",
+  "Lebih aman: halaman web dibuka terpisah, notifikasi dicabut saat keluar"
  ],
- "apk": "WHL-App-v3.4.apk",
- "ukuran": 9084072,
- "sha256": "a4002be44cdd0e58989f1666769b295b66e24dc8cccf48e7206311a0073e9e7b",
- "dibuat": "2026-11-13 09:28"
+ "apk": "WHL-App-v3.6.apk",
+ "ukuran": 7874366,
+ "sha256": "b1d132a9690b0fec8b05d3fdc1e398d4aa51e1c0d8e264888e908b29f87224ba",
+ "dibuat": "2026-11-13 11:37"
 }
