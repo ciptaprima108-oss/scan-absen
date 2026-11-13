@@ -24,16 +24,26 @@
   function token() { return (CTX && CTX.sesi && (CTX.sesi.tokenKsn || CTX.sesi.tokenAbm)) || ''; }
   function kunciIsi() { return 'whlKsnIsi_' + ST.periode + '_' + String(ST.nik || '').replace(/[^A-Za-z0-9]/g, ''); }
   function simpanIsi() { return Simpan.taruh(kunciIsi(), JSON.stringify(ISI)); }
+  /* v3.6 (audit S6): rahasia penilai PER AKUN, bukan per HP — 2 staf di 1 HP tidak saling menimpa penilaian.
+     Rahasia lama (per HP) dipakai akun pertama yang membuka kuesioner sesudah update, supaya jawabannya tetap tersambung. */
+  function kunciRhs() { return K_RHS + '_' + String((CTX && CTX.sesi && (CTX.sesi.idProfil || CTX.sesi.idKetik)) || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
   function rahasia() {
-    return Simpan.ambil(K_RHS).then(function (r) {
+    var kk = kunciRhs();
+    return Simpan.ambil(kk).then(function (r) {
       if (/^[A-Za-z0-9_-]{32,80}$/.test(r)) return r;
+      return Simpan.ambil(K_RHS).then(function (lama) {
+        if (!/^[A-Za-z0-9_-]{32,80}$/.test(lama)) return null;
+        return Simpan.taruh(kk, lama).then(function () { return Simpan.taruh(K_RHS, null); }).then(function () { return lama; }); // pindah ke akun ini, kunci HP dibuang
+      });
+    }).then(function (r) {
+      if (r) return r;
       var a = new Uint8Array(48), h = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_', o = '';
       (window.crypto || window.msCrypto).getRandomValues(a); for (var i = 0; i < a.length; i++) o += h.charAt(a[i] % 64);
-      return Simpan.taruh(K_RHS, o).then(function () { return o; });
+      return Simpan.taruh(kk, o).then(function () { return o; });
     });
   }
   function rekan() { return ST ? (ST.staf || []).filter(function (o) { return o.nik !== ST.nik; }) : []; }
-  function statusOrang(nik) { var x = ISI[nik]; return !x ? 'belum' : x.kirim ? 'ok' : x.tt ? 'tt' : (Object.keys(x.v || {}).length || x.alasan ? 'draf' : 'belum'); }
+  function statusOrang(nik) { var x = ISI[nik]; if ((!x || !x.kirim) && ST && (ST.sudah || []).indexOf(nik) >= 0) return 'ok'; /* v3.6: server mencatat sudah dinilai */ return !x ? 'belum' : x.kirim ? 'ok' : x.tt ? 'tt' : (Object.keys(x.v || {}).length || x.alasan ? 'draf' : 'belum'); }
   function sisa() { return rekan().filter(function (o) { var s = statusOrang(o.nik); return s !== 'ok' && s !== 'tt'; }).length; }
 
   /** Muat status kuesioner untuk kartu Beranda. -> {ada, buka, alasan, sisa, jumlah, k3, perluPin, galat} */
@@ -120,6 +130,7 @@
     tb.disabled = true; tb.innerHTML = '<span class="putar"></span> &nbsp;Menyimpan...';
     rahasia().then(function (rhs) { return rpc('ksnKirim', [token(), rhs, { nik: o.nik, t: nilai.slice(0, 4), s: nilai.slice(4, 6), alasan: String(x.alasan || '').trim() }]); }).then(function (h) {
       if (h.login === false) { tutup(); CTX.sesi.tokenKsn = ''; ST = null; mintaMasuk(function () { buka(CTX); }); return; }
+      if (!h.ok && h.sudah) { x.kirim = true; simpanIsi(); tb.disabled = false; tb.textContent = 'Simpan'; ps.textContent = h.pesan || 'Rekan ini sudah kamu nilai di periode ini.'; R.bunyi('gagal'); return; } /* v3.6 (T4): 1 penilai = 1 nilai per rekan */
       if (!h.ok) { tb.disabled = false; tb.textContent = 'Simpan'; ps.textContent = h.pesan || 'Gagal menyimpan.'; R.bunyi('gagal'); R.getar('gagal'); return; }
       x.kirim = true; x.tt = false; simpanIsi(); if (h.terisi != null) ST.terisi = h.terisi;
       R.getar('sukses'); bukaNik = '';

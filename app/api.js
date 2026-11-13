@@ -56,6 +56,8 @@
   /* ---------- KPI (ASLI) ---------- */
   var kpiSimpan = null;
   var Kpi = {
+    /* v3.6 (audit T3): KPI & 5 aspek MILIK SENDIRI lewat DASHBOARD (token dicek server). ?mode=kpi / profiljson lama = cadangan saja. */
+    saya: function (sesi) { return rpc(K.DASH, 'pusat', 'pusatKpiSaya', [sesi.tokenPusat], 60000); },
     semua: function (paksa) {
       if (kpiSimpan && !paksa && Date.now() - kpiSimpan.t < 20 * 60000) return Promise.resolve(kpiSimpan.d);
       return ambilJson(K.INPUTDO + '?mode=kpi').then(function (d) { if (!d || !d.ok) throw new Error((d && d.error) || 'KPI belum tersedia'); kpiSimpan = { t: Date.now(), d: d }; return d; });
@@ -106,6 +108,7 @@
     forumToken: function (sesi) { return rpc(K.DASH, 'pusat', 'pusatForumToken', [sesi.tokenPusat]); }, /* forum-12nov: custom token Firebase */
     /* notif-push-13nov: daftarkan token FCM HP ini + minta server kirim notifikasi forum (server memeriksa pesan di Firestore dulu) */
     daftarPerangkat: function (sesi, fcm, platform) { return rpc(K.DASH, 'pusat', 'pusatDaftarPerangkat', [sesi.tokenPusat, fcm, platform]); },
+    lepasPerangkat: function (sesi, fcm) { return rpc(K.DASH, 'pusat', 'pusatLepasPerangkat', [sesi.tokenPusat, fcm]); }, /* v3.6 (audit T5): spesifikasi server di ENDPOINT-DIBUTUHKAN.txt H */
     forumNotif: function (sesi, ruang, pesanId, jenis) { return rpc(K.DASH, 'pusat', 'pusatForumNotif', [sesi.tokenPusat, ruang, pesanId, jenis || 'pesan']); },
     gantiPin: function (token, lama, baru) { return rpc(K.DASH, 'pusat', 'pusatGantiPin', [token, lama, baru]); },
     ringkasan: function (sesi, bagian, paksa) {

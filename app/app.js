@@ -130,6 +130,7 @@
   function bukaWeb(url) {
     if (!url) return; if (!navigator.onLine) { roti('Tidak ada internet.'); return; }
     try { sessionStorage.setItem('whlV2Tab', tab); } catch (e) { /* */ }
+    var AD = window.AndroidDownloader; if (AD && typeof AD.bukaWeb === 'function') { try { AD.bukaWeb(url); return; } catch (e) { /* */ } } /* v3.6 (audit T2): APK -> WebView terpisah tanpa token */
     var P = window.WHL_PASANG; // hanya ada di browser (bukan APK)
     if (P && !P.berdiri()) { var w = null; try { w = window.open(url, '_blank'); } catch (e) { w = null; } if (w) return; }
     window.location.href = url;
@@ -300,7 +301,7 @@
     ['storing', 'gantung', 'tunjuk'] /* fix: nama kelompok di daftarTindak = tunjuk */.forEach(function (g) { T2[g].forEach(function (x) { var k = g + ':' + (x.id || x.l); kini[k] = x; if (TINDAK_LALU && !TINDAK_LALU[k]) baru.push(x); }); });
     var adaLalu = !!TINDAK_LALU; TINDAK_LALU = kini; if (!baru.length) return;
     if (adaLalu) baru.slice(0, 5).forEach(function (y) { catatKotak('tiket', (y.grup === 'storing' ? 'Storing ' : y.grup === 'gantung' ? 'Tiket gantung ' : 'Tunggu mekanik ') + y.l, (y.ket || '') + (y.lok ? ' · ' + y.lok : ''), { jenis: 'tiket', l: y.l }); });
-    var x = baru[0]; R.bunyi('notifikasi'); R.getar('awas');
+    var x = baru[0]; R.bunyi('tiketWhl'); R.getar('awas');
     roti((x.grup === 'storing' ? '🚨 Storing ' : x.grup === 'gantung' ? '⏰ Tiket gantung ' : '🔧 Tunggu mekanik ') + x.l + (baru.length > 1 ? ' (+' + (baru.length - 1) + ' lagi)' : '') + ' — buka tab Unit');
   }
   /* dipanggil MainActivity saat notifikasi diketuk */
@@ -351,7 +352,7 @@
     PN.addListener('pushNotificationReceived', function (n) {
       var d = n.data || {}; catatKotak(d.jenis === 'tiket' ? 'tiket' : /^📌/.test(n.title || '') ? 'pengumuman' : /menyebutmu/.test(n.title || '') ? 'sebut' : d.jenis === 'forum' ? 'forum' : 'info', n.title, n.body, d);
       if (d.jenis === 'forum' && window.WHL_FORUM && window.WHL_FORUM.siap()) return; // forum tersambung sudah membunyikan sendiri
-      R.bunyi(d.jenis === 'tiket' ? 'gagal' : 'notifikasi'); R.getar('awas'); roti((n.title ? n.title + ' — ' : '') + (n.body || ''));
+      R.bunyi(d.jenis === 'tiket' ? 'tiketWhl' : 'pesanWhl'); R.getar('awas'); roti((n.title ? n.title + ' — ' : '') + (n.body || ''));
       if (d.jenis === 'tiket') muatRingkasan(false);
     });
     PN.addListener('pushNotificationActionPerformed', function (a) { var d = (a.notification && a.notification.data) || {}; catatKotak(d.jenis === 'tiket' ? 'tiket' : d.jenis === 'forum' ? 'forum' : 'info', a.notification && a.notification.title, a.notification && a.notification.body, d); if (KOTAK[0]) KOTAK[0].b = true; setTimeout(function () { bukaDariNotif(d); }, 400); });
@@ -383,7 +384,7 @@
         return navigator.serviceWorker.ready.then(function (reg) { return webPesan.getToken({ vapidKey: KF.vapid, serviceWorkerRegistration: reg }); }).then(function (tok) {
           if (!tok) throw new Error('token kosong');
           PUSH.token = tok; pushSet('mendaftar', 'Token didapat, mendaftarkan ke server...');
-          if (!webPesan._dengar) { webPesan._dengar = true; webPesan.onMessage(function (m) { var n = m.notification || {}, d = m.data || {}; catatKotak(d.jenis === 'tiket' ? 'tiket' : d.jenis === 'forum' ? 'forum' : 'info', n.title, n.body, d); R.bunyi(d.jenis === 'tiket' ? 'gagal' : 'notifikasi'); roti((n.title ? n.title + ' — ' : '') + (n.body || '')); }); }
+          if (!webPesan._dengar) { webPesan._dengar = true; webPesan.onMessage(function (m) { var n = m.notification || {}, d = m.data || {}; catatKotak(d.jenis === 'tiket' ? 'tiket' : d.jenis === 'forum' ? 'forum' : 'info', n.title, n.body, d); R.bunyi(d.jenis === 'tiket' ? 'tiketWhl' : 'pesanWhl'); roti((n.title ? n.title + ' — ' : '') + (n.body || '')); }); }
           return API.Pusat.daftarPerangkat(SESI, tok, 'web').then(function (h) {
             if (h && h.ok) pushSet('aktif'); else if (h && h.login === false) pushSet('gagal', 'Server menolak: sesi habis. Keluar lalu masuk lagi.'); else pushSet('gagal', 'Server menolak: ' + ((h && h.pesan) || 'tanpa keterangan'));
           });
@@ -422,9 +423,9 @@
   /* app kembali dari latar -> ping ulang + coba lagi kalau belum aktif */
   document.addEventListener('visibilitychange', function () { if (!document.hidden && SESI && API.Pusat.asli() && !PUSH.aktif) pasangPush(false); if (!document.hidden && SESI && window.WHL_RILIS) window.WHL_RILIS.cekOtomatis(); });
   function suaraKeras() { return R.setel.keras !== false; }
-  function platformPush() { return suaraKeras() ? 'andr-keras' : 'andr-biasa'; }
+  function platformPush() { return suaraKeras() ? 'andr-suara' : 'andr-biasa'; } /* v3.6: andr-suara = saluran whl3_* (suara WHL) */
   function barisSuaraKeras() {
-    return '<div class="baris" style="align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--garis)"><div style="flex:1"><b>Suara notifikasi keras</b><div class="kecil">Bunyi lebih nyaring & lebih lama, getar panjang. Juga suara di dalam app.</div></div><button type="button" class="saklar' + (suaraKeras() ? ' on' : '') + '" data-aksi="suaraKeras" role="switch" aria-checked="' + suaraKeras() + '" aria-label="Suara notifikasi keras"><i></i></button></div>'
+    return '<div class="baris" style="align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--garis)"><div style="flex:1"><b>Suara notifikasi keras</b><div class="kecil">Suara WHL: perempuan berkata "Pesan WHL" / "Tiket WHL" + jingle, keras & jelas, getar panjang. Juga di dalam app.</div></div><button type="button" class="saklar' + (suaraKeras() ? ' on' : '') + '" data-aksi="suaraKeras" role="switch" aria-checked="' + suaraKeras() + '" aria-label="Suara notifikasi keras"><i></i></button></div>'
       + '<button type="button" class="tKecil" data-aksi="ujiBunyi" style="width:100%;margin-top:10px">' + IK('lonceng') + ' Uji bunyi notifikasi</button>';
   }
   function pushBaris() {
@@ -458,7 +459,9 @@
   }
   setInterval(function () { if (SESI && !document.hidden && API.Pusat.asli()) muatRingkasan(false); }, 300000); // app terbuka: segarkan ringkasan tiap 5 menit
 
-  function muatForum() { if (!SESI || !window.WHL_FORUM || !API.Pusat.asli()) return; window.WHL_FORUM.mulai(ctxForum()).then(function (h) { FORUM = h; gambar(); }); }
+  function muatForum() { if (!SESI || !window.WHL_FORUM || !API.Pusat.asli()) return; window.WHL_FORUM.mulai(ctxForum()).then(function (h) { FORUM = h; gambar(); if (h && h.ok && window.WHL_BANNER) window.WHL_BANNER.muat().then(function (ada) { if (ada && tab === 'beranda') gambar(); }); }); }
+  function ctxBanner() { return { roti: roti, perbarui: function () { if (tab === 'beranda') gambar(); }, tab: function (t) { keTab(t); }, web: bukaWeb,
+    forum: function (r) { if (window.WHL_FORUM) window.WHL_FORUM.bukaKe(ctxForum(), r); }, aksi: function (n) { if (n === 'ksn' && window.WHL_KSN) window.WHL_KSN.buka(ctxKsn()); } }; }
   function forumTampil() { return !!window.WHL_FORUM && API.Pusat.asli() && !(FORUM && FORUM.ditolak); }
   function forumBaru() { return window.WHL_FORUM && window.WHL_FORUM.siap() ? window.WHL_FORUM.totalBaru() : 0; }
 
@@ -493,13 +496,25 @@
       PROFIL = p;
       var k = p.kpi || null;
       KPI = { bulan: (k && k.bulan) || '', dibuat: (k && k.dibuat) || '', persenBulan: k && k.persenBulan, staf: k && !k.error ? k : null, pesan: k && k.error };
+      if (kpiLewatPusat() && (p.jenis === 'staf' || !k || k.pribadi)) muatKpiSaya(); /* v3.6: nilai dari pusatKpiSaya (profil publik tidak lagi berisi nilai) */
       cekCapaianBaru(p);
       var nm = p.namaLengkap || p.nama || p.driver; if (nm && SESI) { SESI.namaLengkap = nm; if (p.jabatan) SESI.jabatan = p.jabatan; simpanSesi(); $('tAkun').textContent = inisial(nm); }
       gambar();
     }, function (e) {
       PROFIL = { galat: e.message }; gambar();
+      if (kpiLewatPusat()) { muatKpiSaya(); return; }
       API.Kpi.untuk(SESI.idProfil || SESI.idKetik, SESI.namaLengkap || SESI.user.nama, paksa).then(function (k) { KPI = k; gambar(); }, function (e2) { KPI = { galat: e2.message }; gambar(); });
     });
+  }
+  function kpiLewatPusat() { return API.Pusat.asli() && API.Pusat.punya('pusatKpiSaya'); }
+  function muatKpiSaya() {
+    if (!SESI) return;
+    API.Kpi.saya(SESI).then(function (k) {
+      if (k && k.login === false) { keLogin('Sesi habis. Silakan masuk lagi.'); return; }
+      KPI = { bulan: (k && k.bulan) || '', dibuat: (k && k.dibuat) || '', persenBulan: k && k.persenBulan, staf: k && k.ok ? k.kpi : null, pesan: k && k.ok ? k.ket : (k && k.pesan) };
+      if (PROFIL && !PROFIL.galat && k && k.ok) PROFIL.kpi = k.kpi;
+      gambar();
+    }, function (e) { KPI = { galat: e.message }; gambar(); });
   }
   /* Bandingkan lencana/achievement dengan yang terakhir dilihat di HP ini; kalau ada yang baru / naik tingkat -> rayakan. */
   function cekCapaianBaru(p) {
@@ -565,6 +580,7 @@
     if (KSN && KSN.ada && KSN.k3) A.push(['insiden', 'Penilaian K3', 'k3']);
     A.push(['profil', 'Nilai saya', 'tab:akun']);
     A.push(['akun', 'Akun', 'tab:akun']);
+    if (window.WHL_BANNER && window.WHL_BANNER.admin()) A.push(['kreatif', 'Kelola banner', 'kelolaBanner', 0, 1]);
     var W = appsSaya().map(function (a) { return [IKON_DIV[a.d] || 'web', a.n.replace(/ WHL$/, '').replace(/^Live Monitor /, ''), 'web:' + alamat(a), 0, a.baru]; });
     W.push(['rumahWeb', 'Pusat WHL web', 'web:' + K.DASH + '?mode=pusat']);
     bukaLembar('<div class="lembarLy"><h3>Layanan WHL</h3><div class="layanan">' + A.map(petakLy).join('') + '</div>'
@@ -659,6 +675,7 @@
   function gambarBeranda() {
     var u = SESI.user, kartu = u.kartu || [], h = '';
     /* v2.16 pola super-app: grid layanan -> kartu sorotan geser -> ringkasan. Perlu ditindak ada di kartu sorotan + Aktivitas + Kotak masuk. */
+    if (window.WHL_BANNER) h += window.WHL_BANNER.html(); /* v3.6 banner pengumuman (karusel) */
     h += '<div class="kartu kLayanan">' + layanan() + '</div>';
     h += sorotan();
     if (D.serverJam && (kartu.indexOf('ritase') >= 0 || bolehPimpinan())) h += kartuProyeksi(); /* v3.0: proyeksi target di atas, seperti Pusat web */
@@ -1014,8 +1031,10 @@
   function gambar(animasi) {
     if (!SESI) return;
     var fokus = document.activeElement && document.activeElement.id, pos = fokus && document.activeElement.selectionStart, el = $('isi');
+    var bg = $('bnrGeser'), bnrI = bg ? Math.round(bg.scrollLeft / Math.max(1, bg.clientWidth)) : 0;
     el.innerHTML = tab === 'unit' ? gambarUnit() : tab === 'absen' ? gambarAbsen() : tab === 'apps' ? gambarApps() : tab === 'akun' ? gambarAkun() : tab === 'kotak' ? gambarKotak() : gambarBeranda();
     gambarMelayang();
+    if (tab === 'beranda' && window.WHL_BANNER && $('bnrGeser')) { window.WHL_BANNER.pasang(ctxBanner()); if (bnrI) $('bnrGeser').scrollLeft = bnrI * $('bnrGeser').clientWidth; }
     if (fokus && (fokus === 'cariUnit' || fokus === 'cariApp') && $(fokus)) { $(fokus).focus(); try { $(fokus).setSelectionRange(pos, pos); } catch (e) { /* */ } }
     gambarKepala();
     if (animasi) { R.hitungNaik(el); R.hitungNaik($('kpl')); el.classList.add('anim'); clearTimeout(gambar.t); gambar.t = setTimeout(function () { el.classList.remove('anim'); }, 1100); }
@@ -1074,7 +1093,7 @@
     b = t.closest('[data-kt]'); if (b) { R.getar(); lembarTopik(b.getAttribute('data-kt')); return; }
     if (t.closest('#btnTema')) { var tb = document.documentElement.getAttribute('data-tema') === 'gelap' ? 'terang' : 'gelap'; pasangTema(tb); Simpan.taruh(KUNCI_TEMA, tb); gambar(); return; }
     if (t.closest('#btnSuara')) { R.aturSetel('suara', !R.setel.suara); pasangSuara(); if (R.setel.suara) R.bunyi('notifikasi'); if (tab === 'akun') gambar(); return; }
-    b = t.closest('[data-ke]'); if (b) { var ke = b.getAttribute('data-ke'); if (b.closest('#lembar') && ke !== 'lainnya') tutupLembar(); if (ke === 'lainnya') lembarLainnya(); else if (ke === 'proyeksi') { keTab('beranda'); setTimeout(function () { var pq = document.querySelector('.proy'); if (pq) pq.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 120); } else if (ke === 'lapor') lembarLapor(); else if (ke === 'forum') window.WHL_FORUM.buka(ctxForum()); else if (ke === 'ksn') window.WHL_KSN.buka(ctxKsn()); else if (ke === 'k3') window.WHL_KSN.bukaK3(ctxKsn()); else if (ke.indexOf('tab:') === 0) keTab(ke.slice(4)); else if (ke.indexOf('web:') === 0) bukaWeb(ke.slice(4)); return; }
+    b = t.closest('[data-ke]'); if (b) { var ke = b.getAttribute('data-ke'); if (b.closest('#lembar') && ke !== 'lainnya') tutupLembar(); if (ke === 'lainnya') lembarLainnya(); else if (ke === 'kelolaBanner') { window.WHL_BANNER.pasang(ctxBanner()); window.WHL_BANNER.kelola(); } else if (ke === 'proyeksi') { keTab('beranda'); setTimeout(function () { var pq = document.querySelector('.proy'); if (pq) pq.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 120); } else if (ke === 'lapor') lembarLapor(); else if (ke === 'forum') window.WHL_FORUM.buka(ctxForum()); else if (ke === 'ksn') window.WHL_KSN.buka(ctxKsn()); else if (ke === 'k3') window.WHL_KSN.bukaK3(ctxKsn()); else if (ke.indexOf('tab:') === 0) keTab(ke.slice(4)); else if (ke.indexOf('web:') === 0) bukaWeb(ke.slice(4)); return; }
     b = t.closest('[data-web]'); if (b) { var u = b.getAttribute('data-web'); if (u) bukaWeb(u); else roti('Link belum tersedia.'); return; }
     b = t.closest('[data-saring]'); if (b) { saringUnit = b.getAttribute('data-saring'); gambar(); return; }
     b = t.closest('[data-aksi]'); if (!b) return;
@@ -1092,7 +1111,7 @@
       if (PUSH.token && SESI) API.Pusat.daftarPerangkat(SESI, PUSH.token, platformPush()).catch(function () { }); // server ikut pakai saluran keras/biasa
       gambar(); R.bunyi('notifikasi'); roti(kn ? 'Suara notifikasi keras dinyalakan.' : 'Suara notifikasi biasa.');
     }
-    else if (a === 'ujiBunyi') { R.bunyi('notifikasi'); R.getar('awas'); var jb3 = window.AndroidDownloader; if (jb3 && jb3.ujiBunyi) { try { jb3.ujiBunyi(); } catch (e) { /* */ } roti('Notifikasi uji dikirim ke HP ini.'); } else roti('Uji bunyi notifikasi hanya di app Android.'); }
+    else if (a === 'ujiBunyi') { R.bunyi('pesanWhl'); R.getar('awas'); var jb3 = window.AndroidDownloader; if (jb3 && jb3.ujiBunyi) { try { jb3.ujiBunyi(); } catch (e) { /* */ } roti('Notifikasi uji dikirim ke HP ini.'); } else roti('Uji bunyi notifikasi hanya di app Android.'); }
     else if (a === 'pushUlang') { pasangPush(true); roti('Mengaktifkan notifikasi...'); }
     else if (a === 'pushSetelan') { try { window.AndroidDownloader.bukaSetelanNotif(); } catch (e) { roti('Buka Setelan HP > Aplikasi > WHL > Notifikasi.'); } }
     else if (a === 'pushTips') lembarTipsNotif();
@@ -1104,7 +1123,12 @@
     else if (a === 'tutup') tutupLembar();
     else if (a === 'keluar') {
       R.tanya({ judul: 'Keluar dari akun?', ket: 'Kamu perlu nomor ID card dan PIN untuk masuk lagi di HP ini.', ya: 'Keluar', tidak: 'Batal', bahaya: true }).then(function (y) {
-        if (!y) return; if (SESI && SESI.tokenAbm) API.Absen.keluar(SESI.tokenAbm); keLogin('');
+        if (!y) return; if (SESI && SESI.tokenAbm) API.Absen.keluar(SESI.tokenAbm);
+        /* v3.6 (audit T5): HP ini berhenti menerima notifikasi akun ini (server + perangkat), kotak masuk & cache dibersihkan */
+        if (SESI && PUSH.token && API.Pusat.punya('pusatLepasPerangkat')) API.Pusat.lepasPerangkat(SESI, PUSH.token).catch(function () { });
+        try { if (webPesan) webPesan.deleteToken().catch(function () { }); } catch (e) { /* */ }
+        KOTAK = []; simpanKotak(); Simpan.taruh('whlBanner', null);
+        keLogin('');
       });
     }
   });
@@ -1174,6 +1198,7 @@
           if (/^rilis/.test(q.layar)) fetch(location.origin + '/api/uji?rilis=baru');
           if (q.layar === 'rilis') setTimeout(function () { window.WHL_RILIS.cekManual(roti); }, 1500);
           if (q.layar === 'rilisUnduh') setTimeout(function () { window.WHL_RILIS.cek(true).then(function (h) { if (!h.ada) return; window.WHL_RILIS.tawarkan(h.info); var t = document.querySelector('.rilisProg'); if (t) t.hidden = false; window.WHL_UNDUH('progres', '64'); }); }, 1500);
+          if (q.layar === 'kelolaBanner') setTimeout(function () { var t0 = Date.now(), i = setInterval(function () { if (window.WHL_BANNER.admin() || Date.now() - t0 > 20000) { clearInterval(i); window.WHL_BANNER.pasang(ctxBanner()); window.WHL_BANNER.kelola(); setTimeout(function () { window.WHL_BANNER._uji.form(null); }, 2500); } }, 400); }, 800);
           if (q.layar === 'lainnya') setTimeout(lembarLainnya, 1500);
           if (q.layar === 'proyeksi') setTimeout(function () { var pq = document.querySelector('.proy'); if (pq) window.scrollTo(0, pq.getBoundingClientRect().top + window.scrollY - 90); }, 2200);
           if (q.layar === 'kotakIsi') setTimeout(function () { catatKotak('pengumuman', '📌 Pengumuman · Umum WHL', 'Briefing K3 besok jam 06.30 di POOL 108, semua pengawas hadir.', { jenis: 'forum', ruang: 'umum', pesan: 'contoh1' }); catatKotak('tiket', '🚨 Storing WHL 902', 'Ban lepas di KM 11 · belum ada mekanik', { jenis: 'tiket', l: 'WHL 902' }); catatKotak('sebut', '@ Andi menyebutmu', 'Andi: @Budi tolong cek unit 905 di KM 40', { jenis: 'forum', ruang: 'pengawas', pesan: 'contoh2' }); KOTAK[2].b = true; KOTAK[2].w -= 3 * 3600000; simpanKotak(); keTab('kotak'); }, 900);

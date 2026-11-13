@@ -36,18 +36,19 @@
     siapJanji.catch(function () { siapJanji = null; });
     return siapJanji;
   }
+  var segarSesi = false;
   function masuk(paksa) {
     var kunci = String(CTX.sesi.idProfil || CTX.sesi.idKetik || '');
     return siapkan().then(function () { return new Promise(function (ok) { var u = auth.onAuthStateChanged(function (x) { u(); ok(x); }); }); }).then(function (user) {
       return Simpan.ambil('whlForumUntuk').then(function (untuk) {
-        if (user && untuk === kunci && !paksa) return user;
+        if (user && untuk === kunci && !paksa && segarSesi) return user; /* v3.6 (audit T5): token forum baru sekali tiap app dibuka -> peran/ruang/akun nonaktif ikut terbaru */
         return (user ? auth.signOut() : Promise.resolve()).then(function () { return API.Pusat.forumToken(CTX.sesi); }).then(function (h) {
           if (!h || !h.ok) { var e = new Error((h && h.pesan) || 'Forum belum bisa dibuka.'); e.ditolak = !!(h && h.ditolak); e.login = h && h.login; throw e; }
           return auth.signInWithCustomToken(h.token).then(function (c) { return Simpan.taruh('whlForumUntuk', kunci).then(function () { return c.user; }); });
         });
       });
     }).then(function (user) { return user.getIdTokenResult(); }).then(function (r) {
-      var c = r.claims; INFO = { uid: auth.currentUser.uid, nama: c.nama, peran: c.peran, admin: c.admin === true, ruang: c.ruang || [] };
+      segarSesi = true; var c = r.claims; INFO = { uid: auth.currentUser.uid, nama: c.nama, peran: c.peran, admin: c.admin === true, ruang: c.ruang || [] };
       RUANG = KF.ruang.filter(function (x) { return INFO.ruang.indexOf(x.id) >= 0; }); return INFO;
     });
   }
@@ -65,7 +66,7 @@
         if (x.uid === INFO.uid || x.hapus || !x.waktu || x.waktu.toMillis() < mulaiMs) return;
         var disebut = (x.sebut || []).indexOf(INFO.uid) >= 0, ruangNm = (KF.ruang.filter(function (q) { return q.id === r; })[0] || {}).nama || r;
         if (aktif === r && document.visibilityState === 'visible') return;
-        if (Date.now() - nadaTerakhir > 4000) { nadaTerakhir = Date.now(); R.bunyi('notifikasi'); R.getar(disebut ? 'awas' : undefined); }
+        if (Date.now() - nadaTerakhir > 4000) { nadaTerakhir = Date.now(); R.bunyi(disebut ? 'pengumumanWhl' : 'pesanWhl'); R.getar(disebut ? 'awas' : undefined); }
         if (CTX.roti) CTX.roti((disebut ? '@ Kamu disebut · ' : '💬 ') + ruangNm + ': ' + pendek(x.nama) + ' — ' + cuplik(x).slice(0, 60));
       });
       if (lapisEl && !aktif) gambarDaftar(); if (CTX.perbarui) CTX.perbarui();
@@ -82,7 +83,7 @@
     return Simpan.ambil('whlForumBaca').then(function (v) { try { BACA_SAYA = JSON.parse(v || '{}') || {}; } catch (e) { BACA_SAYA = {}; } return masuk(false); })
       .then(function () { RUANG.forEach(function (x) { awasi(x.id); }); return { ok: true }; }, function (e) { var siap = /belum disiapkan|kunci layanan/i.test(e.message); gagalMasuk = siap ? 'disiapkan' : e.message; return { ok: false, ditolak: e.ditolak, disiapkan: siap, pesan: e.message }; });
   }
-  function keluar() { tutup(true); Object.keys(AWAS).forEach(function (r) { AWAS[r](); }); AWAS = {}; BARU = {}; INFO = null; if (auth) auth.signOut().catch(function () { }); Simpan.taruh('whlForumUntuk', null); }
+  function keluar() { segarSesi = false; tutup(true); Object.keys(AWAS).forEach(function (r) { AWAS[r](); }); AWAS = {}; BARU = {}; INFO = null; if (auth) auth.signOut().catch(function () { }); Simpan.taruh('whlForumUntuk', null); }
 
   /* ---------- lapis ---------- */
   function lapis(html) {
@@ -94,7 +95,7 @@
   }
   function tutup(diam) { berhenti(); hentiRekam(false); document.documentElement.classList.remove('forum-buka'); if (!lapisEl) return; var d = lapisEl; lapisEl = null; aktif = ''; d.classList.remove('tampil'); setTimeout(function () { d.remove(); }, diam || R.hemat() ? 0 : 220); if (CTX && CTX.perbarui) CTX.perbarui(); }
   function berhenti() { unsub.forEach(function (f) { try { f(); } catch (e) { /* */ } }); unsub = []; if (audioNow) { audioNow.pause(); audioNow = null; } }
-  function kepala(judul, sub, kembali, kanan) { return '<div class="ksnKp"><button type="button" class="kb" data-f="' + kembali + '" aria-label="Kembali">‹</button><div class="nm">' + esc(sub) + '<b>' + esc(judul) + '</b></div>' + (kanan || '') + '</div>'; }
+  function kepala(judul, sub, kembali, kanan, ava) { return '<div class="ksnKp' + (ava ? ' fmKp' : '') + '"><button type="button" class="kb" data-f="' + kembali + '" aria-label="Kembali">‹</button>' + (ava ? '<span class="fmAva">' + ava + '</span>' : '') + '<div class="nm">' + esc(sub) + '<b>' + esc(judul) + '</b></div>' + (kanan || '') + '</div>'; }
   function chipUji() { return KF.mode === 'emulator' ? '<span class="chip kuning" style="margin-left:auto;flex:none">MODE UJI</span>' : ''; }
 
   /* ---------- daftar ruang ---------- */
@@ -125,7 +126,7 @@
   function bukaRuang(r) {
     berhenti(); aktif = r; LIVE = []; LAMA = []; habis = false; BACA = {}; SEMATAN = null; balasKe = null; BARU[r] = 0;
     var x = KF.ruang.filter(function (q) { return q.id === r; })[0];
-    lapis(kepala(x.nama, x.ket, 'daftar', chipUji()) + '<div class="fmSem" id="fmSem" hidden></div><div class="fmList" id="fmList"><div class="kosong"><span class="putar"></span> Memuat pesan...</div></div>' + penulis());
+    lapis(kepala(x.nama, x.ket, 'daftar', chipUji(), ikRuang(x)) + '<div class="fmSem" id="fmSem" hidden></div><div class="fmList" id="fmList"><div class="kosong"><span class="putar"></span> Memuat pesan...</div></div>' + penulis());
     var ref = db.collection('ruang').doc(r);
     unsub.push(ref.collection('pesan').orderBy('waktu', 'desc').limit(30).onSnapshot(function (s) {
       var bawah = dekatBawah(); LIVE = []; s.forEach(function (d) { LIVE.push(ubah(d)); });
@@ -361,6 +362,6 @@
   function bukaKe(ctx, r) {
     buka(ctx); var n = 0, i = setInterval(function () { if (INFO || ++n > 60) { clearInterval(i); if (INFO && INFO.ruang.indexOf(r) >= 0) bukaRuang(r); } }, 250);
   }
-  window.WHL_FORUM = { terbuka: function () { return !!lapisEl; }, tutup: function () { tutup(); }, keDaftar: function () { if (aktif && INFO) { berhenti(); aktif = ''; gambarDaftar(); } }, disiapkan: function () { return gagalMasuk === 'disiapkan'; }, mulai: mulai, buka: buka, bukaKe: bukaKe, keluar: keluar, totalBaru: totalBaru, siap: function () { return !!INFO; }, gagal: function () { return gagalMasuk; },
+  window.WHL_FORUM = { fs: function () { return INFO && db ? { db: db, FV: FV, info: INFO } : null; }, /* v3.6: dipakai banner.js */ terbuka: function () { return !!lapisEl; }, tutup: function () { tutup(); }, keDaftar: function () { if (aktif && INFO) { berhenti(); aktif = ''; gambarDaftar(); } }, disiapkan: function () { return gagalMasuk === 'disiapkan'; }, mulai: mulai, buka: buka, bukaKe: bukaKe, keluar: keluar, totalBaru: totalBaru, siap: function () { return !!INFO; }, gagal: function () { return gagalMasuk; },
     _uji: { bukaRuang: bukaRuang, kirimTeks: function (t) { var el = document.getElementById('fmTeks'); el.value = t; kirimTeks(); }, rekam: mulaiRekam, henti: hentiRekam, aksi: function () { var s = LIVE.slice().sort(function (a, b) { return b.ms - a.ms; })[0]; if (s) aksi(s.id); } } };
 })();

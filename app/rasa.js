@@ -61,7 +61,14 @@
     pinSalah: function () { nada(300, 240, 0.09, 'triangle', 0.05); nada(300, 220, 0.12, 'triangle', 0.05, 0.13); },                 /* khas app: dua ketuk rendah, keluarga "alarm" tapi lebih pendek */
     achievement: function () { [523, 659, 784, 1047].forEach(function (f, i) { nada(f, f, 0.2, 'sine', 0.045, i * 0.09); }); nada(1568, 2093, 0.3, 'sine', 0.025, 0.38); } /* khas app: "aman" + satu nada lebih tinggi & kilau */
   };
+  /* v3.6 suara khas WHL (perempuan "Pesan WHL" / "Tiket WHL" / "Pengumuman WHL" + jingle, -1 dBFS): file di suara/ */
+  var BERKAS = { pesanWhl: 'suara/whl_pesan.mp3', tiketWhl: 'suara/whl_tiket.mp3', pengumumanWhl: 'suara/whl_pengumuman.mp3' }, PUTAR = {};
+  function suaraBerkas(nm) {
+    if (setel.keras === false) { (nm === 'tiketWhl' ? WEB.alarm : WEB.pop)(); return; }
+    try { var a = PUTAR[nm] || (PUTAR[nm] = new Audio(BERKAS[nm])); a.volume = 1; a.currentTime = 0; var p = a.play(); if (p && p.catch) p.catch(function () { WEB.pop(); }); } catch (e) { WEB.pop(); }
+  }
   function bunyi(nm) {
+    if (BERKAS[nm]) { if (setel.suara && !document.hidden && !senyap()) suaraBerkas(nm); return; }
     if (!setel.suara || !RESEP[nm] || document.hidden || senyap()) return;
     var c = audio(); if (!c) return;
     try { if (c.state === 'suspended') c.resume(); RESEP[nm](); } catch (e) { /* */ }
