@@ -1,14 +1,14 @@
 {
- "versi": "3.3",
- "versionCode": 303,
+ "versi": "3.4",
+ "versionCode": 304,
  "wajib": false,
  "catatan": [
-  "Perbarui app langsung dari dalam app (Akun > Cek pembaruan)",
-  "Suara notifikasi keras + uji bunyi",
-  "Proyeksi target KM di Beranda"
+  "Bisa dipasang lebih luas: tanda tangan v1+v2+v3, cocok Android 7 sampai 15/16",
+  "Tombol kembali di kepala layar",
+  "Notifikasi web untuk iPhone (app web)"
  ],
- "apk": "WHL-App-v3.3.apk",
- "ukuran": 9013537,
- "sha256": "7be382f4164131104029a2b7bd146493b32b1c08d6479593e6fc6116d0deda3c",
- "dibuat": "2026-11-13 08:59"
+ "apk": "WHL-App-v3.4.apk",
+ "ukuran": 9084072,
+ "sha256": "a4002be44cdd0e58989f1666769b295b66e24dc8cccf48e7206311a0073e9e7b",
+ "dibuat": "2026-11-13 09:28"
 }
