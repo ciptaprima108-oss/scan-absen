@@ -1,14 +1,14 @@
 {
- "versi": "3.8",
- "versionCode": 308,
+ "versi": "3.9",
+ "versionCode": 309,
  "wajib": false,
  "catatan": [
-  "Ikon layanan baru bergaya 3D",
-  "Suara notifikasi: Pesan We Ha El",
-  "Banner pengumuman di Beranda, forum bermotif"
+  "Masuk pakai Face ID / sidik jari (aktifkan di Akun)",
+  "Banner bisa dibuka: isi lengkap + peserta",
+  "Lihat siapa yang sedang online"
  ],
- "apk": "WHL-App-v3.8.apk",
- "ukuran": 8094760,
- "sha256": "5e494d8015a7f9a1f863da34a57500e36bfdce9a64463a477577c9d1232e3d03",
- "dibuat": "2026-11-13 12:40"
+ "apk": "WHL-App-v3.9.apk",
+ "ukuran": 8237422,
+ "sha256": "a15fafb0f77779911b9e5b493e86acadadb0d60d207ece5259bb7a0620b82bfb",
+ "dibuat": "2026-11-13 13:56"
 }
