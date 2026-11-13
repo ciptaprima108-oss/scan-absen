@@ -1,15 +1,14 @@
 {
- "versi": "3.6",
- "versionCode": 306,
+ "versi": "3.8",
+ "versionCode": 308,
  "wajib": false,
  "catatan": [
-  "Suara notifikasi khas WHL: \"Pesan WHL\" / \"Tiket WHL\" + jingle",
-  "Banner pengumuman di Beranda",
-  "Forum lebih hidup: latar bermotif, gelembung berekor",
-  "Lebih aman: halaman web dibuka terpisah, notifikasi dicabut saat keluar"
+  "Ikon layanan baru bergaya 3D",
+  "Suara notifikasi: Pesan We Ha El",
+  "Banner pengumuman di Beranda, forum bermotif"
  ],
- "apk": "WHL-App-v3.6.apk",
- "ukuran": 7874366,
- "sha256": "b1d132a9690b0fec8b05d3fdc1e398d4aa51e1c0d8e264888e908b29f87224ba",
- "dibuat": "2026-11-13 11:37"
+ "apk": "WHL-App-v3.8.apk",
+ "ukuran": 8094760,
+ "sha256": "5e494d8015a7f9a1f863da34a57500e36bfdce9a64463a477577c9d1232e3d03",
+ "dibuat": "2026-11-13 12:40"
 }
