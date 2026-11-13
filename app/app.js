@@ -137,7 +137,7 @@
   }
   function kartuApp(a) {
     var u = alamat(a);
-    return '<button type="button" class="app' + (u ? '' : ' mati') + '" data-web="' + esc(u) + '"><span class="ik">' + IK(a.ikn || IKON_DIV[a.d] || 'web') + '</span><span class="tx"><b>' + esc(a.n) + '</b><small>' + esc(a.k) + (a.kunci ? ' · 🔒 ' + esc(a.kunci) : '') + '</small></span><span class="chip web">Web</span>' + IK('kanan', 'kmP') + '</button>';
+    return '<button type="button" class="app' + (u ? '' : ' mati') + '" data-web="' + esc(u) + '"><span class="ik">' + window.WHL_ILUS(a.ikn || IKON_DIV[a.d] || 'web') + '</span><span class="tx"><b>' + esc(a.n) + '</b><small>' + esc(a.k) + (a.kunci ? ' · 🔒 ' + esc(a.kunci) : '') + '</small></span><span class="chip web">Web</span>' + IK('kanan', 'kmP') + '</button>';
   }
 
   function mulaiApp() {
@@ -226,7 +226,7 @@
   function waktuLalu(w) { var m = Math.max(0, Math.round((Date.now() - w) / 60000)); return m < 1 ? 'baru saja' : m < 60 ? m + ' mnt lalu' : m < 1440 ? Math.floor(m / 60) + ' jam lalu' : Math.floor(m / 1440) + ' hr lalu'; }
   var IKON_KOTAK = { tiket: ['alarm', 'merah'], forum: ['forum', 'biru'], sebut: ['forum', 'biru'], pengumuman: ['pengumuman', 'biru'], absen: ['absen', 'biru'], ksn: ['kuesioner', 'kuning'], info: ['lonceng', ''] };
   function barisKotak(ik, warna, judul, isi, kanan, attr, belum) {
-    return '<button type="button" class="km' + (belum ? ' belum' : '') + '" ' + attr + '><span class="kmI ' + warna + '">' + IK(ik) + '</span><span class="tx"><b>' + esc(String(judul || '').replace(/^[^A-Za-z0-9@]+/, '')) + '</b>' + (isi ? '<small>' + esc(isi) + '</small>' : '') + '</span><em>' + esc(kanan || '') + '</em>' + IK('kanan', 'kmP') + '</button>';
+    return '<button type="button" class="km' + (belum ? ' belum' : '') + '" ' + attr + '><span class="kmI ' + warna + '">' + window.WHL_ILUS(ik) + '</span><span class="tx"><b>' + esc(String(judul || '').replace(/^[^A-Za-z0-9@]+/, '')) + '</b>' + (isi ? '<small>' + esc(isi) + '</small>' : '') + '</span><em>' + esc(kanan || '') + '</em>' + IK('kanan', 'kmP') + '</button>';
   }
   function gambarKotak() {
     var h = '', P = [], T2 = daftarTindak();
@@ -423,9 +423,9 @@
   /* app kembali dari latar -> ping ulang + coba lagi kalau belum aktif */
   document.addEventListener('visibilitychange', function () { if (!document.hidden && SESI && API.Pusat.asli() && !PUSH.aktif) pasangPush(false); if (!document.hidden && SESI && window.WHL_RILIS) window.WHL_RILIS.cekOtomatis(); });
   function suaraKeras() { return R.setel.keras !== false; }
-  function platformPush() { return suaraKeras() ? 'andr-suara' : 'andr-biasa'; } /* v3.6: andr-suara = saluran whl3_* (suara WHL) */
+  function platformPush() { return suaraKeras() ? 'andr-whl4' : 'andr-biasa'; } /* v3.7: andr-whl4 = saluran whl4_* (suara "We Ha El") */
   function barisSuaraKeras() {
-    return '<div class="baris" style="align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--garis)"><div style="flex:1"><b>Suara notifikasi keras</b><div class="kecil">Suara WHL: perempuan berkata "Pesan WHL" / "Tiket WHL" + jingle, keras & jelas, getar panjang. Juga di dalam app.</div></div><button type="button" class="saklar' + (suaraKeras() ? ' on' : '') + '" data-aksi="suaraKeras" role="switch" aria-checked="' + suaraKeras() + '" aria-label="Suara notifikasi keras"><i></i></button></div>'
+    return '<div class="baris" style="align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--garis)"><div style="flex:1"><b>Suara notifikasi keras</b><div class="kecil">Suara WHL: perempuan berkata "Pesan, We Ha El" / "Tiket, We Ha El" + jingle, keras & jelas, getar panjang. Juga di dalam app.</div></div><button type="button" class="saklar' + (suaraKeras() ? ' on' : '') + '" data-aksi="suaraKeras" role="switch" aria-checked="' + suaraKeras() + '" aria-label="Suara notifikasi keras"><i></i></button></div>'
       + '<button type="button" class="tKecil" data-aksi="ujiBunyi" style="width:100%;margin-top:10px">' + IK('lonceng') + ' Uji bunyi notifikasi</button>';
   }
   function pushBaris() {
@@ -896,8 +896,8 @@
     var A = appsSaya(), q = cariApp.toLowerCase();
     var h = '<div class="cariBaris">' + IK('cari') + '<input id="cariApp" type="search" placeholder="Cari aplikasi atau menu..." value="' + esc(cariApp) + '" autocomplete="off"></div>';
     var L = A.filter(function (a) { return !q || (a.n + ' ' + a.k).toLowerCase().indexOf(q) >= 0; });
-    h += '<h2 class="bagW">Layanan di app</h2><div class="bingkai">' + (forumTampil() ? '<button type="button" class="app" data-ke="forum"><span class="ik">' + IK('forum') + '</span><span class="tx"><b>Forum WHL</b><small>Obrolan, foto & pesan suara antar karyawan</small></span>' + (forumBaru() ? '<span class="fmN">' + forumBaru() + '</span>' : (window.WHL_FORUM.disiapkan() ? '<span class="chip kuning">Segera</span>' : '<span class="chip asli">Asli</span>')) + IK('kanan', 'kmP') + '</button>' : '')
-      + '<button type="button" class="app" data-ke="lapor"><span class="ik">' + IK('input') + '</span><span class="tx"><b>Input cepat</b><small>Form lapangan sesuai peranmu</small></span>' + IK('kanan', 'kmP') + '</button></div>';
+    h += '<h2 class="bagW">Layanan di app</h2><div class="bingkai">' + (forumTampil() ? '<button type="button" class="app" data-ke="forum"><span class="ik">' + window.WHL_ILUS('forum') + '</span><span class="tx"><b>Forum WHL</b><small>Obrolan, foto & pesan suara antar karyawan</small></span>' + (forumBaru() ? '<span class="fmN">' + forumBaru() + '</span>' : (window.WHL_FORUM.disiapkan() ? '<span class="chip kuning">Segera</span>' : '<span class="chip asli">Asli</span>')) + IK('kanan', 'kmP') + '</button>' : '')
+      + '<button type="button" class="app" data-ke="lapor"><span class="ik">' + window.WHL_ILUS('input') + '</span><span class="tx"><b>Input cepat</b><small>Form lapangan sesuai peranmu</small></span>' + IK('kanan', 'kmP') + '</button></div>';
     h += '<h2 class="bagW">Aplikasi web <span>' + L.length + '</span></h2><div class="kecil bingkaiKet">' + IK('web') + '<span>Belum punya tampilan asli. Dibuka sebagai halaman web di dalam app; tombol Kembali membawa kamu ke sini lagi.</span></div>';
     h += L.length ? '<div class="bingkai">' + L.map(kartuApp).join('') + '</div>' : R.kosong(A.length ? 'Tidak ketemu' : 'Belum ada aplikasi untuk peranmu', A.length ? 'Coba kata lain.' : 'Aplikasi muncul sesuai peran di Pusat WHL.');
     h += '<div class="bingkai" style="margin-top:12px">' + kartuApp({ n: 'Pusat WHL versi web', ikn: 'rumahWeb', k: 'Halaman Pusat WHL lengkap (login PIN lagi di sana)', u: K.DASH + '?mode=pusat' }) + '</div>';

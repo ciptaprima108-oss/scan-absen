@@ -264,3 +264,13 @@ html[data-tema="gelap"] .fmList { background-color:#0b1a2e; background-image:url
 .fmKp .fmAva { width:38px; height:38px; border-radius:50%; background:#fff; color:var(--utama); display:grid; place-items:center; flex:none; } .fmKp .fmAva .ikn { width:20px; height:20px; }
 html[data-tema="gelap"] .fmKp .fmAva { background:var(--tint2); color:#fff; }
 .bnrLapis .baris > div { min-width:0; } .bnrLapis input[type="date"] { min-width:0; width:100%; padding-left:10px; padding-right:6px; }
+
+/* ============ v3.8 ikon ilustrasi 3D (ilus3d.js) ============ */
+.ly span { width:62px; height:62px; border-radius:0; } .ly span .ilus { filter:none; width:62px; height:62px; overflow:visible; }
+.ly span .tanda { top:-2px; right:-4px; }
+.lembarLy .ly span, .lembarLy .ly span .ilus { width:58px; height:58px; }
+.app .ik { background:none !important; width:46px; height:46px; flex:0 0 46px; border-radius:0; } .app .ik .ilus { width:46px; height:46px; }
+.kmI, .kmI.merah, .kmI.kuning, html[data-tema="gelap"] .kmI, html[data-tema="gelap"] .kmI.merah, html[data-tema="gelap"] .kmI.kuning { background:none; width:44px; height:44px; } .kmI .ilus { width:44px; height:44px; }
+.rilisIk .ilus { width:52px; height:52px; }
+html[data-tema="gelap"] .ilus3d ellipse[opacity=".16"] { opacity:.45; }
+.fmKp .fmAva .ilus { width:32px; height:32px; } .fmKp .fmAva { background:#fff; }

@@ -358,7 +358,7 @@
 
   /* notif-push-13nov: notifikasi forum diketuk -> buka forum langsung di ruang itu */
   /* v2.16: ikon garis WHL untuk ruang (emoji kalau ikon.js tidak ada) */
-  function ikRuang(x) { var m = { umum: 'pengumuman', pengawas: 'insiden', mekanik: 'truk', fuelman: 'solar', admin: 'dokumen', kantor: 'rumahWeb' }; return window.WHL_IKON ? window.WHL_IKON(m[x.id] || 'forum') : x.ic; }
+  function ikRuang(x) { var m = { umum: 'pengumuman', pengawas: 'insiden', mekanik: 'monitor', fuelman: 'solar', admin: 'dokumen', kantor: 'rumahWeb' }; return window.WHL_ILUS ? window.WHL_ILUS(m[x.id] || 'forum') : window.WHL_IKON ? window.WHL_IKON(m[x.id] || 'forum') : x.ic; } /* v3.8 ikon 3D */
   function bukaKe(ctx, r) {
     buka(ctx); var n = 0, i = setInterval(function () { if (INFO || ++n > 60) { clearInterval(i); if (INFO && INFO.ruang.indexOf(r) >= 0) bukaRuang(r); } }, 250);
   }
