@@ -1,13 +1,14 @@
 {
- "versi": "3.10",
- "versionCode": 311,
+ "versi": "3.11",
+ "versionCode": 312,
  "wajib": false,
  "catatan": [
-  "Menu baru Nota bengkel untuk pengawas: ajukan nota bengkel terafiliasi & pengajuan > 3 jt, lihat status ACC / ditolak",
-  "Ajuan tersimpan di HP saat sinyal putus, dikirim otomatis"
+  "Nota bengkel: ajukan BANYAK nota sekaligus (isian bersama + banyak baris)",
+  "Video perbaikan di nota: rekam / galeri, maks 2 per nota, unggah bisa lanjut kalau sinyal putus",
+  "Ajuan saya: tanda 🎥 untuk nota ber-video"
  ],
- "apk": "WHL-App-v3.10.apk",
- "ukuran": 8249214,
- "sha256": "3c6a232d5f21aa99bb0b6e5b27755102b021ba2b55f978a1b7a88bd673965d53",
- "dibuat": "2026-11-14 13:54"
+ "apk": "WHL-App-v3.11.apk",
+ "ukuran": 8255191,
+ "sha256": "dc4e4c8d24351550a4420afb8cec22d114fb4a5a6d466a11abba5f07ee0c26d3",
+ "dibuat": "2026-11-14 14:49"
 }
