@@ -1,14 +1,14 @@
 {
- "versi": "3.9",
- "versionCode": 309,
+ "versi": "3.9.2",
+ "versionCode": 310,
  "wajib": false,
  "catatan": [
-  "Masuk pakai Face ID / sidik jari (aktifkan di Akun)",
-  "Banner bisa dibuka: isi lengkap + peserta",
-  "Lihat siapa yang sedang online"
+  "Beranda lebih cepat di sinyal lemah: data terakhir langsung tampil, lalu disegarkan",
+  "Forum & tombol admin tetap tersambung walau sinyal lemah (coba ulang otomatis)",
+  "Teks status online lebih jelas"
  ],
- "apk": "WHL-App-v3.9.apk",
- "ukuran": 8237422,
- "sha256": "a15fafb0f77779911b9e5b493e86acadadb0d60d207ece5259bb7a0620b82bfb",
- "dibuat": "2026-11-13 13:56"
+ "apk": "WHL-App-v3.9.2.apk",
+ "ukuran": 8240300,
+ "sha256": "c769261c6efd741f8b4fc5431b49803835dd95bd3df19b3c61e2d3f97780578d",
+ "dibuat": "2026-11-14 08:15"
 }
