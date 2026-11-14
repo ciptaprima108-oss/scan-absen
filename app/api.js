@@ -120,6 +120,10 @@
     daftarPerangkat: function (sesi, fcm, platform) { return rpc(K.DASH, 'pusat', 'pusatDaftarPerangkat', [sesi.tokenPusat, fcm, platform]); },
     lepasPerangkat: function (sesi, fcm) { return rpc(K.DASH, 'pusat', 'pusatLepasPerangkat', [sesi.tokenPusat, fcm]); }, /* v3.6 (audit T5): spesifikasi server di ENDPOINT-DIBUTUHKAN.txt H */
     forumNotif: function (sesi, ruang, pesanId, jenis) { return rpc(K.DASH, 'pusat', 'pusatForumNotif', [sesi.tokenPusat, ruang, pesanId, jenis || 'pesan']); },
+    /* v3.10 NOTA bengkel pengawas (kontrak Dodi 14 Nov, DASHBOARD api pusat) */
+    notaOpsi: function (sesi) { return rpc(K.DASH, 'pusat', 'pusatNotaOpsi', [sesi.tokenPusat], 25000); },
+    notaAjukan: function (sesi, d) { return rpc(K.DASH, 'pusat', 'pusatNotaAjukan', [sesi.tokenPusat, d], K.BATAS_NOTA || 90000); }, /* BATAS_NOTA hanya diubah uji otomatis */ /* foto s/d 9 x 300 KB: 4G lemah butuh waktu */
+    notaSaya: function (sesi) { return rpc(K.DASH, 'pusat', 'pusatNotaSaya', [sesi.tokenPusat], 25000); },
     gantiPin: function (token, lama, baru) { return rpc(K.DASH, 'pusat', 'pusatGantiPin', [token, lama, baru]); },
     ringkasan: function (sesi, bagian, paksa) {
       if (pusatAsli) return rpc(K.DASH, 'pusat', 'ringkasanPusat', [bagian, !!paksa, '', sesi.tokenPusat], 30000); /* v3.9.2: 90 -> 30 dtk; data lama tetap tampil dari cache */

@@ -6,7 +6,7 @@
 (function () {
   var S = 'https://script.google.com/macros/s/';
   var K = {
-    VERSI: '3.9.2', KODE: 310, /* KODE = versionCode APK (dipakai cek pembaruan di browser; di APK dibaca dari Android) */
+    VERSI: '3.10', KODE: 311, /* KODE = versionCode APK (dipakai cek pembaruan di browser; di APK dibaca dari Android) */
     RILIS: 'https:' + '/' + '/ciptaprima108-oss.github.io/scan-absen/rilis/', /* v3.3 pembaruan dari dalam app: versi.json + APK */
     DASH: S + 'AKfycbzqJ0nKotpl-TjuTHLTMcOZpYZSeWdE9VWHFw0h712aoMagPDZJMQ--7W-kDtCxPvw/exec',     /* DASHBOARD: Pusat WHL */
     ABSEN: S + 'AKfycbyJBXvN79b4y9eunDSRigMXmDOS4kW3K5ZF0ZEbGCKT1-WPqi-zEica0r7M__-dqwqhDQ/exec',  /* Absensi Tambang: api abm */

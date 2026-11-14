@@ -316,3 +316,28 @@ html[data-tema="gelap"] .ilus3d ellipse[opacity=".16"] { opacity:.45; }
 .pitaData button, .forumSt button { flex:none; background:var(--panel); color:var(--utama); font-weight:800; font-size:12.5px; border-radius:99px; padding:6px 12px; border:1px solid var(--garis); }
 .forumSt { display:flex; align-items:center; gap:8px; margin:6px 6px 2px; padding:8px 10px; border-radius:12px; background:var(--lembut2); font-size:12px; color:var(--redup); font-weight:600; }
 .forumSt span:not(.putar) { flex:1; min-width:0; } .forumSt .putar { width:13px; height:13px; flex:none; } .forumSt .ikn { width:16px; height:16px; flex:none; color:var(--tKuning); }
+
+/* ============ v3.10 nota bengkel ============ */
+.notaSeg { margin-bottom:14px; } .notaJenis { margin-bottom:8px; } .notaJenis button { font-size:13px; }
+.kecilSeg { grid-template-columns:1fr 1fr; } .kecilSeg button { min-height:40px; }
+.wajib { font-style:normal; font-size:11px; font-weight:800; color:var(--tMerah); background:#fde2e2; border-radius:99px; padding:1px 7px; margin-left:4px; } html[data-tema="gelap"] .wajib { background:#3a1620; }
+.notaRp { font-size:20px; font-weight:800; }
+.notaFoto { display:flex; flex-wrap:wrap; gap:8px; }
+.notaFoto > span { position:relative; width:84px; height:84px; border-radius:14px; overflow:hidden; box-shadow:var(--bayang); } .notaFoto img { width:100%; height:100%; object-fit:cover; }
+.notaFoto > span button { position:absolute; top:4px; right:4px; width:24px; height:24px; border-radius:50%; background:rgba(5,20,45,.7); color:#fff; font-size:12px; padding:0; }
+.notaTambah { width:84px; height:84px; border-radius:14px; border:2px dashed var(--garis); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:var(--utama); cursor:pointer; background:var(--lembut2); }
+.notaTambah .ikn { width:24px; height:24px; } .notaTambah small { font-size:10.5px; color:var(--redup); font-weight:700; text-align:center; }
+.notaDaftar { padding:6px 12px; } .notaKartu { padding:12px 2px; } .notaKartu + .notaKartu { border-top:1px solid var(--garis); }
+.notaAtas { display:flex; align-items:center; gap:8px; } .notaAtas b { flex:1; min-width:0; font-size:15px; }
+.notaSt { font-style:normal; font-size:11.5px; font-weight:800; padding:3px 10px; border-radius:99px; white-space:nowrap; }
+.notaSt.abu { background:var(--panel2); color:var(--redup); } .notaSt.hijau { background:#dcfce7; color:#15803d; } .notaSt.merah { background:#fde2e2; color:#c62828; } .notaSt.kuning { background:#fdf3e1; color:#9a5b00; }
+html[data-tema="gelap"] .notaSt.hijau { background:#123a26; color:#86efac; } html[data-tema="gelap"] .notaSt.merah { background:#3a1620; color:#fca5a5; } html[data-tema="gelap"] .notaSt.kuning { background:#3a2a10; color:#fcd34d; }
+.notaRinci { font-size:12.5px; color:var(--redup); margin-top:2px; } .notaTotal { font-size:18px; font-weight:800; margin-top:4px; } .notaTotal small { display:block; font-size:11.5px; color:var(--samar); font-weight:600; }
+.notaUraian { margin-top:4px; }
+.notaKode { display:flex; align-items:center; gap:6px; margin-top:8px; background:#e9f9ef; color:#15803d; border-radius:12px; padding:8px 10px; font-size:13.5px; } .notaKode .ikn { width:18px; height:18px; } .notaKode b { font-size:15px; letter-spacing:.02em; }
+.notaTolak { display:flex; align-items:flex-start; gap:6px; margin-top:8px; background:#fdecec; color:#b71c1c; border-radius:12px; padding:8px 10px; font-size:13.5px; font-weight:600; } .notaTolak .ikn { width:18px; height:18px; flex:none; }
+html[data-tema="gelap"] .notaKode { background:#123a26; color:#86efac; } html[data-tema="gelap"] .notaTolak { background:#3a1620; color:#fca5a5; }
+.notaUlang { margin-top:10px; min-height:46px; font-size:15px; }
+.notaBaris { display:flex; align-items:center; gap:8px; padding:10px 4px; } .notaBaris + .notaBaris { border-top:1px solid var(--garis); } .notaBaris .tx { flex:1; min-width:0; } .notaBaris b { display:block; font-size:14px; } .notaBaris small { font-size:12px; color:var(--redup); }
+.notaBaris .tKecil { min-height:38px; padding:0 10px; font-size:12.5px; }
+.notaIsi .tUtama .ikn, .ksnIsi .tUtama .ikn { display:inline-block; width:20px; height:20px; vertical-align:-4px; margin-right:6px; }
