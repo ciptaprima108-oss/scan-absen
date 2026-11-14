@@ -207,7 +207,9 @@
     var AD = window.AndroidDownloader; if (AD && typeof AD.bukaWeb === 'function') { try { AD.bukaWeb(url); return; } catch (e) { /* */ } } /* v3.6 (audit T2): APK -> WebView terpisah tanpa token */
     try { var CI = window.Capacitor; if (CI && CI.getPlatform && CI.getPlatform() === 'ios' && CI.Plugins && CI.Plugins.WhlAsli) { CI.Plugins.WhlAsli.bukaWeb({ url: url }); return; } } catch (e) { /* */ } /* app iPhone: peramban terpisah (SFSafariViewController) */
     var P = window.WHL_PASANG; // hanya ada di browser (bukan APK)
-    if (P && !P.berdiri()) { var w = null; try { w = window.open(url, '_blank'); } catch (e) { w = null; } if (w) return; }
+    /* v3.9.2: SELALU coba jendela baru dulu (juga saat app web terpasang di Layar Utama). Dulu di PWA terpasang halaman app diganti
+       halaman web -> kembali = app dimuat ulang dari nol di 4G lemah (Beranda kerangka abu-abu lama, forum masuk ulang). */
+    if (P) { var w = null; try { w = window.open(url, '_blank', 'noopener'); } catch (e) { w = null; } if (w || P.berdiri()) return; }
     window.location.href = url;
   }
   function kartuApp(a) {
@@ -223,7 +225,7 @@
     var t0 = ''; try { t0 = sessionStorage.getItem('whlV2Tab') || ''; } catch (e) { /* */ }
     var h = (location.hash || '').replace('#', ''); if (/^(beranda|unit|absen|apps|akun|kotak|aktivitas)$/.test(h)) t0 = h;
     keTab(/^(beranda|unit|absen|apps|akun|kotak|aktivitas)$/.test(t0) ? t0 : 'beranda');
-    muatRingkasan(false); muatAbsen(); muatProfil(false); muatKsn(); setTimeout(muatForum, 1200);
+    muatCacheRingkas().then(function () { muatRingkasan(false); }); muatAbsen(); muatProfil(false); muatKsn(); setTimeout(muatForum, 1200);
     setTimeout(function () { if (NOTIF.tiket && bolehUnit()) aturNotif(true); }, 1500); // pastikan jadwal cek latar terpasang
     setTimeout(function () { if (SESI && API.Pusat.asli()) pasangPush(); }, 2500); // notif-push-13nov
     setTimeout(function () { if (window.WHL_RILIS) window.WHL_RILIS.cekOtomatis(); }, 4000); // v3.3: ada versi baru? (maks 1x per 6 jam)
@@ -365,6 +367,7 @@
   }
 
   /* ---------- Forum (v2.11): forum.js; di sini cuma pintu + lencana ---------- */
+  API.Pusat.saatBerubah = function () { if (SESI && FORUM && FORUM.disiapkan && API.Pusat.punya('pusatForumToken')) { FORUM = null; muatForum(); } };
   function ctxForum() { return { sesi: SESI, roti: roti, perbarui: function () { aturTanda(); if (tab === 'beranda' || tab === 'apps') gambar(); } }; }
   /* ---------- v2.14 Notifikasi tiket perlu ditindak ---------- */
   var NOTIF = { tiket: false }, TINDAK_LALU = null;
@@ -535,7 +538,14 @@
   }
   setInterval(function () { if (SESI && !document.hidden && API.Pusat.asli()) muatRingkasan(false); }, 300000); // app terbuka: segarkan ringkasan tiap 5 menit
 
-  function muatForum() { if (!SESI || !window.WHL_FORUM || !API.Pusat.asli()) return; window.WHL_FORUM.mulai(ctxForum()).then(function (h) { FORUM = h; gambar(); if (h && h.ok && window.WHL_BANNER) window.WHL_BANNER.muat().then(function (ada) { if (ada && tab === 'beranda') gambar(); }); if (h && h.ok && window.WHL_ONLINE) window.WHL_ONLINE.mulai({ sesi: function () { return SESI; }, perbarui: function () { if (tab === 'beranda') gambar(); } }); }); }
+  /* v3.9.2: forum gagal / lama tersambung -> coba ulang otomatis (20 dtk, 1 mnt, 2 mnt, lalu tiap 5 mnt) + status kecil di Beranda */
+  var forumCoba = 0, forumTunda = null, FORUM_ST = '';
+  function forumUlang() { clearTimeout(forumTunda); var j = [20, 60, 120][forumCoba] || 300; forumCoba++; forumTunda = setTimeout(function () { if (SESI && !(window.WHL_FORUM && window.WHL_FORUM.siap())) API.Pusat.cekUlang().then(muatForum); }, j * 1000); }
+  function forumStatus() {
+    if (!window.WHL_FORUM || !API.Pusat.asli() || (FORUM && (FORUM.ditolak || (FORUM.disiapkan && API.Pusat.dikenal()))) || window.WHL_FORUM.siap()) return '';
+    return '<div class="forumSt">' + (FORUM_ST === 'gagal' ? IK('forum') + '<span>Forum belum tersambung (sinyal lemah?). Mencoba lagi otomatis.</span><button type="button" data-aksi="forumUlang">Coba lagi</button>' : '<span class="putar"></span><span>Menyambung ke Forum…</span>') + '</div>';
+  }
+  function muatForum() { if (!SESI || !window.WHL_FORUM || !API.Pusat.asli()) return; FORUM_ST = 'menyambung'; window.WHL_FORUM.mulai(ctxForum()).then(function (h) { FORUM = h; FORUM_ST = h && h.ok ? 'ok' : (h && h.disiapkan && !API.Pusat.dikenal()) || !(h && h.disiapkan) ? 'gagal' : 'disiapkan'; if (h && h.ok) { forumCoba = 0; clearTimeout(forumTunda); } else if (!h || (!h.ditolak && !h.disiapkan)) forumUlang(); else if (h.disiapkan) forumUlang(); gambar(); if (h && h.ok && window.WHL_BANNER) window.WHL_BANNER.muat().then(function (ada) { if (ada && tab === 'beranda') gambar(); }); if (h && h.ok && window.WHL_ONLINE) window.WHL_ONLINE.mulai({ sesi: function () { return SESI; }, perbarui: function () { if (tab === 'beranda') gambar(); } }); }); }
   /* v3.9: nama staf yang sedang bertugas (absen hari ini) untuk mengisi peserta banner — hanya dipakai admin di Kelola banner */
   function bertugasNama() { return API.Pusat.ringkasan(SESI, 'bertugas', true).then(function (r) { var P = (r && r.bertugas && r.bertugas.petugas) || []; return P.map(function (x) { return String(x.nama || '').trim(); }).filter(Boolean); }); }
   function ctxBanner() { return { bertugas: bertugasNama, roti: roti, perbarui: function () { if (tab === 'beranda') gambar(); }, tab: function (t) { keTab(t); }, web: bukaWeb,
@@ -545,16 +555,26 @@
 
   /* ---------- muat data ---------- */
   var sedangMuat = false;
+  /* v3.9.2: ringkasan terakhir disimpan di HP per akun -> Beranda langsung terisi saat app dibuka, lalu disegarkan di belakang */
+  function kunciRingkas() { return 'whlV2Ringkas_' + String((SESI && (SESI.idProfil || SESI.idKetik)) || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+  function muatCacheRingkas() {
+    if (!SESI || D.serverJam) return Promise.resolve();
+    return Simpan.ambil(kunciRingkas()).then(function (v) {
+      var c = null; try { c = JSON.parse(v || 'null'); } catch (e) { c = null; }
+      if (c && c.serverJam && !D.serverJam && SESI) { D = c; D.dariCache = true; gambar(true); }
+    });
+  }
+  function simpanCacheRingkas(r) { try { var t = JSON.stringify(r); if (t.length < 1500000) Simpan.taruh(kunciRingkas(), t); } catch (e) { /* */ } }
   function muatRingkasan(paksa) {
     if (!SESI) return Promise.resolve(); sedangMuat = true;
     return API.Pusat.ringkasan(SESI, 'pos,gps,target,subcon,insiden,do,solar', paksa) /* v2.6: tanpa 'absen' & 'bertugas' (kehadiran orang lain tidak ditampilkan di app) */.then(function (r) {
       sedangMuat = false;
       if (r && r.login === false) { if (SESI && SESI.bio) bioGugur(SESI.idProfil || SESI.idKetik); keLogin('Sesi habis. Silakan masuk lagi pakai PIN.'); return; }
       if (r && r.user && SESI.mode === 'asli') { SESI.user = r.user; simpanSesi(); }
-      var pertama = !D.serverJam, lama = D.pos && D.pos.tiket ? Number(D.pos.tiket.nunggu) || 0 : null;
-      D = r || {}; gambar(pertama); cekTindakBaru();
+      var pertama = !D.serverJam || D.dariCache, lama = D.pos && D.pos.tiket ? Number(D.pos.tiket.nunggu) || 0 : null;
+      D = r || {}; if (D.serverJam) simpanCacheRingkas(D); gambar(pertama); cekTindakBaru();
       var kini = D.pos && D.pos.ok && D.pos.tiket ? Number(D.pos.tiket.nunggu) || 0 : 0;
-    }, function (e) { sedangMuat = false; D = { galat: e.message }; gambar(); });
+    }, function (e) { sedangMuat = false; if (D.serverJam) { D.segarGagal = e.message; D.menyegar = false; } else D = { galat: e.message }; gambar(); }); /* v3.9.2: data lama tidak dibuang saat gagal */
   }
   function muatAbsen() {
     if (!SESI || !SESI.tokenAbm) { ABSEN = { tanpa: true }; gambar(); return; }
@@ -753,8 +773,9 @@
   function gambarBeranda() {
     var u = SESI.user, kartu = u.kartu || [], h = '';
     /* v2.16 pola super-app: grid layanan -> kartu sorotan geser -> ringkasan. Perlu ditindak ada di kartu sorotan + Aktivitas + Kotak masuk. */
+    if (D.serverJam && (D.dariCache || D.segarGagal || D.menyegar)) h += '<div class="pitaData' + (D.segarGagal ? ' gagal' : '') + '">' + (D.segarGagal ? IK('alarm') + '<span>Belum bisa menyegarkan data (' + esc(D.segarGagal) + '). Yang tampil data jam ' + esc(String(D.serverJam).slice(-5).replace(':', '.')) + '.</span><button type="button" data-aksi="segar">Coba lagi</button>' : '<span class="putar"></span><span>Menyegarkan… yang tampil data jam ' + esc(String(D.serverJam).slice(-5).replace(':', '.')) + '</span>') + '</div>';
     if (window.WHL_BANNER) h += window.WHL_BANNER.html(); /* v3.6 banner pengumuman (karusel) */
-    h += '<div class="kartu kLayanan">' + layanan() + '</div>';
+    h += '<div class="kartu kLayanan">' + layanan() + forumStatus() + '</div>';
     if (window.WHL_ONLINE) h += window.WHL_ONLINE.htmlBeranda(); /* v3.9: siapa online (semua staf) */
     h += sorotan();
     if (D.serverJam && (kartu.indexOf('ritase') >= 0 || bolehPimpinan())) h += kartuProyeksi(); /* v3.0: proyeksi target di atas, seperti Pusat web */
@@ -1184,13 +1205,14 @@
     var a = b.getAttribute('data-aksi');
     if (a === 'absen') { if (!navigator.onLine) { R.bunyi('gagal'); roti('Tidak ada internet. Nyalakan data / WiFi dulu.'); return; } R.getar('sedang'); try { sessionStorage.setItem('whlV2Tab', 'absen'); } catch (e) { /* */ } window.location.href = 'absen.html'; }
     else if (a === 'aktifAbsen') aktifAbsen();
-    else if (a === 'segar') { D = {}; gambar(); segarSemua(); }
+    else if (a === 'segar') { if (D.serverJam) { D.segarGagal = ''; D.menyegar = true; } else D = {}; gambar(); segarSemua(); } /* v3.9.2: segarkan tanpa menghapus data yang sedang tampil */
     else if (a === 'kpiUlang') { KPI = null; PROFIL = null; gambar(); muatProfil(true); }
     else if (a === 'tema') { var baru = document.documentElement.getAttribute('data-tema') === 'gelap' ? 'terang' : 'gelap'; pasangTema(baru); Simpan.taruh(KUNCI_TEMA, baru); gambar(); }
     else if (a === 'suara') { R.aturSetel('suara', !R.setel.suara); pasangSuara(); gambar(); if (R.setel.suara) R.bunyi('notifikasi'); }
     else if (a === 'kotakHapus') { KOTAK = []; simpanKotak(); gambar(); aturTanda(); roti('Notifikasi dibersihkan.'); }
     else if (a === 'online') { var on2 = !window.WHL_ONLINE.tampil(); window.WHL_ONLINE.aturTampil(on2); gambar(); roti(on2 ? 'Status online kamu ditampilkan.' : 'Status online disembunyikan.'); }
     else if (a === 'bio') { if (SESI && SESI.bio) bioMatikan(); else bioAktifkan(); }
+    else if (a === 'forumUlang') { forumCoba = 0; FORUM_ST = 'menyambung'; gambar(); API.Pusat.cekUlang().then(muatForum); }
     else if (a === 'cekRilis') { if (window.WHL_RILIS) window.WHL_RILIS.cekManual(roti); }
     else if (a === 'suaraKeras') {
       var kn = !suaraKeras(); R.aturSetel('keras', kn); var jb2 = window.AndroidDownloader; if (jb2 && jb2.aturSuaraKeras) try { jb2.aturSuaraKeras(kn); } catch (e) { /* */ }

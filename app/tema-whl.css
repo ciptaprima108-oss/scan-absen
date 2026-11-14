@@ -307,3 +307,12 @@ html[data-tema="gelap"] .ilus3d ellipse[opacity=".16"] { opacity:.45; }
 .onForum { padding:10px 14px; margin-bottom:12px; } .onJudul { display:flex; align-items:baseline; gap:8px; margin-bottom:4px; } .onJudul small { margin-left:auto; color:var(--redup); font-size:11.5px; }
 .onBaris { display:flex; align-items:center; gap:10px; padding:7px 0; } .onBaris + .onBaris { border-top:1px solid var(--garis); } .onBaris .onAva { width:38px; height:38px; font-size:13px; margin:0; flex:none; }
 .onBaris div { flex:1; min-width:0; } .onBaris b { display:block; font-size:14px; } .onBaris small { font-size:12px; color:var(--redup); } .onBaris em { font-style:normal; font-size:12px; color:var(--redup); white-space:nowrap; }
+
+/* ============ v3.9.2 status data & forum (jaringan lemah) ============ */
+.pitaData { display:flex; align-items:center; gap:8px; background:var(--tint); color:var(--tBiru); border-radius:14px; padding:8px 12px; margin:0 0 10px; font-size:12.5px; font-weight:600; }
+.pitaData .putar { width:14px; height:14px; flex:none; } .pitaData span:not(.putar) { flex:1; min-width:0; }
+.pitaData.gagal { background:#fdf3e1; color:#8a5200; } html[data-tema="gelap"] .pitaData.gagal { background:#3a2a10; color:#ffd38a; }
+.pitaData .ikn { width:16px; height:16px; flex:none; }
+.pitaData button, .forumSt button { flex:none; background:var(--panel); color:var(--utama); font-weight:800; font-size:12.5px; border-radius:99px; padding:6px 12px; border:1px solid var(--garis); }
+.forumSt { display:flex; align-items:center; gap:8px; margin:6px 6px 2px; padding:8px 10px; border-radius:12px; background:var(--lembut2); font-size:12px; color:var(--redup); font-weight:600; }
+.forumSt span:not(.putar) { flex:1; min-width:0; } .forumSt .putar { width:13px; height:13px; flex:none; } .forumSt .ikn { width:16px; height:16px; flex:none; color:var(--tKuning); }

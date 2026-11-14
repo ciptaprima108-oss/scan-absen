@@ -43,16 +43,16 @@
   function htmlBeranda() {
     if (!pimpinan() || !LIST) return '';
     var on = LIST.filter(function (x) { return x.on; }), baru = LIST.filter(function (x) { return !x.on; });
-    return '<h2 class="bagW">Sedang online <span><i class="titikOn"></i>' + on.length + ' staf</span></h2><div class="kartu onKartu">'
+    return '<h2 class="bagW">Sedang online <span>' + (on.length ? '<i class="titikOn"></i>' + on.length + ' staf lain' : 'selain kamu') + '</span></h2><div class="kartu onKartu">'
       + (LIST.length ? '<div class="onGeser">' + LIST.slice(0, 20).map(function (x) { return '<div class="onOrang' + (x.on ? ' on' : '') + '"><span class="onAva">' + esc(inisial(x.nama)) + '<i></i></span><b>' + esc(String(x.nama).split(/\s+/).slice(0, 2).join(' ')) + '</b><small>' + (x.on ? 'online' : esc(teksMenit(x.menit))) + '</small></div>'; }).join('') + '</div>'
         + (baru.length ? '<div class="kecil" style="margin-top:8px">' + baru.length + ' staf baru aktif dalam 1 jam terakhir.</div>' : '')
-        : '<div class="kecil">Belum ada staf lain yang membuka app dalam 1 jam terakhir.</div>') + '</div>';
+        : '<div class="kecil">Belum ada staf lain online. Kamu sendiri tidak dihitung; staf lain muncul di sini kalau membuka app dalam 1 jam terakhir.</div>') + '</div>';
   }
   /** bagian atas daftar ruang Forum (pimpinan saja) */
   function htmlForum() {
     if (!pimpinan() || !LIST) return '';
     var on = LIST.filter(function (x) { return x.on; });
-    return '<div class="kartu onForum"><div class="onJudul"><b><i class="titikOn"></i>Sedang online ' + on.length + '</b><small>1 jam terakhir</small></div>'
+    return '<div class="kartu onForum"><div class="onJudul"><b><i class="titikOn"></i>' + (on.length ? 'Sedang online ' + on.length + ' staf lain' : 'Belum ada staf lain online') + '</b><small>1 jam terakhir</small></div>'
       + (LIST.length ? LIST.slice(0, 30).map(function (x) { return '<div class="onBaris"><span class="onAva' + (x.on ? ' on' : '') + '">' + esc(inisial(x.nama)) + '<i></i></span><div><b>' + esc(x.nama) + '</b><small>' + esc(x.jabatan || x.peran || '') + '</small></div><em>' + (x.on ? 'online' : esc(teksMenit(x.menit))) + '</em></div>'; }).join('') : '<div class="kecil">Belum ada staf lain online.</div>') + '</div>';
   }
   window.WHL_ONLINE = { mulai: mulai, berhenti: berhenti, aturTampil: aturTampil, tampil: function () { return tampil; }, pimpinan: pimpinan, htmlBeranda: htmlBeranda, htmlForum: htmlForum, muat: muat };

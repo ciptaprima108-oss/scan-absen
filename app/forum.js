@@ -37,17 +37,20 @@
     return siapJanji;
   }
   var segarSesi = false;
+  function batas(j, ms) { return new Promise(function (ok, gagal) { var t = setTimeout(function () { gagal(new Error('Forum lama menjawab (sinyal lemah).')); }, ms); j.then(function (v) { clearTimeout(t); ok(v); }, function (e) { clearTimeout(t); gagal(e); }); }); }
   function masuk(paksa) {
     var kunci = String(CTX.sesi.idProfil || CTX.sesi.idKetik || '');
     return siapkan().then(function () { return new Promise(function (ok) { var u = auth.onAuthStateChanged(function (x) { u(); ok(x); }); }); }).then(function (user) {
       return Simpan.ambil('whlForumUntuk').then(function (untuk) {
         if (user && untuk === kunci && !paksa && segarSesi) return user; /* v3.6 (audit T5): token forum baru sekali tiap app dibuka -> peran/ruang/akun nonaktif ikut terbaru */
-        return (user ? auth.signOut() : Promise.resolve()).then(function () { return API.Pusat.forumToken(CTX.sesi); }).then(function (h) {
-          if (!h || !h.ok) { var e = new Error((h && h.pesan) || 'Forum belum bisa dibuka.'); e.ditolak = !!(h && h.ditolak); e.login = h && h.login; throw e; }
-          return auth.signInWithCustomToken(h.token).then(function (c) { return Simpan.taruh('whlForumUntuk', kunci).then(function () { return c.user; }); });
-        });
+        /* v3.9.2: minta token baru dulu; kalau GAGAL karena jaringan dan sesi Firebase lama milik akun yang sama masih ada -> pakai yang lama
+           (dulu: sesi lama dikeluarkan dulu, lalu token baru gagal di 4G lemah -> forum mati, tombol admin hilang) */
+        return API.Pusat.forumToken(CTX.sesi).then(function (h) {
+          if (!h || !h.ok) { var e = new Error((h && h.pesan) || 'Forum belum bisa dibuka.'); e.ditolak = !!(h && h.ditolak); e.login = h && h.login; e.server = true; throw e; }
+          return (user ? auth.signOut() : Promise.resolve()).then(function () { return batas(auth.signInWithCustomToken(h.token), 25000); }).then(function (c) { return Simpan.taruh('whlForumUntuk', kunci).then(function () { return c.user; }); });
+        }).catch(function (e) { if (!e.server && user && untuk === kunci && auth.currentUser) return auth.currentUser; throw e; });
       });
-    }).then(function (user) { return user.getIdTokenResult(); }).then(function (r) {
+    }).then(function (user) { return batas(user.getIdTokenResult(), 20000); }).then(function (r) {
       segarSesi = true; var c = r.claims; INFO = { uid: auth.currentUser.uid, nama: c.nama, peran: c.peran, admin: c.admin === true, ruang: c.ruang || [] };
       RUANG = KF.ruang.filter(function (x) { return INFO.ruang.indexOf(x.id) >= 0; }); return INFO;
     });

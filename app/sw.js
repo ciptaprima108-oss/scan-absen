@@ -3,7 +3,7 @@
  * jawaban API (script.google.com), pengenal wajah (CDN), dan semua POST lewat langsung tanpa disimpan.
  * Cara ambil: jaringan dulu (maks 4 dtk) supaya versi baru langsung terpakai; kalau gagal / tidak ada sinyal -> salinan di HP.
  */
-const VERSI = 'af3011484a', CACHE = 'whl-cangkang-' + VERSI;
+const VERSI = '46b0e4f596', CACHE = 'whl-cangkang-' + VERSI;
 /* WEB PUSH (iPhone iOS 16.4+ dari Layar Utama, Chrome Android): Firebase Cloud Messaging. Pesan ber-"notification" ditampilkan otomatis
  * oleh pustaka Firebase; ketuk -> fcm_options.link (app web, ?buka=forum:ruang / tiket:lambung). */
 try {
