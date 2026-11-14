@@ -205,6 +205,7 @@
     if (!url) return; if (!navigator.onLine) { roti('Tidak ada internet.'); return; }
     try { sessionStorage.setItem('whlV2Tab', tab); } catch (e) { /* */ }
     var AD = window.AndroidDownloader; if (AD && typeof AD.bukaWeb === 'function') { try { AD.bukaWeb(url); return; } catch (e) { /* */ } } /* v3.6 (audit T2): APK -> WebView terpisah tanpa token */
+    try { var CI = window.Capacitor; if (CI && CI.getPlatform && CI.getPlatform() === 'ios' && CI.Plugins && CI.Plugins.WhlAsli) { CI.Plugins.WhlAsli.bukaWeb({ url: url }); return; } } catch (e) { /* */ } /* app iPhone: peramban terpisah (SFSafariViewController) */
     var P = window.WHL_PASANG; // hanya ada di browser (bukan APK)
     if (P && !P.berdiri()) { var w = null; try { w = window.open(url, '_blank'); } catch (e) { w = null; } if (w) return; }
     window.location.href = url;
@@ -508,7 +509,7 @@
     if (PUSH.status === 'belum' && !pluginPush()) PUSH.status = iosBelumDipasang() ? 'pasangDulu' : webPushBisa() ? 'belum' : 'webTidak';
     var t = { aktif: ['Aktif', 'Notifikasi forum & tiket muncul dengan bunyi walau app ditutup.'], mendaftar: ['Menyambungkan...', ''],
       ditolak: ['Izin ditolak', 'Buka setelan notifikasi, nyalakan "Izinkan notifikasi" untuk WHL, lalu kembali ke sini.'], gagal: ['Gagal', ''],
-      server: ['Belum tersedia', ''], tanpaFcm: ['Belum tersedia', 'Versi APK ini belum tersambung ke layanan notifikasi.'],
+      server: ['Belum tersedia', ''], tanpaFcm: ['Belum tersedia', 'Versi app ini belum tersambung ke layanan notifikasi.'],
       bukanApp: ['Hanya di app Android', 'Notifikasi langsung hanya ada di app Android WHL.'], pasangDulu: ['Pasang dulu', 'Di iPhone, notifikasi hanya bisa kalau WHL sudah ditambahkan ke Layar Utama (Bagikan > Tambahkan ke Layar Utama), lalu dibuka dari ikonnya. Butuh iOS 16.4 ke atas.'],
       webTidak: ['Tidak didukung', 'Peramban / versi iOS ini belum mendukung notifikasi web (perlu iOS 16.4+).'], belum: ['Belum aktif', 'Ketuk "Aktifkan notifikasi".'] }[PUSH.status] || ['Belum aktif', ''];
     var ket = PUSH.galat || t[1], bisa = (pluginPush() && adaFcm()) || (!pluginPush() && webPushBisa() && !iosBelumDipasang());

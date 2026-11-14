@@ -12,6 +12,8 @@
   'use strict';
   var Simpan = window.WHL_API.Simpan, DAFTAR = 'whlBioDaftar', MINTA = {}, nomor = 0;
   function jb() { var a = window.AndroidDownloader; return a && typeof a.bioAda === 'function' ? a : null; }
+  /* app iPhone (TestFlight): plugin native WhlAsli (Face ID + Keychain), karena passkey/WebAuthn tidak jalan di WebView app */
+  function ios() { var C = window.Capacitor; try { return C && C.getPlatform && C.getPlatform() === 'ios' ? (C.Plugins && C.Plugins.WhlAsli) || (C.registerPlugin && C.registerPlugin('WhlAsli')) : null; } catch (e) { return null; } }
   function kunciAkun(id) { return String(id || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
   function b64(buf) { var s = '', b = new Uint8Array(buf); for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
   function unb64(t) { t = String(t).replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '='; var s = atob(t), b = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return b; }
@@ -24,6 +26,7 @@
 
   /* ---------- ketersediaan ---------- */
   function tersedia() {
+    var I = ios(); if (I) return I.bioAda().then(function (h) { return { ada: !!h.ada, jenis: 'ios', label: h.label || 'Face ID', alasan: h.alasan || '' }; }, function () { return { ada: false, jenis: 'ios', alasan: 'Face ID tidak tersedia.' }; });
     var a = jb();
     if (a) { var h = 'tidak'; try { h = String(a.bioAda()); } catch (e) { /* */ } return Promise.resolve({ ada: h === 'ya', jenis: 'android', label: 'sidik jari / wajah HP', alasan: h === 'ya' ? '' : h === 'belum' ? 'Belum ada sidik jari / wajah terdaftar di HP ini (Setelan > Keamanan).' : 'HP ini tidak punya biometrik yang cukup aman.' }); }
     if (!window.PublicKeyCredential || !window.isSecureContext || !crypto || !crypto.subtle) return Promise.resolve({ ada: false, jenis: 'web', alasan: 'Peramban ini tidak mendukung passkey.' });
@@ -81,17 +84,17 @@
   /** Aktifkan untuk akun ini: teks = sesi JSON (berisi token). -> Promise<mode> */
   function aktifkan(id, nama, teks) {
     var k = kunciAkun(id);
-    var jalan = jb() ? asli('bioSimpan', [k, teks]).then(function () { return 'android'; }) : simpanWeb(k, nama, teks);
+    var I = ios(), jalan = I ? I.bioSimpan({ akun: k, teks: teks }).then(function () { return 'ios'; }, function (e) { throw new Error((e && e.message) || 'dibatalkan'); }) : jb() ? asli('bioSimpan', [k, teks]).then(function () { return 'android'; }) : simpanWeb(k, nama, teks);
     return jalan.then(function (mode) {
       return daftar().then(function (a) { a = a.filter(function (x) { return x.k !== k; }); a.unshift({ k: k, id: id, nama: nama || id, mode: mode, sejak: Date.now() }); return taruhDaftar(a); }).then(function () { return mode; });
     });
   }
   /** Buka sesi tersimpan (minta biometrik). -> Promise<teks sesi> */
-  function buka(id) { var k = kunciAkun(id); return jb() ? asli('bioBuka', [k]) : bukaWeb(k); }
+  function buka(id) { var k = kunciAkun(id), I = ios(); if (I) return I.bioBuka({ akun: k }).then(function (r) { return r.teks; }, function (e) { throw new Error((e && e.message) || 'dibatalkan'); }); return jb() ? asli('bioBuka', [k]) : bukaWeb(k); }
   /** Hapus (keluar akun, PIN diganti, sesi kedaluwarsa, dimatikan di Akun). */
   function hapus(id) {
     var k = kunciAkun(id);
-    try { if (jb()) jb().bioHapus(k); } catch (e) { /* */ }
+    try { if (jb()) jb().bioHapus(k); if (ios()) ios().bioHapus({ akun: k }).catch(function () { }); } catch (e) { /* */ }
     try { idb('readwrite', function (s) { return s.delete(k); }).catch(function () { }); } catch (e) { /* */ }
     return Simpan.taruh('whlBioBlob_' + k, null).then(daftar).then(function (a) { return taruhDaftar(a.filter(function (x) { return x.k !== k; })); });
   }

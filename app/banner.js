@@ -31,17 +31,25 @@
 
   /* ---------- muat dari Firestore (sesudah login forum) ---------- */
   Simpan.ambil(SIMPAN).then(function (v) { try { var a = JSON.parse(v || '[]'); if (Array.isArray(a) && !DARI.length) DARI = a; } catch (e) { /* */ } });
+  /* v3.9.1 (14 Nov, iPhone 4G "Memuat banner..." tanpa akhir): batas tunggu; kalau server lambat/putus, pakai salinan cache HP. Hasil: true = server, 'cache' = salinan, false = gagal */
+  var MUAT_BATAS = 15000, muatJalan = null;
+  function bacaSnap(s) { var L = []; s.forEach(function (d) { var x = d.data(); x.id = d.id; try { x.dibuat = x.waktu && x.waktu.toDate ? x.waktu.toDate().toISOString() : ''; } catch (e) { x.dibuat = ''; } delete x.waktu; L.push(x); }); return L; }
   function muat() {
-    return new Promise(function (ok) {
+    if (muatJalan) return muatJalan;
+    muatJalan = new Promise(function (ok) {
+      var selesai = false, akhiri = function (v) { if (selesai) return; selesai = true; clearInterval(i); clearTimeout(jam); muatJalan = null; ok(v); };
+      var jam = setTimeout(function () { var F = window.WHL_FORUM && window.WHL_FORUM.fs(); if (!F) return akhiri(false);
+        F.db.collection('banner').get({ source: 'cache' }).then(function (s) { if (!s.empty) { DARI = bacaSnap(s); akhiri('cache'); } else akhiri(false); }, function () { akhiri(false); }); }, MUAT_BATAS);
       var n = 0, i = setInterval(function () {
         var F = window.WHL_FORUM && window.WHL_FORUM.fs();
-        if (!F && ++n < 60) return; clearInterval(i); if (!F) return ok(false);
+        if (!F && ++n < 28) return; clearInterval(i); if (!F) return akhiri(false);
         F.db.collection('banner').get().then(function (s) {
-          var L = []; s.forEach(function (d) { var x = d.data(); x.id = d.id; try { x.dibuat = x.waktu && x.waktu.toDate ? x.waktu.toDate().toISOString() : ''; } catch (e) { x.dibuat = ''; } delete x.waktu; L.push(x); });
-          DARI = L; try { Simpan.taruh(SIMPAN, JSON.stringify(L.filter(aktif).slice(0, 6))); } catch (e) { /* */ } ok(true);
-        }, function () { ok(false); });
+          var L = bacaSnap(s);
+          DARI = L; try { Simpan.taruh(SIMPAN, JSON.stringify(L.filter(aktif).slice(0, 6))); } catch (e) { /* */ } akhiri(true);
+        }, function () { akhiri(false); });
       }, 500);
     });
+    return muatJalan;
   }
   function admin() { var F = window.WHL_FORUM && window.WHL_FORUM.fs(); return !!(F && F.info.admin); }
 
@@ -127,13 +135,23 @@
   }
   function kelola() {
     if (!admin()) { R.bunyi('gagal'); return; }
-    lapis('<div class="kecil" style="text-align:center;padding:20px"><span class="putar"></span> Memuat banner...</div>');
-    muat().then(gambarDaftar);
+    STATUS = '';
+    if (DARI.length) gambarDaftar(); /* tampilkan yang sudah ada dulu, segarkan dari server di belakang */
+    else lapis('<div class="kecil" style="text-align:center;padding:20px"><span class="putar"></span> Memuat banner...</div>');
+    segarDaftar();
+  }
+  var STATUS = '';
+  function segarDaftar() {
+    muat().then(function (v) {
+      STATUS = v === true ? '' : v === 'cache' ? 'Sinyal lambat: menampilkan salinan terakhir di HP ini.' : 'Banner belum bisa dimuat dari server (sinyal / login forum).';
+      if (lapisEl && !document.getElementById('bnrJudul')) gambarDaftar();
+    });
   }
   var EDIT = null, FOTO = '';
   function gambarDaftar() {
+    var stat = STATUS ? '<div class="kecil" style="margin:0 2px 10px;color:#C62828">' + esc(STATUS) + ' <button type="button" class="tKecil" data-k="ulang" style="margin-left:6px">Coba lagi</button></div>' : '';
     var L = DARI.slice().sort(function (a, b) { return (a.urut || 0) - (b.urut || 0); }), h = hariIni();
-    lapis('<button type="button" class="tUtama" data-k="baru" style="margin-top:0">+ Banner baru</button>'
+    lapis(stat + '<button type="button" class="tUtama" data-k="baru" style="margin-top:0">+ Banner baru</button>'
       + '<div class="kecil" style="margin:10px 2px">Tampil di Beranda semua staf, urut dari angka kecil. Banner bawaan (Selamat datang, Notifikasi, Kuesioner) selalu di belakang.</div>'
       + (L.length ? '<div class="bingkai">' + L.map(function (b) {
         var st = !aktif(b) ? (b.aktif === false ? 'nonaktif' : (b.sampai && b.sampai < h ? 'sudah lewat' : 'belum mulai')) : 'tampil';
@@ -195,6 +213,7 @@
     var b = ev.target.closest('[data-k]'); if (!b) return; var k = b.getAttribute('data-k'), id = b.getAttribute('data-id');
     if (k === 'tutup') { if (document.getElementById('bnrJudul')) gambarDaftar(); else tutup(); }
     else if (k === 'baru') form(null); else if (k === 'daftar') gambarDaftar();
+    else if (k === 'ulang') { STATUS = ''; lapis('<div class="kecil" style="text-align:center;padding:20px"><span class="putar"></span> Memuat banner...</div>'); segarDaftar(); }
     else if (k === 'ubah') form(DARI.filter(function (x) { return x.id === id; })[0]);
     else if (k === 'simpan') simpan();
     else if (k === 'ambilPeserta') {
