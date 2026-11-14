@@ -1,14 +1,13 @@
 {
- "versi": "3.9.2",
- "versionCode": 310,
+ "versi": "3.10",
+ "versionCode": 311,
  "wajib": false,
  "catatan": [
-  "Beranda lebih cepat di sinyal lemah: data terakhir langsung tampil, lalu disegarkan",
-  "Forum & tombol admin tetap tersambung walau sinyal lemah (coba ulang otomatis)",
-  "Teks status online lebih jelas"
+  "Menu baru Nota bengkel untuk pengawas: ajukan nota bengkel terafiliasi & pengajuan > 3 jt, lihat status ACC / ditolak",
+  "Ajuan tersimpan di HP saat sinyal putus, dikirim otomatis"
  ],
- "apk": "WHL-App-v3.9.2.apk",
- "ukuran": 8240300,
- "sha256": "c769261c6efd741f8b4fc5431b49803835dd95bd3df19b3c61e2d3f97780578d",
- "dibuat": "2026-11-14 08:15"
+ "apk": "WHL-App-v3.10.apk",
+ "ukuran": 8249214,
+ "sha256": "3c6a232d5f21aa99bb0b6e5b27755102b021ba2b55f978a1b7a88bd673965d53",
+ "dibuat": "2026-11-14 13:54"
 }
