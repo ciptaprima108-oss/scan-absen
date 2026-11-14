@@ -124,6 +124,11 @@
     notaOpsi: function (sesi) { return rpc(K.DASH, 'pusat', 'pusatNotaOpsi', [sesi.tokenPusat], 25000); },
     notaAjukan: function (sesi, d) { return rpc(K.DASH, 'pusat', 'pusatNotaAjukan', [sesi.tokenPusat, d], K.BATAS_NOTA || 90000); }, /* BATAS_NOTA hanya diubah uji otomatis */ /* foto s/d 9 x 300 KB: 4G lemah butuh waktu */
     notaSaya: function (sesi) { return rpc(K.DASH, 'pusat', 'pusatNotaSaya', [sesi.tokenPusat], 25000); },
+    /* v3.11: banyak nota sekali kirim + video perbaikan per potongan 4 MB */
+    notaAjukanBanyak: function (sesi, d) { return rpc(K.DASH, 'pusat', 'pusatNotaAjukanBanyak', [sesi.tokenPusat, d], K.BATAS_NOTA || 120000); },
+    notaVideoMulai: function (sesi, x) { return rpc(K.DASH, 'pusat', 'pusatNotaVideoMulai', [sesi.tokenPusat, x], 25000); },
+    notaVideoPotong: function (sesi, upId, ke, b64) { return rpc(K.DASH, 'pusat', 'pusatNotaVideoPotong', [sesi.tokenPusat, upId, ke, b64], K.BATAS_VIDEO || 120000); },
+    notaVideoSelesai: function (sesi, upId) { return rpc(K.DASH, 'pusat', 'pusatNotaVideoSelesai', [sesi.tokenPusat, upId], 60000); },
     gantiPin: function (token, lama, baru) { return rpc(K.DASH, 'pusat', 'pusatGantiPin', [token, lama, baru]); },
     ringkasan: function (sesi, bagian, paksa) {
       if (pusatAsli) return rpc(K.DASH, 'pusat', 'ringkasanPusat', [bagian, !!paksa, '', sesi.tokenPusat], 30000); /* v3.9.2: 90 -> 30 dtk; data lama tetap tampil dari cache */

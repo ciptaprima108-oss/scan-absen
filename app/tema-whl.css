@@ -341,3 +341,20 @@ html[data-tema="gelap"] .notaKode { background:#123a26; color:#86efac; } html[da
 .notaBaris { display:flex; align-items:center; gap:8px; padding:10px 4px; } .notaBaris + .notaBaris { border-top:1px solid var(--garis); } .notaBaris .tx { flex:1; min-width:0; } .notaBaris b { display:block; font-size:14px; } .notaBaris small { font-size:12px; color:var(--redup); }
 .notaBaris .tKecil { min-height:38px; padding:0 10px; font-size:12.5px; }
 .notaIsi .tUtama .ikn, .ksnIsi .tUtama .ikn { display:inline-block; width:20px; height:20px; vertical-align:-4px; margin-right:6px; }
+/* v3.11 banyak nota + video perbaikan */
+.notaMode { margin-bottom:12px; }
+.notaJudulB { display:block; font-size:15px; margin-bottom:8px; }
+.notaBarisK { border-left:4px solid var(--utama); } .notaBarisK .notaAtas { margin-bottom:2px; } .notaBarisK .notaAtas b { font-size:16px; }
+.notaHapusB { min-height:34px; padding:0 12px; font-size:12.5px; color:#c62828; }
+.notaTambahB { width:100%; min-height:48px; font-size:15px; font-weight:800; border:2px dashed var(--utama); background:var(--lembut2); color:var(--utama); margin:4px 0 12px; }
+.notaSub { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; font-size:14px; color:var(--redup); } .notaSub b { font-size:20px; color:var(--teks); }
+.notaVid { display:flex; flex-direction:column; gap:8px; }
+.notaVidK { display:flex; align-items:center; gap:10px; background:var(--lembut2); border-radius:14px; padding:8px; }
+.notaVidK video { width:84px; height:64px; border-radius:10px; object-fit:cover; background:#0b1a2e; flex:none; }
+.notaVidK .tx { flex:1; min-width:0; } .notaVidK .tx b { display:block; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .notaVidK .tx small { font-size:12px; color:var(--redup); }
+.notaVidK > .tKecil { min-height:34px; width:34px; padding:0; flex:none; }
+.notaVidTombol { display:flex; gap:8px; } .notaVidTombol label { flex:1; min-height:44px; display:flex; align-items:center; justify-content:center; gap:6px; font-size:13.5px; font-weight:800; cursor:pointer; } .notaVidTombol .ikn { width:20px; height:20px; }
+.notaProg { display:block; position:relative; height:16px; margin-top:4px; border-radius:99px; background:var(--panel2); overflow:hidden; }
+.notaProg i { position:absolute; left:0; top:0; bottom:0; width:0; background:linear-gradient(90deg, var(--utama), #22c55e); transition:width .3s; }
+.notaProg em { position:relative; display:block; font-style:normal; font-size:10.5px; font-weight:800; line-height:16px; text-align:center; color:var(--teks); }
+.notaVidT { font-size:13px; font-weight:800; }
