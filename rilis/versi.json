@@ -1,14 +1,14 @@
 {
- "versi": "3.12",
- "versionCode": 313,
+ "versi": "3.13",
+ "versionCode": 314,
  "wajib": false,
  "catatan": [
-  "Forum: tulisan ala WA (*tebal* _miring_ ~coret~ ```kode```) dan @semua untuk menyebut semua anggota ruang",
-  "Menu: DO & Kendala WHL dan Inputan DO dihapus; Input DO & Uang Jalan jadi Administrasi WHL",
-  "Menu baru Laba unit khusus pimpinan"
+  "Menu baru Gaji driver: perkiraan sisa gaji per driver & per unit sesudah potongan kasbon dan cicilan HP (admin, pimpinan, pengawas)",
+  "Menu baru Ajuan kasbon: pengawas ajukan kasbon / cicilan HP driver, semua karyawan bisa ajukan cicilan HP sendiri, tanda tangan jari di HP",
+  "Pak Fanza bisa ACC / tolak ajuan kasbon & cicilan HP langsung dari app"
  ],
- "apk": "WHL-App-v3.12.apk",
- "ukuran": 8263744,
- "sha256": "33c25aef808d04b289a8c324c168b7f016e7ff2f0e24324575bf7252a68acf56",
- "dibuat": "2026-11-15 02:49"
+ "apk": "WHL-App-v3.13.apk",
+ "ukuran": 8286670,
+ "sha256": "8d977f1896f7c7a19f2488d2687de0afa06c885edef21e2f87e832ff350072f9",
+ "dibuat": "2026-11-15 09:46"
 }
