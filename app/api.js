@@ -131,6 +131,14 @@
     notaVideoSelesai: function (sesi, upId) { return rpc(K.DASH, 'pusat', 'pusatNotaVideoSelesai', [sesi.tokenPusat, upId], 60000); },
     /* laba-pimpinan-15nov: Laba Unit khusus pimpinan/penuh (DASHBOARD LabaPusat.gs; server menolak peran lain). Baca pertama bisa 20-40 dtk. */
     labaUnit: function (sesi, dari, sampai, armada, paksa) { return rpc(K.DASH, 'pusat', 'pusatLabaUnit', [sesi.tokenPusat, dari || '', sampai || '', armada || 'SEMUA', !!paksa], K.BATAS_LABA || 90000); },
+    /* gaji-driver-app-15nov (KONTRAK-APP.md Dodi): gaji driver admin/pimpinan/penuh/pengawas + ajuan kasbon & cicilan HP. Hitungan pertama bisa 20-40 dtk. */
+    gajiDriver: function (sesi, periode, paksa) { return rpc(K.DASH, 'pusat', 'pusatGajiDriver', [sesi.tokenPusat, periode || '', !!paksa], K.BATAS_GAJI || 90000); },
+    kasbonOpsi: function (sesi) { return rpc(K.DASH, 'pusat', 'pusatKasbonOpsi', [sesi.tokenPusat], K.BATAS_GAJI || 90000); },
+    kasbonAjukan: function (sesi, d) { return rpc(K.DASH, 'pusat', 'pusatKasbonAjukan', [sesi.tokenPusat, d], K.BATAS_NOTA || 90000); },
+    kasbonSaya: function (sesi) { return rpc(K.DASH, 'pusat', 'pusatKasbonSaya', [sesi.tokenPusat], 30000); },
+    kasbonPutus: function (sesi, id, keputusan, alasan) { return rpc(K.DASH, 'pusat', 'pusatKasbonPutus', [sesi.tokenPusat, id, keputusan, alasan || ''], 45000); },
+    kasbonPdf: function (sesi, id) { return rpc(K.DASH, 'pusat', 'pusatKasbonPdf', [sesi.tokenPusat, id], 60000); },
+    cicilanStafPdf: function (sesi, periode) { return rpc(K.DASH, 'pusat', 'pusatCicilanStafPdf', [sesi.tokenPusat, periode || ''], 90000); },
     gantiPin: function (token, lama, baru) { return rpc(K.DASH, 'pusat', 'pusatGantiPin', [token, lama, baru]); },
     ringkasan: function (sesi, bagian, paksa) {
       if (pusatAsli) return rpc(K.DASH, 'pusat', 'ringkasanPusat', [bagian, !!paksa, '', sesi.tokenPusat], 30000); /* v3.9.2: 90 -> 30 dtk; data lama tetap tampil dari cache */

@@ -96,6 +96,16 @@
       + '<rect x="9" y="27" width="32" height="11" fill="' + F('y') + '"/><ellipse cx="25" cy="27" rx="16" ry="6" fill="' + F('y') + '"/><ellipse cx="25" cy="27" rx="16" ry="6" fill="' + K + '"/>'
       + '<path d="M18 27h14" stroke="#fff" stroke-opacity=".7" stroke-width="2.4" stroke-linecap="round"/>'
       + '<path d="M38 40L50 26" fill="none" stroke="' + F('b') + '" stroke-width="7" stroke-linecap="round"/><path d="M42 20h12v12z" fill="' + F('b') + '"/>'; };
+  /* gaji-driver-app-15nov: dompet biru + uang kertas toska (Gaji driver) dan lembar ajuan + koin kuning + pena oranye (Ajuan kasbon) */
+  B.gaji = function (F, K) { return '<rect x="14" y="10" width="34" height="20" rx="4" fill="' + F('t') + '" transform="rotate(-8 31 20)"/><rect x="18" y="13" width="34" height="20" rx="4" fill="' + F('t') + '" opacity=".85" transform="rotate(6 35 23)"/>'
+      + '<rect x="8" y="22" width="48" height="32" rx="9" fill="' + F('b') + '"/><rect x="8" y="22" width="48" height="32" rx="9" fill="' + K + '"/>'
+      + '<path d="M8 31h40a8 8 0 0 1 8 8v0" fill="none" stroke="' + F('bt') + '" stroke-width="3" stroke-opacity=".5"/>'
+      + '<rect x="38" y="33" width="20" height="13" rx="6.5" fill="' + F('bt') + '"/><circle cx="45" cy="39.5" r="3.6" fill="' + F('y') + '"/>'; };
+  B.kasbon = function (F, K) { return '<rect x="10" y="7" width="34" height="46" rx="7" fill="' + F('w') + '"/><rect x="10" y="7" width="34" height="46" rx="7" fill="' + K + '"/>'
+      + '<path d="M17 18h20M17 25h20M17 32h12" stroke="' + F('b') + '" stroke-width="3.4" stroke-linecap="round"/>'
+      + '<path d="M17 44c3-4 5 2 8-1s4-3 6 0" fill="none" stroke="' + F('bt') + '" stroke-width="2.4" stroke-linecap="round"/>'
+      + '<circle cx="45" cy="44" r="13" fill="' + F('y') + '"/><circle cx="45" cy="44" r="13" fill="' + K + '"/><circle cx="45" cy="44" r="9" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="2"/>'
+      + '<text x="45" y="48.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="11.5" fill="#9a5b00">Rp</text>'; };
   B.monitorPos = B.monitor;
   var AKA = { notif: 'lonceng', unit: 'truk', skema: 'peta', storing: 'truk', pos: 'monitor', banner: 'pengumuman', kalender: 'jadwal', semua: 'lainnya', kpi: 'profil', ritase: 'grafik', inventaris: 'centang', absensi: 'kartuId' };
   function ilus(nama) {

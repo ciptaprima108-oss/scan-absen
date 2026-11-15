@@ -227,7 +227,7 @@
     setTimeout(function () { if (NOTIF.tiket && bolehUnit()) aturNotif(true); }, 1500); // pastikan jadwal cek latar terpasang
     setTimeout(function () { if (SESI && API.Pusat.asli()) pasangPush(); }, 2500); // notif-push-13nov
     setTimeout(function () { if (window.WHL_RILIS) window.WHL_RILIS.cekOtomatis(); }, 4000);
-    setTimeout(function () { if (window.WHL_NOTA && window.WHL_NOTA.boleh(SESI)) { window.WHL_NOTA.pasang(ctxNota()); window.WHL_NOTA.kirimAntrean(); } }, 6000); /* v3.10: kirim ulang ajuan nota tertunda */ // v3.3: ada versi baru? (maks 1x per 6 jam)
+    setTimeout(function () { if (window.WHL_NOTA && window.WHL_NOTA.boleh(SESI)) { window.WHL_NOTA.pasang(ctxNota()); window.WHL_NOTA.kirimAntrean(); } if (window.WHL_KASBON && window.WHL_KASBON.boleh(SESI)) { window.WHL_KASBON.pasang(ctxNota()); window.WHL_KASBON.kirimAntrean(); } }, 6000); /* v3.10: kirim ulang ajuan nota tertunda */ // v3.3: ada versi baru? (maks 1x per 6 jam)
     bukaDariAlamat();
   }
   var URUT = ['beranda', 'apps', 'unit', 'absen', 'kotak', 'akun'], AKT = 'unit', RIWAYAT = [], mundur = false, tekanKeluar = 0;
@@ -366,7 +366,7 @@
   }
 
   /* ---------- Forum (v2.11): forum.js; di sini cuma pintu + lencana ---------- */
-  API.Pusat.saatBerubah = function () { if (SESI && FORUM && FORUM.disiapkan && API.Pusat.punya('pusatForumToken')) { FORUM = null; muatForum(); } };
+  API.Pusat.saatBerubah = function () { if (SESI && FORUM && FORUM.disiapkan && API.Pusat.punya('pusatForumToken')) { FORUM = null; muatForum(); } try { if (SESI && tab === 'beranda' && !$('layarApp').classList.contains('sembunyi')) gambar(); } catch (e) { /* gaji-driver-app-15nov: menu baru muncul sesudah ping ulang */ } };
   function ctxForum() { return { sesi: SESI, roti: roti, perbarui: function () { aturTanda(); if (tab === 'beranda' || tab === 'apps') gambar(); } }; }
   /* ---------- v2.14 Notifikasi tiket perlu ditindak ---------- */
   var NOTIF = { tiket: false }, TINDAK_LALU = null;
@@ -409,6 +409,7 @@
     d = d || {}; if (!SESI) return;
     if (d.jenis === 'forum' && window.WHL_FORUM) window.WHL_FORUM.bukaKe(ctxForum(), String(d.ruang || 'umum'));
     else if (d.jenis === 'tiket' && d.l) window.WHL_TINDAK(String(d.l));
+    else if (/^kasbon_/.test(String(d.jenis || '')) && window.WHL_KASBON && window.WHL_KASBON.boleh(SESI)) window.WHL_KASBON.buka(ctxNota(), d.jenis === 'kasbon_pimpinan' ? 'acc' : 'daftar'); /* gaji-driver-app-15nov */
   }
   /* v2.18: alur aktifkan notifikasi per langkah dengan status & galat ASLI: cek app -> ping server ulang -> izin -> token FCM -> daftar ke server.
      Dijalankan otomatis tiap app dibuka / kembali dari latar / buka Akun (kalau belum aktif), dan manual lewat tombol "Aktifkan notifikasi". */
@@ -659,8 +660,10 @@
     L.push(['input', 'Input', 'lapor']);
     if (window.WHL_NOTA && window.WHL_NOTA.boleh(SESI)) L.push(['dokumen', 'Nota bengkel', 'nota']); /* v3.10 khusus pengawas / admin / pimpinan */
     if (window.WHL_LABA && window.WHL_LABA.boleh(SESI)) L.push(['laba', 'Laba unit', 'laba']); /* laba-pimpinan-15nov: khusus pimpinan / penuh */
+    if (window.WHL_GAJI && window.WHL_GAJI.boleh(SESI)) L.push(['gaji', 'Gaji driver', 'gaji']); /* gaji-driver-app-15nov: admin / pimpinan / penuh / pengawas */
     if (KSN && (KSN.ada || KSN.perluPin) && SESI.user.peran !== 'driver') L.push(['kuesioner', 'Kuesioner', 'ksn', KSN.ada && KSN.buka ? KSN.sisa : 0]);
     L.push(['profil', 'Nilai saya', 'tab:akun']);
+    if (window.WHL_KASBON && window.WHL_KASBON.boleh(SESI)) L.push(['kasbon', 'Ajuan kasbon', 'kasbon']); /* gaji-driver-app-15nov: semua staf (cicilan HP diri sendiri) */
     appsSaya().forEach(function (a) { L.push([IKON_DIV[a.d] || 'web', a.n.replace(/ WHL$/, '').replace(/^Live Monitor /, '').replace(/^Dashboard /, ''), 'web:' + alamat(a)]); });
     L = L.slice(0, 7); L.push(['lainnya', 'Lainnya', 'lainnya']); // 2 baris x 4 ikon, ikon ke-8 selalu "Lainnya" (lembar bawah semua layanan)
     return '<div class="layanan">' + L.map(function (x) { return '<button type="button" class="ly" data-ke="' + esc(x[2]) + '"><span>' + ILUS(x[0]) + (x[3] ? '<i class="tanda angka">' + (x[3] > 9 ? '9+' : x[3]) + '</i>' : '') + '</span><b>' + esc(x[1]) + '</b></button>'; }).join('') + '</div>';
@@ -676,6 +679,8 @@
     A.push(['input', 'Input cepat', 'lapor']);
     if (window.WHL_NOTA && window.WHL_NOTA.boleh(SESI)) A.push(['dokumen', 'Nota bengkel', 'nota', 0, 1]);
     if (window.WHL_LABA && window.WHL_LABA.boleh(SESI)) A.push(['laba', 'Laba unit', 'laba', 0, 1]); /* laba-pimpinan-15nov */
+    if (window.WHL_GAJI && window.WHL_GAJI.boleh(SESI)) A.push(['gaji', 'Gaji driver', 'gaji', 0, 1]); /* gaji-driver-app-15nov */
+    if (window.WHL_KASBON && window.WHL_KASBON.boleh(SESI)) A.push(['kasbon', 'Ajuan kasbon', 'kasbon', 0, 1]); /* gaji-driver-app-15nov */
     A.push(['kotak', 'Kotak masuk', 'tab:kotak', kotakBelum(), 1]);
     if (hitungProyeksi()) A.push(['grafik', 'Proyeksi target', 'proyeksi', 0, 1]);
     if (KSN && (KSN.ada || KSN.perluPin)) A.push(['kuesioner', 'Kuesioner', 'ksn', KSN.ada && KSN.buka ? KSN.sisa : 0]);
@@ -1202,7 +1207,7 @@
     b = t.closest('[data-kt]'); if (b) { R.getar(); lembarTopik(b.getAttribute('data-kt')); return; }
     if (t.closest('#btnTema')) { var tb = document.documentElement.getAttribute('data-tema') === 'gelap' ? 'terang' : 'gelap'; pasangTema(tb); Simpan.taruh(KUNCI_TEMA, tb); gambar(); return; }
     if (t.closest('#btnSuara')) { R.aturSetel('suara', !R.setel.suara); pasangSuara(); if (R.setel.suara) R.bunyi('notifikasi'); if (tab === 'akun') gambar(); return; }
-    b = t.closest('[data-ke]'); if (b) { var ke = b.getAttribute('data-ke'); if (b.closest('#lembar') && ke !== 'lainnya') tutupLembar(); if (ke === 'nota') window.WHL_NOTA.buka(ctxNota()); else if (ke === 'laba') window.WHL_LABA.buka(ctxNota()); else if (ke === 'lainnya') lembarLainnya(); else if (ke === 'kelolaBanner') { window.WHL_BANNER.pasang(ctxBanner()); window.WHL_BANNER.kelola(); } else if (ke === 'proyeksi') { keTab('beranda'); setTimeout(function () { var pq = document.querySelector('.proy'); if (pq) pq.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 120); } else if (ke === 'lapor') lembarLapor(); else if (ke === 'forum') window.WHL_FORUM.buka(ctxForum()); else if (ke === 'ksn') window.WHL_KSN.buka(ctxKsn()); else if (ke === 'k3') window.WHL_KSN.bukaK3(ctxKsn()); else if (ke.indexOf('tab:') === 0) keTab(ke.slice(4)); else if (ke.indexOf('web:') === 0) bukaWeb(ke.slice(4)); return; }
+    b = t.closest('[data-ke]'); if (b) { var ke = b.getAttribute('data-ke'); if (b.closest('#lembar') && ke !== 'lainnya') tutupLembar(); if (ke === 'nota') window.WHL_NOTA.buka(ctxNota()); else if (ke === 'laba') window.WHL_LABA.buka(ctxNota()); else if (ke === 'gaji') window.WHL_GAJI.buka(ctxNota()); else if (ke === 'kasbon') window.WHL_KASBON.buka(ctxNota()); else if (ke === 'lainnya') lembarLainnya(); else if (ke === 'kelolaBanner') { window.WHL_BANNER.pasang(ctxBanner()); window.WHL_BANNER.kelola(); } else if (ke === 'proyeksi') { keTab('beranda'); setTimeout(function () { var pq = document.querySelector('.proy'); if (pq) pq.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 120); } else if (ke === 'lapor') lembarLapor(); else if (ke === 'forum') window.WHL_FORUM.buka(ctxForum()); else if (ke === 'ksn') window.WHL_KSN.buka(ctxKsn()); else if (ke === 'k3') window.WHL_KSN.bukaK3(ctxKsn()); else if (ke.indexOf('tab:') === 0) keTab(ke.slice(4)); else if (ke.indexOf('web:') === 0) bukaWeb(ke.slice(4)); return; }
     b = t.closest('[data-web]'); if (b) { var u = b.getAttribute('data-web'); if (u) bukaWeb(u); else roti('Link belum tersedia.'); return; }
     b = t.closest('[data-saring]'); if (b) { saringUnit = b.getAttribute('data-saring'); gambar(); return; }
     b = t.closest('[data-aksi]'); if (!b) return;
@@ -1240,6 +1245,7 @@
         if (SESI && PUSH.token && API.Pusat.punya('pusatLepasPerangkat')) API.Pusat.lepasPerangkat(SESI, PUSH.token).catch(function () { });
         try { if (webPesan) webPesan.deleteToken().catch(function () { }); } catch (e) { /* */ }
         KOTAK = []; simpanKotak(); Simpan.taruh('whlBanner', null);
+        if (window.WHL_GAJI) window.WHL_GAJI.lupakan(); if (window.WHL_KASBON) window.WHL_KASBON.lupakan(); if (window.WHL_LABA) window.WHL_LABA.lupakan(); /* gaji-driver-app-15nov: angka gaji/laba dibuang dari memori */
         if (SESI) bioGugur(SESI.idProfil || SESI.idKetik); /* v3.9 */
         var habis = function () { keLogin(''); }; if (window.WHL_ONLINE) { var tunda = setTimeout(habis, 2500); window.WHL_ONLINE.berhenti().then(function () { clearTimeout(tunda); habis(); }); } else habis();
       });
