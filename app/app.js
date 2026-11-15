@@ -229,12 +229,14 @@
     setTimeout(function () { if (SESI && API.Pusat.asli()) pasangPush(); }, 2500); // notif-push-13nov
     setTimeout(function () { if (window.WHL_RILIS) window.WHL_RILIS.cekOtomatis(); }, 4000);
     muatAksesGaji(); /* v3.14 akses-gaji-15nov: flag menu Gaji/Kasbon dari server (pusatGajiAkses) */
+    muatLembur();
     setTimeout(function () { if (window.WHL_NOTA && window.WHL_NOTA.boleh(SESI)) { window.WHL_NOTA.pasang(ctxNota()); window.WHL_NOTA.kirimAntrean(); } if (window.WHL_KASBON && window.WHL_KASBON.boleh(SESI)) { window.WHL_KASBON.pasang(ctxNota()); window.WHL_KASBON.kirimAntrean(); } }, 6000); /* v3.10: kirim ulang ajuan nota tertunda */ // v3.3: ada versi baru? (maks 1x per 6 jam)
     bukaDariAlamat();
   }
   var URUT = ['beranda', 'apps', 'unit', 'absen', 'kotak', 'akun'], AKT = 'unit', RIWAYAT = [], mundur = false, tekanKeluar = 0;
   var NAV_DARI = { beranda: 'beranda', apps: 'beranda', unit: 'aktivitas', absen: 'aktivitas', kotak: 'kotak', akun: 'akun' };
   function keTab(t) {
+    if (t === 'kehadiran') t = 'absen'; /* v3.15 */
     if (t === 'aktivitas') t = bolehUnit() ? AKT : 'absen'; /* v2.16: Aktivitas = Unit + Absen saya (segmen di atas) */
     if (t === 'unit' && !bolehUnit()) t = 'absen';
     if (t === 'unit' || t === 'absen') AKT = t;
@@ -247,7 +249,7 @@
     var arah = URUT.indexOf(t) >= URUT.indexOf(tab) ? 'masukKanan' : 'masukKiri', pindah = t !== tab;
     tab = t; try { sessionStorage.setItem('whlV2Tab', t); } catch (e) { /* */ }
     Array.prototype.forEach.call(document.querySelectorAll('.nav button[data-tab]'), function (b) { b.classList.toggle('on', b.getAttribute('data-tab') === NAV_DARI[t]); });
-    var J = { beranda: 'Pusat WHL', unit: 'Aktivitas', absen: 'Aktivitas', apps: 'Semua layanan', akun: 'Akun saya', kotak: 'Kotak masuk' }[t];
+    var J = { beranda: 'Pusat WHL', unit: 'Aktivitas', absen: 'Kehadiran', apps: 'Semua layanan', akun: 'Akun saya', kotak: 'Kotak masuk' }[t];
     $('judulTab').textContent = J; $('kpl').classList.toggle('ringkas', t !== 'beranda'); if ($('tKembali')) $('tKembali').hidden = t === 'beranda';
     gambar(true); window.scrollTo(0, 0);
     var el = $('isi'); el.classList.remove('masukKanan', 'masukKiri'); if (pindah) { void el.offsetWidth; el.classList.add(arah); }
@@ -326,18 +328,35 @@
   /* kartu "sedang berjalan" melayang di atas navigasi (Beranda) */
   function gambarMelayang() {
     var el = $('melayang'); if (!el) return;
-    if (tab !== 'beranda' || !SESI) { el.classList.add('sembunyi'); return; }
+    if (tab !== 'beranda' || !SESI) { el.classList.add('sembunyi'); document.documentElement.classList.remove('ml-absen'); return; }
     var T2 = daftarTindak(), h = '';
     if (T2.storing.length) { var x = T2.storing[0]; h = '<button type="button" class="mlI merah" data-ke="tab:unit">' + IK('alarm') + '</button><button type="button" class="mlT" data-ke="tab:unit"><b>' + T2.storing.length + ' unit storing sedang ditangani</b><small>' + esc(x.l) + (x.mek ? ' · ' + x.mek : ' · belum ada mekanik') + (x.umur ? ' · ' + x.umur : '') + '</small></button><button type="button" class="mlB" data-ke="tab:unit">Lihat</button>'; }
-    else if (SESI.user.peran !== 'driver' && ABSEN && ABSEN.ok) {
-      var c = ABSEN.hari || [], m = c.filter(function (y) { return y.tipe === 'Masuk'; })[0], pl = c.filter(function (y) { return /^Pulang/.test(y.tipe); })[0];
-      h = '<button type="button" class="mlI" data-ke="tab:absen">' + IK(m ? 'jam' : 'absen') + '</button><button type="button" class="mlT" data-ke="tab:absen"><b>' + (m ? (pl ? 'Sudah pulang ' + esc(String(pl.jam).replace(':', '.')) : 'Sedang bertugas sejak ' + esc(String(m.jam).replace(':', '.'))) : 'Belum absen masuk') + '</b><small>' + (m ? (m.status === 'Telat' ? 'Masuk tercatat telat' : 'Absen masuk tercatat') + (pl ? '' : ' · absen pulang nanti') : 'Pindai wajah + GPS di lokasi site') + '</small></button>' + (pl ? '' : '<button type="button" class="mlB" data-aksi="absen">Absen</button>');
-    }
+    else if (kotakAbsen()) { el.innerHTML = kotakAbsen(); el.classList.remove('sembunyi'); el.classList.add('mlAbsen'); document.documentElement.classList.add('ml-absen'); return; }
+    el.classList.remove('mlAbsen'); document.documentElement.classList.remove('ml-absen');
     el.innerHTML = h; el.classList.toggle('sembunyi', !h);
+  }
+  /* v3.15 kotak absen (Reza: "tombolnya dekatan dengan absen aja ... jadi bisa absen atau lembur"): 2 tombol sama besar berdampingan.
+     Tampil melayang di Beranda; kalau tempat melayang dipakai kabar storing, kotak ini ikut di Beranda di bawah grid ikon. */
+  function kotakAbsen() {
+    if (!SESI || SESI.user.peran === 'driver' || !ABSEN || !ABSEN.ok) return '';
+    var h = '';
+    {
+      var c = ABSEN.hari || [], m = c.filter(function (y) { return y.tipe === 'Masuk'; })[0], pl = c.filter(function (y) { return /^Pulang/.test(y.tipe); })[0];
+      var LB = window.WHL_LEMBUR ? window.WHL_LEMBUR.ringkas() : { aktif: false }, jt = function (j) { return esc(String(j || '').replace(':', '.')); };
+      var sub = m ? (m.status === 'Telat' ? 'Masuk tercatat telat' : 'Absen masuk tercatat') + (pl ? '' : ' · absen pulang nanti') : 'Pindai wajah + GPS di lokasi site';
+      if (LB.status === 'DISETUJUI') sub = 'Lembur s/d ' + jt(LB.sampai) + ' (di-ACC)'; else if (LB.status === 'MENUNGGU') sub = 'Lembur s/d ' + jt(LB.sampai) + ' menunggu ACC';
+      var tbAbsen = pl ? '' : '<button type="button" class="mlB" data-aksi="absen">' + (m ? 'Absen pulang' : 'Absen') + '</button>';
+      var tbLembur = LB.status === 'DISETUJUI' ? '<button type="button" class="mlB mlB2 hijau" data-aksi="lembur">Lembur s/d ' + jt(LB.sampai) + '</button>'
+        : '<button type="button" class="mlB mlB2" data-aksi="lembur">' + (m && LB.aktif && LB.status !== 'MENUNGGU' ? 'Ajukan lembur' : LB.status === 'MENUNGGU' ? 'Lembur menunggu' : 'Lembur') + '</button>';
+      var tbAcc = LB.bolehAcc && LB.menunggu ? '<button type="button" class="mlAcc" data-aksi="lemburAcc">ACC lembur (' + LB.menunggu + ')</button>' : '';
+      h = '<div class="mlBaris"><button type="button" class="mlI" data-ke="tab:absen">' + IK(m ? 'jam' : 'absen') + '</button><button type="button" class="mlT" data-ke="tab:absen"><b>' + (m ? (pl ? 'Sudah pulang ' + jt(pl.jam) : 'Sedang bertugas sejak ' + jt(m.jam)) : 'Belum absen masuk') + '</b><small>' + sub + '</small></button></div>'
+        + '<div class="mlTombol">' + tbAbsen + tbLembur + '</div>' + tbAcc;
+    }
+    return h;
   }
   function segmenAkt() {
     if (!bolehUnit()) return '';
-    return '<div class="segmen" role="tablist"><button type="button" role="tab" data-ke="tab:unit" class="' + (tab === 'unit' ? 'on' : '') + '">' + IK('truk') + 'Unit hari ini</button><button type="button" role="tab" data-ke="tab:absen" class="' + (tab === 'absen' ? 'on' : '') + '">' + IK('absen') + 'Absen saya</button></div>';
+    return '<div class="segmen" role="tablist"><button type="button" role="tab" data-ke="tab:unit" class="' + (tab === 'unit' ? 'on' : '') + '">' + IK('truk') + 'Unit hari ini</button><button type="button" role="tab" data-ke="tab:absen" class="' + (tab === 'absen' ? 'on' : '') + '">' + IK('absen') + 'Kehadiran</button></div>';
   }
   /* kartu sorotan yang bisa digeser (pola kartu promo super-app; isinya informasi kerja) */
   function sorotan() {
@@ -368,7 +387,7 @@
   }
 
   /* ---------- Forum (v2.11): forum.js; di sini cuma pintu + lencana ---------- */
-  API.Pusat.saatBerubah = function () { if (SESI && FORUM && FORUM.disiapkan && API.Pusat.punya('pusatForumToken')) { FORUM = null; muatForum(); } try { if (SESI && tab === 'beranda' && !$('layarApp').classList.contains('sembunyi')) gambar(); } catch (e) { /* gaji-driver-app-15nov: menu baru muncul sesudah ping ulang */ } muatAksesGaji(); };
+  API.Pusat.saatBerubah = function () { if (SESI && FORUM && FORUM.disiapkan && API.Pusat.punya('pusatForumToken')) { FORUM = null; muatForum(); } try { if (SESI && tab === 'beranda' && !$('layarApp').classList.contains('sembunyi')) gambar(); } catch (e) { /* gaji-driver-app-15nov: menu baru muncul sesudah ping ulang */ } muatAksesGaji(); muatLembur(); };
   function ctxForum() { return { sesi: SESI, roti: roti, perbarui: function () { aturTanda(); if (tab === 'beranda' || tab === 'apps') gambar(); } }; }
   /* ---------- v2.14 Notifikasi tiket perlu ditindak ---------- */
   var NOTIF = { tiket: false }, TINDAK_LALU = null;
@@ -552,6 +571,8 @@
   function bertugasNama() { return API.Pusat.ringkasan(SESI, 'bertugas', true).then(function (r) { var P = (r && r.bertugas && r.bertugas.petugas) || []; return P.map(function (x) { return String(x.nama || '').trim(); }).filter(Boolean); }); }
   function muatAksesGaji() { if (!window.WHL_GAJI || !SESI) return; window.WHL_GAJI.muatAkses(ctxNota()).then(function () { try { if (SESI && tab === 'beranda' && !$('layarApp').classList.contains('sembunyi')) gambar(); } catch (e) { /* */ } }); }
   function ctxNota() { return { sesi: function () { return SESI; }, roti: roti, perbarui: function () { if (tab === 'beranda') gambar(); } }; }
+  function ctxLembur() { return { sesi: function () { return SESI; }, roti: roti, perbarui: function () { try { if (SESI && (tab === 'beranda' || tab === 'absen') && !$('layarApp').classList.contains('sembunyi')) gambar(); } catch (e) { /* */ } } }; }
+  function muatLembur() { if (window.WHL_LEMBUR && SESI) window.WHL_LEMBUR.muat(ctxLembur()); } /* v3.15: status lembur hari ini + jumlah menunggu ACC (kalau server lembur sudah ada) */
   function ctxBanner() { return { bertugas: bertugasNama, roti: roti, perbarui: function () { if (tab === 'beranda') gambar(); }, tab: function (t) { keTab(t); }, web: bukaWeb,
     forum: function (r) { if (window.WHL_FORUM) window.WHL_FORUM.bukaKe(ctxForum(), r); }, aksi: function (n) { if (n === 'ksn' && window.WHL_KSN) window.WHL_KSN.buka(ctxKsn()); } }; }
   function forumTampil() { return !!window.WHL_FORUM && API.Pusat.asli() && !(FORUM && FORUM.ditolak); }
@@ -659,10 +680,18 @@
      item = [ikon, label, ke (aksi), lencana, id simpan] */
   var IKON_PILIH = null, IKON_MAKS = 11, IKON_BAWAAN = 7;
   function kunciIkon() { return 'whlBerandaIkon_' + String((SESI && (SESI.idProfil || SESI.idKetik)) || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
-  function muatIkonPilih() { IKON_PILIH = null; return Simpan.ambil(kunciIkon()).then(function (v) { try { var a = JSON.parse(v || 'null'); IKON_PILIH = Array.isArray(a) && a.length ? a : null; } catch (e) { IKON_PILIH = null; } }); }
+  function muatIkonPilih() {
+    IKON_PILIH = null;
+    return Simpan.ambil(kunciIkon()).then(function (v) {
+      try { var a = JSON.parse(v || 'null'); IKON_PILIH = Array.isArray(a) && a.length ? a : null; } catch (e) { IKON_PILIH = null; }
+      /* v3.15: id lama "absen" (v3.14) -> "kehadiran", posisinya tetap; disimpan ulang sekali */
+      if (IKON_PILIH && IKON_PILIH.indexOf('absen') >= 0) { var b = []; IKON_PILIH.forEach(function (id) { id = id === 'absen' ? 'kehadiran' : id; if (b.indexOf(id) < 0) b.push(id); }); IKON_PILIH = b; Simpan.taruh(kunciIkon(), JSON.stringify(b)); }
+    });
+  }
+  function lemburTanda() { var L = window.WHL_LEMBUR ? window.WHL_LEMBUR.ringkas() : null; return L && L.bolehAcc ? L.menunggu : 0; }
   function kandidatLayanan() {
     var L = [], tambah = function (x) { if (!L.some(function (y) { return y[4] === x[4]; })) L.push(x); };
-    if (SESI.user.peran !== 'driver') tambah(['absen', 'Absen', 'tab:absen', 0, 'absen']);
+    if (SESI.user.peran !== 'driver') tambah(['absen', 'Kehadiran', 'tab:absen', lemburTanda(), 'kehadiran']); /* v3.15 (Reza): menu Absen diganti hub Kehadiran (absen, izin/cuti, lembur) */
     if (bolehUnit()) tambah(['truk', 'Unit', 'tab:unit', daftarTindak().total, 'unit']);
     if (forumTampil()) tambah(['forum', 'Forum', 'forum', forumBaru(), 'forum']);
     tambah(['input', 'Input', 'lapor', 0, 'input']);
@@ -672,6 +701,7 @@
     if (KSN && (KSN.ada || KSN.perluPin) && SESI.user.peran !== 'driver') tambah(['kuesioner', 'Kuesioner', 'ksn', KSN.ada && KSN.buka ? KSN.sisa : 0, 'ksn']);
     tambah(['profil', 'Nilai saya', 'tab:akun', 0, 'profil']);
     if (window.WHL_KASBON && window.WHL_KASBON.boleh(SESI)) tambah(['kasbon', 'Ajuan kasbon', 'kasbon', 0, 'kasbon']); /* gaji-driver-app-15nov: semua staf (cicilan HP diri sendiri) */
+    if (window.WHL_DOKKAS && window.WHL_DOKKAS.boleh(SESI)) tambah(['dokumen', 'Dokumen kasbon', 'dokkas', 0, 'dokkas']); /* v3.15: arsip ajuan + rekap potongan (admin/pimpinan/Fanza/Reza) */
     appsSaya().forEach(function (a) { tambah([IKON_DIV[a.d] || 'web', a.n.replace(/ WHL$/, '').replace(/^Live Monitor /, '').replace(/^Dashboard /, ''), 'web:' + alamat(a), 0, 'app:' + a.n]); });
     /* tambahan yang biasanya cuma di "Lainnya" (boleh dipasang di Beranda juga) */
     tambah(['kotak', 'Kotak masuk', 'tab:kotak', kotakBelum(), 'kotak']);
@@ -762,7 +792,7 @@
   function petakLy(x) { return '<button type="button" class="ly lyL" data-ke="' + esc(x[2]) + '"><span>' + ILUS(x[0]) + (x[3] ? '<i class="tanda angka">' + (x[3] > 9 ? '9+' : x[3]) + '</i>' : '') + (x[4] ? '<i class="baru">Baru</i>' : '') + '</span><b>' + esc(x[1]) + '</b></button>'; }
   function lembarLainnya() {
     var A = [], T2 = daftarTindak();
-    if (SESI.user.peran !== 'driver') A.push(['absen', 'Absen', 'tab:absen']);
+    if (SESI.user.peran !== 'driver') A.push(['absen', 'Kehadiran', 'tab:absen', lemburTanda(), 1]); /* v3.15: absen + izin/cuti + lembur */
     if (bolehUnit()) A.push(['truk', 'Unit hari ini', 'tab:unit', T2.total]);
     if (forumTampil()) A.push(['forum', 'Forum', 'forum', forumBaru()]);
     A.push(['input', 'Input cepat', 'lapor']);
@@ -770,6 +800,7 @@
     if (window.WHL_LABA && window.WHL_LABA.boleh(SESI)) A.push(['laba', 'Laba unit', 'laba', 0, 1]); /* laba-pimpinan-15nov */
     if (window.WHL_GAJI && window.WHL_GAJI.boleh(SESI)) A.push(['gaji', window.WHL_GAJI.judul(SESI), 'gaji', 0, 1]); /* gaji-driver-app-15nov */
     if (window.WHL_KASBON && window.WHL_KASBON.boleh(SESI)) A.push(['kasbon', 'Ajuan kasbon', 'kasbon', 0, 1]); /* gaji-driver-app-15nov */
+    if (window.WHL_DOKKAS && window.WHL_DOKKAS.boleh(SESI)) A.push(['dokumen', 'Dokumen kasbon', 'dokkas', 0, 1]); /* v3.15 */
     A.push(['kotak', 'Kotak masuk', 'tab:kotak', kotakBelum(), 1]);
     if (hitungProyeksi()) A.push(['grafik', 'Proyeksi target', 'proyeksi', 0, 1]);
     if (KSN && (KSN.ada || KSN.perluPin)) A.push(['kuesioner', 'Kuesioner', 'ksn', KSN.ada && KSN.buka ? KSN.sisa : 0]);
@@ -874,6 +905,7 @@
     if (D.serverJam && (D.dariCache || D.segarGagal || D.menyegar)) h += '<div class="pitaData' + (D.segarGagal ? ' gagal' : '') + '">' + (D.segarGagal ? IK('alarm') + '<span>Belum bisa menyegarkan data (' + esc(D.segarGagal) + '). Yang tampil data jam ' + esc(String(D.serverJam).slice(-5).replace(':', '.')) + '.</span><button type="button" data-aksi="segar">Coba lagi</button>' : '<span class="putar"></span><span>Menyegarkan… yang tampil data jam ' + esc(String(D.serverJam).slice(-5).replace(':', '.')) + '</span>') + '</div>';
     if (window.WHL_BANNER) h += window.WHL_BANNER.html(); /* v3.6 banner pengumuman (karusel) */
     h += '<div class="kartu kLayanan">' + layanan() + forumStatus() + '</div>';
+    if (daftarTindak().storing.length && kotakAbsen()) h += '<div class="kartu kAbsenIn" id="kotakAbsen">' + kotakAbsen() + '</div>'; /* v3.15: tempat melayang dipakai kabar storing */
     if (window.WHL_ONLINE) h += window.WHL_ONLINE.htmlBeranda(); /* v3.9: siapa online (semua staf) */
     h += sorotan();
     if (D.serverJam && (kartu.indexOf('ritase') >= 0 || bolehPimpinan())) h += kartuProyeksi(); /* v3.0: proyeksi target di atas, seperti Pusat web */
@@ -1083,10 +1115,42 @@
 
   /* Tab Absen (v2.6, permintaan Reza): HANYA status absen diri sendiri hari ini + tombol ABSEN. Tidak ada riwayat, rekap bulan,
      daftar belum absen, atau cuti/izin orang lain, untuk semua peran. */
+  /* v3.15 HUB KEHADIRAN (Reza: "absen, cuti, lembur sekalian di sana aja, tulisin apa fiturnya"): kartu besar + keterangan singkat.
+     Riwayat absen TETAP tidak ditampilkan (aturan Reza v2.6). Lembur aktif otomatis kalau pusatPing memuat fungsi pusatLembur*. */
+  function gayaHadir() {
+    if (document.getElementById('hdGaya')) return;
+    var st = document.createElement('style'); st.id = 'hdGaya';
+    st.textContent = '.hdK{display:block;width:100%;text-align:left;color:var(--teks);margin-bottom:12px}.hdAtas{display:flex;gap:12px;align-items:center}.hdAtas .ik{width:52px;height:52px;flex:none}.hdAtas .ik .ilus{width:52px;height:52px}'
+      + '.hdAtas .tx{flex:1;min-width:0}.hdAtas .tx b{display:block;font-size:16.5px;font-weight:800}.hdAtas .tx small{display:block;font-size:12.5px;color:var(--redup);line-height:1.45;margin-top:2px}'
+      + '.hdFitur{margin:10px 0 0;padding-left:18px;font-size:12.5px;color:var(--redup);line-height:1.6}.hdFitur b{color:var(--teks)}.hdTombol{display:flex;gap:8px;margin-top:12px}.hdTombol button{flex:1;margin:0;min-height:46px}'
+      + '.hdSegera{opacity:.92}.hdSegera .chip{margin-left:6px}';
+    document.head.appendChild(st);
+  }
+  function kartuHadir(ik, judul, sub, fitur, tombol, ekstra) {
+    return '<div class="kartu hdK' + (ekstra || '') + '"><div class="hdAtas"><span class="ik">' + ILUS(ik) + '</span><span class="tx"><b>' + judul + '</b><small>' + sub + '</small></span></div>'
+      + (fitur && fitur.length ? '<ul class="hdFitur">' + fitur.map(function (f) { return '<li>' + f + '</li>'; }).join('') + '</ul>' : '') + (tombol || '') + '</div>';
+  }
   function gambarAbsen() {
-    var h = segmenAkt() + '<div class="kartu absenK"><div class="judulK">Absen saya hari ini</div><div class="status">' + chipAbsen() + '</div>' + (SESI.user.peran === 'driver' ? '' : tombolAbsen()) + '</div>';
-    if (SESI.user.peran !== 'driver') h += '<div class="kecil" style="margin:0 6px 14px">Absen pertama hari ini tercatat sebagai <b>Masuk</b>, absen berikutnya (minimal 2 jam kemudian) sebagai <b>Pulang</b>.</div>';
-    h += '<div class="bingkai">' + kartuApp({ n: 'Pengajuan Izin', ikn: 'dokumen', k: 'Izin / sakit / cuti', u: K.ABSEN + '?mode=izin' }) + '</div>';
+    gayaHadir();
+    var h = segmenAkt();
+    if (SESI.user.peran === 'driver') return h + '<div class="kartu absenK"><div class="judulK">Absen saya hari ini</div><div class="status">' + chipAbsen() + '</div></div>';
+    h += '<div class="kecil" style="margin:0 6px 12px;line-height:1.5">Semua urusan kehadiranmu di satu tempat: absen, izin / cuti, dan lembur.</div>';
+    /* 1. Absen masuk / pulang */
+    h += kartuHadir('absen', 'Absen masuk / pulang', 'Pindai wajah + GPS di lokasi site.', ['Absen pertama hari ini tercatat <b>Masuk</b>, berikutnya (minimal 2 jam kemudian) <b>Pulang</b>.', 'Jarak maks ' + esc((ABSEN && ABSEN.titik && ABSEN.titik.radius) || 100) + ' m dari titik site.'],
+      '<div class="status" style="margin-top:10px">' + chipAbsen() + '</div>' + tombolAbsen());
+    /* 2. Izin / cuti (halaman web Absensi ?mode=izin) */
+    h += kartuHadir('dokumen', 'Izin / Cuti', 'Ajukan izin, sakit, atau cuti ke atasan.', ['Pilih jenis, tanggal, dan alasan; lampirkan surat dokter kalau sakit.', 'Dibuka sebagai halaman web Absensi WHL di dalam app.'],
+      '<div class="hdTombol"><button type="button" class="tKecil" data-aksi="izin">Ajukan izin / cuti</button></div>');
+    /* 3. Lembur */
+    var L = window.WHL_LEMBUR ? window.WHL_LEMBUR.ringkas() : { aktif: false };
+    if (L.aktif) {
+      var st = L.status === 'DISETUJUI' ? '<span class="chip hijau">Lembur s/d ' + esc(String(L.sampai).replace(':', '.')) + '</span>' : L.status === 'MENUNGGU' ? '<span class="chip kuning">Lembur ' + esc(String(L.mulai).replace(':', '.')) + '–' + esc(String(L.sampai).replace(':', '.')) + ' menunggu ACC</span>' : L.status === 'DITOLAK' ? '<span class="chip merah">Lembur hari ini ditolak</span>' : '';
+      h += kartuHadir('jam', 'Lembur', 'Ajukan jam lembur, pantau ACC pimpinan.', ['Isi tanggal, jam mulai–selesai, dan pekerjaannya.', 'Status: menunggu ACC, disetujui, atau ditolak + alasan.'].concat(L.bolehAcc ? ['<b>Pimpinan:</b> setujui / tolak lembur tim.'] : []),
+        (st ? '<div class="status" style="margin-top:10px">' + st + '</div>' : '') + '<div class="hdTombol"><button type="button" class="tUtama" data-aksi="lembur">Ajukan lembur</button>' + (L.bolehAcc ? '<button type="button" class="tKecil" data-aksi="lemburAcc">ACC lembur' + (L.menunggu ? ' (' + L.menunggu + ')' : '') + '</button>' : '') + '</div>');
+    } else {
+      h += kartuHadir('jam', 'Lembur <span class="chip kuning">Segera hadir</span>', 'Pengajuan & persetujuan lembur langsung dari app.', ['Karyawan: ajukan jam lembur + pekerjaannya.', 'Pimpinan: setujui / tolak lembur tim, dapat notifikasi.', 'Aktif otomatis begitu server lembur siap (cukup buka ulang app).'],
+        '<div class="hdTombol"><button type="button" class="tKecil" data-aksi="lembur">Lembur</button></div>', ' hdSegera');
+    }
     return h;
   }
 
@@ -1296,13 +1360,16 @@
     b = t.closest('[data-kt]'); if (b) { R.getar(); lembarTopik(b.getAttribute('data-kt')); return; }
     if (t.closest('#btnTema')) { var tb = document.documentElement.getAttribute('data-tema') === 'gelap' ? 'terang' : 'gelap'; pasangTema(tb); Simpan.taruh(KUNCI_TEMA, tb); gambar(); return; }
     if (t.closest('#btnSuara')) { R.aturSetel('suara', !R.setel.suara); pasangSuara(); if (R.setel.suara) R.bunyi('notifikasi'); if (tab === 'akun') gambar(); return; }
-    b = t.closest('[data-ke]'); if (b) { var ke = b.getAttribute('data-ke'); if (b.closest('#lembar') && ke !== 'lainnya') tutupLembar(); if (ke === 'nota') window.WHL_NOTA.buka(ctxNota()); else if (ke === 'laba') window.WHL_LABA.buka(ctxNota()); else if (ke === 'gaji') window.WHL_GAJI.buka(ctxNota()); else if (ke === 'aturBeranda') bukaAturBeranda(); else if (ke === 'kasbon') window.WHL_KASBON.buka(ctxNota()); else if (ke === 'lainnya') lembarLainnya(); else if (ke === 'kelolaBanner') { window.WHL_BANNER.pasang(ctxBanner()); window.WHL_BANNER.kelola(); } else if (ke === 'proyeksi') { keTab('beranda'); setTimeout(function () { var pq = document.querySelector('.proy'); if (pq) pq.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 120); } else if (ke === 'lapor') lembarLapor(); else if (ke === 'forum') window.WHL_FORUM.buka(ctxForum()); else if (ke === 'ksn') window.WHL_KSN.buka(ctxKsn()); else if (ke === 'k3') window.WHL_KSN.bukaK3(ctxKsn()); else if (ke.indexOf('tab:') === 0) keTab(ke.slice(4)); else if (ke.indexOf('web:') === 0) bukaWeb(ke.slice(4)); return; }
+    b = t.closest('[data-ke]'); if (b) { var ke = b.getAttribute('data-ke'); if (b.closest('#lembar') && ke !== 'lainnya') tutupLembar(); if (ke === 'nota') window.WHL_NOTA.buka(ctxNota()); else if (ke === 'laba') window.WHL_LABA.buka(ctxNota()); else if (ke === 'gaji') window.WHL_GAJI.buka(ctxNota()); else if (ke === 'aturBeranda') bukaAturBeranda(); else if (ke === 'kasbon') window.WHL_KASBON.buka(ctxNota()); else if (ke === 'dokkas') window.WHL_DOKKAS.buka(ctxNota()); else if (ke === 'lainnya') lembarLainnya(); else if (ke === 'kelolaBanner') { window.WHL_BANNER.pasang(ctxBanner()); window.WHL_BANNER.kelola(); } else if (ke === 'proyeksi') { keTab('beranda'); setTimeout(function () { var pq = document.querySelector('.proy'); if (pq) pq.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 120); } else if (ke === 'lapor') lembarLapor(); else if (ke === 'forum') window.WHL_FORUM.buka(ctxForum()); else if (ke === 'ksn') window.WHL_KSN.buka(ctxKsn()); else if (ke === 'k3') window.WHL_KSN.bukaK3(ctxKsn()); else if (ke.indexOf('tab:') === 0) keTab(ke.slice(4)); else if (ke.indexOf('web:') === 0) bukaWeb(ke.slice(4)); return; }
     b = t.closest('[data-web]'); if (b) { var u = b.getAttribute('data-web'); if (u) bukaWeb(u); else roti('Link belum tersedia.'); return; }
     b = t.closest('[data-saring]'); if (b) { saringUnit = b.getAttribute('data-saring'); gambar(); return; }
     b = t.closest('[data-aksi]'); if (!b) return;
     var a = b.getAttribute('data-aksi');
     if (a === 'absen') { if (!navigator.onLine) { R.bunyi('gagal'); roti('Tidak ada internet. Nyalakan data / WiFi dulu.'); return; } R.getar('sedang'); try { sessionStorage.setItem('whlV2Tab', 'absen'); } catch (e) { /* */ } window.location.href = 'absen.html'; }
     else if (a === 'aktifAbsen') aktifAbsen();
+    else if (a === 'lembur') { if (window.WHL_LEMBUR) window.WHL_LEMBUR.bukaAju(ctxNota()); } /* v3.15: tanpa server lembur -> "Fitur lembur segera hadir" */
+    else if (a === 'lemburAcc') { if (window.WHL_LEMBUR) window.WHL_LEMBUR.bukaAcc(ctxNota()); }
+    else if (a === 'izin') { R.getar(); bukaWeb(K.ABSEN + '?mode=izin'); }
     else if (a === 'segar') { if (D.serverJam) { D.segarGagal = ''; D.menyegar = true; } else D = {}; gambar(); segarSemua(); } /* v3.9.2: segarkan tanpa menghapus data yang sedang tampil */
     else if (a === 'kpiUlang') { KPI = null; PROFIL = null; gambar(); muatProfil(true); }
     else if (a === 'tema') { var baru = document.documentElement.getAttribute('data-tema') === 'gelap' ? 'terang' : 'gelap'; pasangTema(baru); Simpan.taruh(KUNCI_TEMA, baru); gambar(); }
@@ -1334,7 +1401,7 @@
         if (SESI && PUSH.token && API.Pusat.punya('pusatLepasPerangkat')) API.Pusat.lepasPerangkat(SESI, PUSH.token).catch(function () { });
         try { if (webPesan) webPesan.deleteToken().catch(function () { }); } catch (e) { /* */ }
         KOTAK = []; simpanKotak(); Simpan.taruh('whlBanner', null);
-        if (window.WHL_GAJI) window.WHL_GAJI.lupakan(); if (window.WHL_KASBON) window.WHL_KASBON.lupakan(); if (window.WHL_LABA) window.WHL_LABA.lupakan(); /* gaji-driver-app-15nov: angka gaji/laba dibuang dari memori */
+        if (window.WHL_GAJI) window.WHL_GAJI.lupakan(); if (window.WHL_KASBON) window.WHL_KASBON.lupakan(); if (window.WHL_DOKKAS) window.WHL_DOKKAS.lupakan(); if (window.WHL_LEMBUR) window.WHL_LEMBUR.lupakan(); if (window.WHL_LABA) window.WHL_LABA.lupakan(); /* gaji-driver-app-15nov: angka gaji/laba dibuang dari memori */
         if (SESI) bioGugur(SESI.idProfil || SESI.idKetik); /* v3.9 */
         var habis = function () { keLogin(''); }; if (window.WHL_ONLINE) { var tunda = setTimeout(habis, 2500); window.WHL_ONLINE.berhenti().then(function () { clearTimeout(tunda); habis(); }); } else habis();
       });

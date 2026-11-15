@@ -140,6 +140,12 @@
     kasbonPutus: function (sesi, id, keputusan, alasan) { return rpc(K.DASH, 'pusat', 'pusatKasbonPutus', [sesi.tokenPusat, id, keputusan, alasan || ''], 45000); },
     kasbonPdf: function (sesi, id) { return rpc(K.DASH, 'pusat', 'pusatKasbonPdf', [sesi.tokenPusat, id], 60000); },
     cicilanStafPdf: function (sesi, periode) { return rpc(K.DASH, 'pusat', 'pusatCicilanStafPdf', [sesi.tokenPusat, periode || ''], 90000); },
+    /* v3.15 kasbon-ttd-impor-15nov: Dokumen kasbon & cicilan (admin / pimpinan / Fanza / Reza; hak dicek server) */
+    kasbonDokumen: function (sesi, periode) { return rpc(K.DASH, 'pusat', 'pusatKasbonDokumen', [sesi.tokenPusat, periode || ''], K.BATAS_GAJI || 90000); },
+    kasbonRekapPdf: function (sesi, periode) { return rpc(K.DASH, 'pusat', 'pusatKasbonRekapPdf', [sesi.tokenPusat, periode || ''], 90000); },
+    /* v3.15: daftar fungsi server (salinan) + panggilan umum untuk fitur yang namanya baru ditentukan server (lembur.js) */
+    daftar: function () { return pusatFn.slice(); },
+    panggil: function (fn, args, ms) { return rpc(K.DASH, 'pusat', fn, args || [], ms || 30000); },
     gantiPin: function (token, lama, baru) { return rpc(K.DASH, 'pusat', 'pusatGantiPin', [token, lama, baru]); },
     ringkasan: function (sesi, bagian, paksa) {
       if (pusatAsli) return rpc(K.DASH, 'pusat', 'ringkasanPusat', [bagian, !!paksa, '', sesi.tokenPusat], 30000); /* v3.9.2: 90 -> 30 dtk; data lama tetap tampil dari cache */

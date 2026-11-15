@@ -138,6 +138,15 @@ html[data-tema="gelap"] .kmI { color:#9cc6fa; } html[data-tema="gelap"] .kmI.mer
 html[data-tema="gelap"] .mlI { color:#9cc6fa; }
 .mlT { flex:1; min-width:0; text-align:left; } .mlT b { display:block; font-size:14px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .mlT small { display:block; font-size:12px; color:var(--redup); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .mlB { flex:none; background:var(--utama); color:#fff; font-weight:800; font-size:13.5px; border-radius:999px; padding:0 16px; min-height:38px; }
+/* v3.15 kotak absen: Absen + Lembur berdampingan (sama besar), ACC lembur untuk pimpinan */
+.melayang.mlAbsen { flex-direction:column; align-items:stretch; gap:8px; padding:10px 12px 12px; }
+.mlBaris { display:flex; align-items:center; gap:10px; min-width:0; }
+.mlTombol { display:flex; gap:8px; } .mlTombol .mlB { flex:1 1 0; min-width:0; min-height:42px; padding:0 10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mlB.mlB2 { background:var(--panel2); color:var(--utama); box-shadow:inset 0 0 0 1.5px var(--utama); } .mlB.mlB2.hijau { background:#15803d; color:#fff; box-shadow:none; }
+html[data-tema="gelap"] .mlB.mlB2 { color:#9cc6fa; box-shadow:inset 0 0 0 1.5px #9cc6fa; } html[data-tema="gelap"] .mlB.mlB2.hijau { color:#fff; box-shadow:none; }
+.mlAcc { width:100%; background:var(--merah); color:#fff; font-weight:800; font-size:13.5px; border-radius:999px; padding:0 12px; min-height:40px; }
+.kAbsenIn { display:flex; flex-direction:column; gap:10px; padding:12px; }
+html.ml-absen .isiWrap { padding-bottom:calc(250px + env(safe-area-inset-bottom)); }
 
 /* ---------- navigasi bawah 5 tab ---------- */
 .nav { background:var(--nav); border-top:1px solid var(--garis); box-shadow:0 -4px 18px rgba(16,42,84,.06); }
