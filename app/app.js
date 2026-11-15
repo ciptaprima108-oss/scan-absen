@@ -274,7 +274,7 @@
     window.addEventListener('popstate', function () { var r = window.WHL_KEMBALI(); if (r === 'keluar') { try { history.back(); } catch (e) { /* */ } } else { try { history.pushState({ whl: 1 }, ''); } catch (e) { /* */ } } });
   }
   /* notifikasi web diketuk -> app dibuka dengan ?buka=forum:umum / tiket:WHL 902 */
-  function bukaDariAlamat() { var m = /[?&]buka=([^&#]+)/.exec(location.search); if (!m) return; var p = decodeURIComponent(m[1]).split(':'); try { history.replaceState(history.state, '', location.pathname); } catch (e) { /* */ } setTimeout(function () { bukaDariNotif(p[0] === 'tiket' ? { jenis: 'tiket', l: p.slice(1).join(':') } : { jenis: 'forum', ruang: p[1] || 'umum' }); }, 1800); }
+  function bukaDariAlamat() { var m = /[?&]buka=([^&#]+)/.exec(location.search); if (!m) return; var p = decodeURIComponent(m[1]).split(':'); try { history.replaceState(history.state, '', location.pathname); } catch (e) { /* */ } setTimeout(function () { bukaDariNotif(p[0] === 'tiket' ? { jenis: 'tiket', l: p.slice(1).join(':') } : p[0] === 'lembur' ? { jenis: 'lembur', id: p[1] || '' } : { jenis: 'forum', ruang: p[1] || 'umum' }); }, 1800); }
   /* keyboard HP terbuka -> navigasi bawah & kartu melayang disembunyikan, kolom ketik forum pas di atas keyboard */
   var tinggiMaks = window.innerHeight;
   window.addEventListener('resize', function () { tinggiMaks = Math.max(tinggiMaks, window.innerHeight); document.documentElement.classList.toggle('kb-buka', window.innerHeight < tinggiMaks * 0.78); });
@@ -305,7 +305,7 @@
   function kotakBelum() { return KOTAK.filter(function (x) { return !x.b; }).length; }
   function bacaSemuaKotak() { if (tab !== 'kotak' || !kotakBelum()) return; KOTAK.forEach(function (x) { x.b = true; }); simpanKotak(); aturTanda(); }
   function waktuLalu(w) { var m = Math.max(0, Math.round((Date.now() - w) / 60000)); return m < 1 ? 'baru saja' : m < 60 ? m + ' mnt lalu' : m < 1440 ? Math.floor(m / 60) + ' jam lalu' : Math.floor(m / 1440) + ' hr lalu'; }
-  var IKON_KOTAK = { tiket: ['alarm', 'merah'], forum: ['forum', 'biru'], sebut: ['forum', 'biru'], pengumuman: ['pengumuman', 'biru'], absen: ['absen', 'biru'], ksn: ['kuesioner', 'kuning'], info: ['lonceng', ''] };
+  var IKON_KOTAK = { tiket: ['alarm', 'merah'], forum: ['forum', 'biru'], sebut: ['forum', 'biru'], pengumuman: ['pengumuman', 'biru'], absen: ['absen', 'biru'], ksn: ['kuesioner', 'kuning'], lembur: ['jam', 'kuning'], info: ['lonceng', ''] };
   function barisKotak(ik, warna, judul, isi, kanan, attr, belum) {
     return '<button type="button" class="km' + (belum ? ' belum' : '') + '" ' + attr + '><span class="kmI ' + warna + '">' + window.WHL_ILUS(ik) + '</span><span class="tx"><b>' + esc(String(judul || '').replace(/^[^A-Za-z0-9@]+/, '')) + '</b>' + (isi ? '<small>' + esc(isi) + '</small>' : '') + '</span><em>' + esc(kanan || '') + '</em>' + IK('kanan', 'kmP') + '</button>';
   }
@@ -344,7 +344,8 @@
       var c = ABSEN.hari || [], m = c.filter(function (y) { return y.tipe === 'Masuk'; })[0], pl = c.filter(function (y) { return /^Pulang/.test(y.tipe); })[0];
       var LB = window.WHL_LEMBUR ? window.WHL_LEMBUR.ringkas() : { aktif: false }, jt = function (j) { return esc(String(j || '').replace(':', '.')); };
       var sub = m ? (m.status === 'Telat' ? 'Masuk tercatat telat' : 'Absen masuk tercatat') + (pl ? '' : ' · absen pulang nanti') : 'Pindai wajah + GPS di lokasi site';
-      if (LB.status === 'DISETUJUI') sub = 'Lembur s/d ' + jt(LB.sampai) + ' (di-ACC)'; else if (LB.status === 'MENUNGGU') sub = 'Lembur s/d ' + jt(LB.sampai) + ' menunggu ACC';
+      if (LB.status === 'DISETUJUI') sub = 'Lembur s/d ' + jt(LB.sampai) + ' (di-ACC)'; else if (LB.status === 'MENUNGGU') sub = 'Lembur s/d ' + jt(LB.sampai) + ' menunggu ACC'; else if (LB.status === 'DICABUT') sub = 'Lembur dicabut pimpinan'; else if (LB.status === 'DITOLAK') sub = 'Lembur ditolak';
+      if (LB.label) sub = esc(LB.label); /* v3.16: badge status kerja dari server (sama dengan Pos Kontrol) */
       var tbAbsen = pl ? '' : '<button type="button" class="mlB" data-aksi="absen">' + (m ? 'Absen pulang' : 'Absen') + '</button>';
       var tbLembur = LB.status === 'DISETUJUI' ? '<button type="button" class="mlB mlB2 hijau" data-aksi="lembur">Lembur s/d ' + jt(LB.sampai) + '</button>'
         : '<button type="button" class="mlB mlB2" data-aksi="lembur">' + (m && LB.aktif && LB.status !== 'MENUNGGU' ? 'Ajukan lembur' : LB.status === 'MENUNGGU' ? 'Lembur menunggu' : 'Lembur') + '</button>';
@@ -431,6 +432,7 @@
     if (d.jenis === 'forum' && window.WHL_FORUM) window.WHL_FORUM.bukaKe(ctxForum(), String(d.ruang || 'umum'));
     else if (d.jenis === 'tiket' && d.l) window.WHL_TINDAK(String(d.l));
     else if (/^kasbon_/.test(String(d.jenis || '')) && window.WHL_KASBON && window.WHL_KASBON.boleh(SESI)) window.WHL_KASBON.buka(ctxNota(), d.jenis === 'kasbon_pimpinan' ? 'acc' : 'daftar'); /* gaji-driver-app-15nov */
+    else if (d.jenis === 'lembur' && window.WHL_LEMBUR) bukaLemburNotif(); /* v3.16 lembur-acc-15nov: pimpinan -> Persetujuan, staf -> Lembur saya */
   }
   /* v2.18: alur aktifkan notifikasi per langkah dengan status & galat ASLI: cek app -> ping server ulang -> izin -> token FCM -> daftar ke server.
      Dijalankan otomatis tiap app dibuka / kembali dari latar / buka Akun (kalau belum aktif), dan manual lewat tombol "Aktifkan notifikasi". */
@@ -450,12 +452,13 @@
     PN.addListener('registrationError', function (e) { clearTimeout(pushTunggu); pushSet('gagal', 'Gagal ambil token notifikasi: ' + ((e && (e.error || e.message)) || 'tanpa keterangan')); });
     /* app sedang dibuka: Android tidak menampilkan notifikasi -> tampilkan sendiri + bunyi */
     PN.addListener('pushNotificationReceived', function (n) {
-      var d = n.data || {}; catatKotak(d.jenis === 'tiket' ? 'tiket' : /^📌/.test(n.title || '') ? 'pengumuman' : /menyebutmu/.test(n.title || '') ? 'sebut' : d.jenis === 'forum' ? 'forum' : 'info', n.title, n.body, d);
+      var d = n.data || {}; catatKotak(d.jenis === 'tiket' ? 'tiket' : /^📌/.test(n.title || '') ? 'pengumuman' : /menyebutmu/.test(n.title || '') ? 'sebut' : d.jenis === 'forum' ? 'forum' : d.jenis === 'lembur' ? 'lembur' : 'info', n.title, n.body, d);
       if (d.jenis === 'forum' && window.WHL_FORUM && window.WHL_FORUM.siap()) return; // forum tersambung sudah membunyikan sendiri
       R.bunyi(d.jenis === 'tiket' ? 'tiketWhl' : 'pesanWhl'); R.getar('awas'); roti((n.title ? n.title + ' — ' : '') + (n.body || ''));
       if (d.jenis === 'tiket') muatRingkasan(false);
+      if (d.jenis === 'lembur') muatLembur(); /* v3.16: badge ACC lembur / status lembur langsung diperbarui */
     });
-    PN.addListener('pushNotificationActionPerformed', function (a) { var d = (a.notification && a.notification.data) || {}; catatKotak(d.jenis === 'tiket' ? 'tiket' : d.jenis === 'forum' ? 'forum' : 'info', a.notification && a.notification.title, a.notification && a.notification.body, d); if (KOTAK[0]) KOTAK[0].b = true; setTimeout(function () { bukaDariNotif(d); }, 400); });
+    PN.addListener('pushNotificationActionPerformed', function (a) { var d = (a.notification && a.notification.data) || {}; catatKotak(d.jenis === 'tiket' ? 'tiket' : d.jenis === 'forum' ? 'forum' : d.jenis === 'lembur' ? 'lembur' : 'info', a.notification && a.notification.title, a.notification && a.notification.body, d); if (KOTAK[0]) KOTAK[0].b = true; setTimeout(function () { bukaDariNotif(d); }, 400); });
     KANAL_PUSH.forEach(function (k) { PN.createChannel({ id: k.id, name: k.name, description: k.description, sound: k.sound, importance: 5, visibility: 1, vibration: true, lights: true, lightColor: '#1E88E5' }).catch(function () { }); });
   }
   /* ---------- PWA (iPhone iOS 16.4+ dipasang ke layar utama / Chrome Android): WEB PUSH lewat Firebase Messaging + VAPID ---------- */
@@ -484,7 +487,7 @@
         return navigator.serviceWorker.ready.then(function (reg) { return webPesan.getToken({ vapidKey: KF.vapid, serviceWorkerRegistration: reg }); }).then(function (tok) {
           if (!tok) throw new Error('token kosong');
           PUSH.token = tok; pushSet('mendaftar', 'Token didapat, mendaftarkan ke server...');
-          if (!webPesan._dengar) { webPesan._dengar = true; webPesan.onMessage(function (m) { var n = m.notification || {}, d = m.data || {}; catatKotak(d.jenis === 'tiket' ? 'tiket' : d.jenis === 'forum' ? 'forum' : 'info', n.title, n.body, d); R.bunyi(d.jenis === 'tiket' ? 'tiketWhl' : 'pesanWhl'); roti((n.title ? n.title + ' — ' : '') + (n.body || '')); }); }
+          if (!webPesan._dengar) { webPesan._dengar = true; webPesan.onMessage(function (m) { var n = m.notification || {}, d = m.data || {}; catatKotak(d.jenis === 'tiket' ? 'tiket' : d.jenis === 'forum' ? 'forum' : d.jenis === 'lembur' ? 'lembur' : 'info', n.title, n.body, d); R.bunyi(d.jenis === 'tiket' ? 'tiketWhl' : 'pesanWhl'); roti((n.title ? n.title + ' — ' : '') + (n.body || '')); }); }
           return API.Pusat.daftarPerangkat(SESI, tok, 'web').then(function (h) {
             if (h && h.ok) pushSet('aktif'); else if (h && h.login === false) pushSet('gagal', 'Server menolak: sesi habis. Keluar lalu masuk lagi.'); else pushSet('gagal', 'Server menolak: ' + ((h && h.pesan) || 'tanpa keterangan'));
           });
@@ -572,6 +575,11 @@
   function muatAksesGaji() { if (!window.WHL_GAJI || !SESI) return; window.WHL_GAJI.muatAkses(ctxNota()).then(function () { try { if (SESI && tab === 'beranda' && !$('layarApp').classList.contains('sembunyi')) gambar(); } catch (e) { /* */ } }); }
   function ctxNota() { return { sesi: function () { return SESI; }, roti: roti, perbarui: function () { if (tab === 'beranda') gambar(); } }; }
   function ctxLembur() { return { sesi: function () { return SESI; }, roti: roti, perbarui: function () { try { if (SESI && (tab === 'beranda' || tab === 'absen') && !$('layarApp').classList.contains('sembunyi')) gambar(); } catch (e) { /* */ } } }; }
+  function bukaLemburNotif() {
+    var L = window.WHL_LEMBUR, buka = function () { if (L.ringkas().bolehAcc) L.bukaAcc(ctxLembur()); else L.bukaAju(ctxLembur()); };
+    if (!L.aktif()) { API.Pusat.cekUlang().then(function () { L.muat(ctxLembur()).then(buka); }); return; }
+    L.muat(ctxLembur()).then(buka, buka);
+  }
   function muatLembur() { if (window.WHL_LEMBUR && SESI) window.WHL_LEMBUR.muat(ctxLembur()); } /* v3.15: status lembur hari ini + jumlah menunggu ACC (kalau server lembur sudah ada) */
   function ctxBanner() { return { bertugas: bertugasNama, roti: roti, perbarui: function () { if (tab === 'beranda') gambar(); }, tab: function (t) { keTab(t); }, web: bukaWeb,
     forum: function (r) { if (window.WHL_FORUM) window.WHL_FORUM.bukaKe(ctxForum(), r); }, aksi: function (n) { if (n === 'ksn' && window.WHL_KSN) window.WHL_KSN.buka(ctxKsn()); } }; }
@@ -1144,8 +1152,9 @@
     /* 3. Lembur */
     var L = window.WHL_LEMBUR ? window.WHL_LEMBUR.ringkas() : { aktif: false };
     if (L.aktif) {
-      var st = L.status === 'DISETUJUI' ? '<span class="chip hijau">Lembur s/d ' + esc(String(L.sampai).replace(':', '.')) + '</span>' : L.status === 'MENUNGGU' ? '<span class="chip kuning">Lembur ' + esc(String(L.mulai).replace(':', '.')) + '–' + esc(String(L.sampai).replace(':', '.')) + ' menunggu ACC</span>' : L.status === 'DITOLAK' ? '<span class="chip merah">Lembur hari ini ditolak</span>' : '';
-      h += kartuHadir('jam', 'Lembur', 'Ajukan jam lembur, pantau ACC pimpinan.', ['Isi tanggal, jam mulai–selesai, dan pekerjaannya.', 'Status: menunggu ACC, disetujui, atau ditolak + alasan.'].concat(L.bolehAcc ? ['<b>Pimpinan:</b> setujui / tolak lembur tim.'] : []),
+      var st = L.status === 'DISETUJUI' ? '<span class="chip hijau">Lembur s/d ' + esc(String(L.sampai).replace(':', '.')) + '</span>' : L.status === 'MENUNGGU' ? '<span class="chip kuning">Lembur ' + esc(String(L.mulai).replace(':', '.')) + '–' + esc(String(L.sampai).replace(':', '.')) + ' menunggu ACC</span>' : L.status === 'DITOLAK' ? '<span class="chip merah">Lembur hari ini ditolak</span>' : L.status === 'DICABUT' ? '<span class="chip merah">Lembur dicabut</span>' : L.status === 'KEDALUWARSA' ? '<span class="chip">Lembur kedaluwarsa</span>' : '';
+      if (L.label) st = '<span class="chip' + (L.st === 'habis' ? ' merah' : L.st === 'lembur' ? ' hijau' : L.st === 'tunggu' ? ' kuning' : '') + '">' + esc(L.label) + '</span>';
+      h += kartuHadir('jam', 'Lembur', 'Ajukan jam lembur, pantau ACC pimpinan.', ['Untuk shift yang sedang berjalan; 1x ACC maks 2 jam, mau lanjut = ajukan lagi.', 'Status: menunggu ACC, disetujui, ditolak, dicabut, atau kedaluwarsa.'].concat(L.bolehAcc ? ['<b>Pimpinan:</b> setujui / tolak lembur tim.'] : []),
         (st ? '<div class="status" style="margin-top:10px">' + st + '</div>' : '') + '<div class="hdTombol"><button type="button" class="tUtama" data-aksi="lembur">Ajukan lembur</button>' + (L.bolehAcc ? '<button type="button" class="tKecil" data-aksi="lemburAcc">ACC lembur' + (L.menunggu ? ' (' + L.menunggu + ')' : '') + '</button>' : '') + '</div>');
     } else {
       h += kartuHadir('jam', 'Lembur <span class="chip kuning">Segera hadir</span>', 'Pengajuan & persetujuan lembur langsung dari app.', ['Karyawan: ajukan jam lembur + pekerjaannya.', 'Pimpinan: setujui / tolak lembur tim, dapat notifikasi.', 'Aktif otomatis begitu server lembur siap (cukup buka ulang app).'],

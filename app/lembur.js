@@ -1,9 +1,12 @@
-/* WHL App — LEMBUR (v3.15, Andro 15 Nov 2026). Reza: "absen, cuti, lembur sekalian di sana aja" + "tombolnya dekatan dengan absen".
+/* WHL App — LEMBUR (v3.15, disambung ke server asli v3.16, Andro 15 Nov 2026). Reza: "absen, cuti, lembur sekalian di sana aja" + "tombolnya dekatan dengan absen".
  * Server lembur sedang dibuat Hesti (sesi lain). Selama pusatPing belum memuat fungsi berawalan "pusatLembur", semua pintu lembur
  * menampilkan "Fitur lembur segera hadir". Begitu server live: cukup tutup-buka app (ping ulang) — tanpa build ulang,
  * ASAL nama fungsi & bentuk data cocok dengan USULAN di bawah. Kalau Hesti memakai nama lain, ubah NAMA saja (1 tempat).
  *
- * USULAN KONTRAK (api "pusat" DASHBOARD, argumen 1 = token; tanpa objek Date, jam 'HH:mm', tanggal 'yyyy-MM-dd'):
+ * v3.16: server ASLI = Upgrade\lembur-acc-15nov\SPEK-APP.md (Hesti, Lembur.gs DASHBOARD). Nama fungsi sama. Tambahan dari server:
+ *   status.kerja {st, label, akhir, sampai, tunggu}, status.aturan {toleransiMnt, tungguMnt, jatahJam}, status.pesanAju; sumber; status DICABUT & KEDALUWARSA;
+ *   ajuan hanya untuk shift berjalan (sudah absen masuk), 1x ACC maks jatahJam (sampai dipotong server); TOLAK lembur yang sedang jalan = DICABUT.
+ * KONTRAK AWAL (api "pusat" DASHBOARD, argumen 1 = token; tanpa objek Date, jam 'HH:mm', tanggal 'yyyy-MM-dd'):
  *   status : [token] -> { ok, bolehAju, bolehAcc, hariIni:{id, tanggal, mulai, sampai, alasan, status:'MENUNGGU'|'DISETUJUI'|'DITOLAK', alasanTolak}|null, menunggu:<jumlah ajuan menunggu ACC saya> }
  *   ajukan : [token, {cid, tanggal, mulai, sampai, alasan}] -> { ok, id, dobel? }
  *   saya   : [token] -> { ok, list:[{id, tanggal, mulai, sampai, jam, alasan, status, oleh, waktuPutus, alasanTolak}] }   (30 terbaru)
@@ -46,7 +49,7 @@
   /** {aktif, status, sampai, menunggu, bolehAcc} — dipakai app.js untuk tombol di kotak absen */
   function ringkas() {
     var a = aktif(), h = ST && ST.hariIni;
-    return { aktif: a, status: h ? h.status : '', mulai: h ? h.mulai : '', sampai: h ? h.sampai : '', menunggu: ST ? Number(ST.menunggu) || 0 : 0, bolehAcc: a && bolehAcc() };
+    return { aktif: a, status: h ? h.status : '', mulai: h ? h.mulai : '', sampai: h ? h.sampai : '', menunggu: ST ? Number(ST.menunggu) || 0 : 0, bolehAcc: a && bolehAcc(), label: ST && ST.kerja ? ST.kerja.label || '' : '', st: ST && ST.kerja ? ST.kerja.st || '' : '' };
   }
   function segera() { if (R.getar) R.getar(); roti('Fitur lembur segera hadir.'); }
 
@@ -68,17 +71,26 @@
     kembalikanIsian(simpan);
     var g2 = lapisEl.querySelector('.ksnIsi'); if (g2) g2.scrollTop = y;
   }
-  function isianLama() { var o = {}; if (lapisEl) ['lbTgl', 'lbMulai', 'lbSampai', 'lbAlasan', 'lbTolak'].forEach(function (id) { var e = document.getElementById(id); if (e) o[id] = e.value; }); return o; }
+  function isianLama() { var o = {}; if (lapisEl) ['lbMulai', 'lbLama', 'lbAlasan', 'lbTolak'].forEach(function (id) { var e = document.getElementById(id); if (e) o[id] = e.value; }); return o; }
   function kembalikanIsian(o) { Object.keys(o).forEach(function (id) { var e = document.getElementById(id); if (e && o[id] != null) e.value = o[id]; }); }
   function tutup() { if (!lapisEl) return; var d = lapisEl; lapisEl = null; d.classList.remove('tampil'); setTimeout(function () { d.remove(); }, 200); perbarui(); }
-  var WARNA = { MENUNGGU: ['kuning', 'Menunggu ACC'], DISETUJUI: ['hijau', 'Disetujui'], DITOLAK: ['merah', 'Ditolak'] };
+  var WARNA = { MENUNGGU: ['kuning', 'Menunggu ACC'], DISETUJUI: ['hijau', 'Disetujui'], DITOLAK: ['merah', 'Ditolak'], DICABUT: ['merah', 'Dicabut'], KEDALUWARSA: ['abu', 'Kedaluwarsa'] };
+  var SUMBER = { otomatis: 'otomatis (lewat jam pulang)', poskontrol: 'dari Pos Kontrol', 'manual-pimpinan': 'dicatat pimpinan', pimpinan: 'dicatat pimpinan', app: '' };
+  function aturan() { var a = (ST && ST.aturan) || {}; return { jatah: Number(a.jatahJam) || 2, tol: Number(a.toleransiMnt) || 30 }; }
+  function menit(j) { var m = String(j || '').match(/^(\d{1,2}):(\d{2})$/); return m ? +m[1] * 60 + +m[2] : null; }
+  function jamDari(m) { m = ((m % 1440) + 1440) % 1440; return p2(Math.floor(m / 60)) + ':' + p2(m % 60); }
+  /* jam mulai usulan: sambung dari ujung lembur yang masih jalan, kalau tidak jam pulang + toleransi */
+  function mulaiUsul() { var h = ST && ST.hariIni, k = (ST && ST.kerja) || {}; if (h && h.status === 'DISETUJUI' && menit(h.sampai) != null) return h.sampai; var a = menit(k.akhir); return a != null ? jamDari(a + aturan().tol) : ''; }
   function isiAju() {
     var h = '', hi = ST && ST.hariIni;
     if (hi) { var w = WARNA[hi.status] || ['abu', hi.status]; h += '<div class="kartu"><div class="lbAtas"><b>Lembur hari ini</b><em class="notaSt ' + w[0] + '">' + esc(w[1]) + '</em></div><div class="lbKecil">' + esc(jamTitik(hi.mulai)) + ' s/d <b>' + esc(jamTitik(hi.sampai)) + '</b>' + (hi.alasan ? ' · ' + esc(hi.alasan) : '') + (hi.status === 'DITOLAK' && hi.alasanTolak ? '<br>Alasan ditolak: ' + esc(hi.alasanTolak) : '') + '</div></div>'; }
+    if (ST && ST.kerja && ST.kerja.label) h += '<div class="kartu lbKecil" style="font-weight:800">' + esc(ST.kerja.label) + '</div>';
+    if (punya('ajukan') && ST && ST.bolehAju === false) h += '<div class="kartu lbKosong">' + esc(ST.pesanAju || 'Ajuan lembur belum bisa: pastikan sudah absen masuk di shift ini.') + '</div>';
     if (punya('ajukan') && !(ST && ST.bolehAju === false)) {
       h += '<div class="kartu lbForm"><b>Ajuan baru</b><div class="lbKecil">Diajukan ke pimpinan. Kamu dapat kabar setelah di-ACC atau ditolak.</div>'
-        + '<label for="lbTgl">Tanggal</label><input id="lbTgl" class="isian" type="date" value="' + esc(hariIni()) + '">'
-        + '<div class="lbJam"><div><label for="lbMulai">Mulai</label><input id="lbMulai" class="isian" type="time" value="18:00"></div><div><label for="lbSampai">Sampai</label><input id="lbSampai" class="isian" type="time" value="21:00"></div></div>'
+        + '<div class="lbKecil" style="margin-top:8px">Untuk <b>shift yang sedang berjalan</b> (' + esc(tglTampil(tglShift())) + '). 1x ACC maks <b>' + aturan().jatah + ' jam</b>; mau lanjut sesudahnya = ajukan lagi.</div>'
+        + '<div class="lbJam"><div><label for="lbMulai">Mulai</label><input id="lbMulai" class="isian" type="time" value="' + esc(mulaiUsul()) + '"></div><div><label for="lbLama">Lama</label><select id="lbLama" class="isian">' + pilihanLama() + '</select></div></div>'
+        + '<div class="lbKecil" style="margin-top:4px">Mulai dikosongkan = diatur server (jam pulang + ' + aturan().tol + ' mnt, atau saat di-ACC).</div>'
         + '<label for="lbAlasan">Pekerjaan / alasan</label><textarea id="lbAlasan" class="isian" rows="3" maxlength="300" placeholder="Contoh: kawal unit storing di KM 40 sampai selesai"></textarea>'
         + '<button type="button" class="tUtama" data-l="kirim" style="margin-top:14px"' + (sibuk ? ' disabled' : '') + '>' + (sibuk ? 'Mengirim…' : 'Ajukan lembur') + '</button></div>';
     } else if (!punya('ajukan')) h += '<div class="kartu lbKosong">Pengajuan lembur dari app belum dibuka di server.</div>';
@@ -100,9 +112,10 @@
     if (!ANTRE.length) return h + '<div class="kartu lbKosong">Tidak ada ajuan lembur yang menunggu.</div>';
     return h + '<div class="kartu">' + ANTRE.map(function (a) {
       var id = esc(a.id), t = tolakId === a.id;
-      return '<div class="lbKartu"><div class="lbAtas"><b>' + esc(a.nama) + '</b><small class="lbKecil">' + esc(a.jabatan || '') + '</small></div><div class="lbKecil">' + esc(tglTampil(a.tanggal)) + ' · <b>' + esc(jamTitik(a.mulai)) + '–' + esc(jamTitik(a.sampai)) + '</b>' + (a.jam ? ' (' + esc(a.jam) + ' jam)' : '') + '<br>' + esc(a.alasan || '') + (a.waktu ? '<br>Diajukan ' + esc(a.waktu) : '') + '</div>'
-        + (t ? '<textarea id="lbTolak" class="isian" rows="2" maxlength="200" placeholder="Alasan ditolak (wajib)" style="margin-top:8px"></textarea><div class="lbTombol"><button type="button" class="tKecil" data-l="batalTolak">Batal</button><button type="button" class="tolak" data-l="tolakKirim:' + id + '">Kirim penolakan</button></div>'
-          : '<div class="lbTombol"><button type="button" class="tolak" data-l="tolak:' + id + '">Tolak</button><button type="button" class="tUtama' + (yakin === a.id ? ' yakin' : '') + '" data-l="acc:' + id + '"' + (sibuk ? ' disabled' : '') + '>' + (yakin === a.id ? 'Ketuk lagi untuk ACC' : 'ACC') + '</button></div>') + '</div>';
+      var jalan = /^LEMBUR s\/d|^ACC LEMBUR/i.test(String(a.label || ''));
+      return '<div class="lbKartu"><div class="lbAtas"><b>' + esc(a.namaLengkap || a.nama) + '</b><small class="lbKecil">' + esc(a.jabatan || '') + '</small></div>' + (a.label ? '<div class="lbKecil" style="font-weight:800;color:var(--teks)">' + esc(a.label) + '</div>' : '') + '<div class="lbKecil">' + esc(tglTampil(a.tanggal)) + ' · <b>' + esc(jamTitik(a.mulai)) + '–' + esc(jamTitik(a.sampai)) + '</b>' + (a.jam ? ' (' + esc(a.jam) + ' jam)' : '') + ' <i>kalau di-ACC sekarang</i>' + (a.jamPulang ? '<br>Jam pulang ' + esc(jamTitik(a.jamPulang)) : '') + '<br>' + esc(a.alasan || '') + (a.waktu ? '<br>Diajukan ' + esc(a.waktu) : '') + (SUMBER[a.sumber] ? ' · ' + esc(SUMBER[a.sumber]) : '') + '</div>'
+        + (t ? '<textarea id="lbTolak" class="isian" rows="2" maxlength="200" placeholder="' + (jalan ? 'Alasan tidak diperpanjang (wajib). Lembur yang jalan berhenti di jam ACC-nya.' : 'Alasan ditolak (wajib). Orangnya langsung terkunci.') + '" style="margin-top:8px"></textarea><div class="lbTombol"><button type="button" class="tKecil" data-l="batalTolak">Batal</button><button type="button" class="tolak" data-l="tolakKirim:' + id + '">' + (jalan ? 'Tidak diperpanjang' : 'Kirim penolakan') + '</button></div>'
+          : '<div class="lbTombol"><button type="button" class="tolak" data-l="tolak:' + id + '">' + (jalan ? 'Tolak perpanjangan' : 'Tolak') + '</button><button type="button" class="tUtama' + (yakin === a.id ? ' yakin' : '') + '" data-l="acc:' + id + '"' + (sibuk ? ' disabled' : '') + '>' + (yakin === a.id ? 'Ketuk lagi untuk ACC' : 'ACC') + '</button></div>') + '</div>';
     }).join('') + '</div>';
   }
   function muatList() {
@@ -117,11 +130,12 @@
   function bukaAcc(ctx) { CTX = ctx || CTX; if (!aktif() || !punya('antre')) { segera(); return; } mode = 'acc'; yakin = ''; tolakId = ''; lapis(); muatAntre(); }
   function cid() { var a = new Uint8Array(8); try { crypto.getRandomValues(a); } catch (e) { for (var i = 0; i < 8; i++) a[i] = Math.random() * 256; } return 'LB' + Date.now().toString(36) + Array.prototype.map.call(a, function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }
   var CID = '';
+  function tglShift() { var h = ST && ST.hariIni; return (h && h.tanggal) || hariIni(); }
+  function pilihanLama() { var j = aturan().jatah, o = ''; for (var m = 30; m <= j * 60; m += 30) o += '<option value="' + m + '"' + (m === j * 60 ? ' selected' : '') + '>' + (m % 60 ? (m / 60).toFixed(1).replace('.', ',') : m / 60) + ' jam</option>'; return o; }
   function kirim() {
-    var t = document.getElementById('lbTgl').value, m = document.getElementById('lbMulai').value, s = document.getElementById('lbSampai').value, al = document.getElementById('lbAlasan').value.trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) { roti('Isi tanggal lembur.'); return; }
-    if (!/^\d{2}:\d{2}$/.test(m) || !/^\d{2}:\d{2}$/.test(s)) { roti('Isi jam mulai dan jam selesai.'); return; }
-    if (m === s) { roti('Jam mulai dan selesai tidak boleh sama.'); return; }
+    var t = tglShift(), m = document.getElementById('lbMulai').value, lm = Math.min(Number(document.getElementById('lbLama').value) || 0, aturan().jatah * 60), al = document.getElementById('lbAlasan').value.trim(), s = '';
+    if (m && !/^\d{2}:\d{2}$/.test(m)) { roti('Jam mulai tidak sah.'); return; }
+    if (m) { if (!(lm > 0)) { roti('Pilih lama lembur.'); return; } s = jamDari(menit(m) + lm); }
     if (al.length < 5) { roti('Tulis pekerjaan / alasan lembur (minimal 5 huruf).'); return; }
     if (!CID) CID = cid();
     sibuk = true; lapis();
@@ -129,7 +143,7 @@
       sibuk = false;
       if (h && h.login === false) { roti('Sesi habis. Keluar lalu masuk lagi.'); lapis(); return; }
       if (!h || !h.ok) { if (R.bunyi) R.bunyi('gagal'); roti((h && h.pesan) || 'Ajuan lembur ditolak server.'); lapis(); return; }
-      CID = ''; if (R.bunyi) R.bunyi('sukses'); if (R.getar) R.getar('sukses'); roti('Lembur diajukan' + (h.id ? ' (' + h.id + ')' : '') + '. Tunggu ACC pimpinan.');
+      CID = ''; if (R.bunyi) R.bunyi('sukses'); if (R.getar) R.getar('sukses'); roti(h.dobel ? 'Ajuan lembur sudah ada' + (h.id ? ' (' + h.id + ')' : '') + ', tunggu ACC.' : (h.pesan || ('Lembur diajukan' + (h.id ? ' (' + h.id + ')' : '') + '. Tunggu ACC pimpinan.')));
       var e = document.getElementById('lbAlasan'); if (e) e.value = '';
       muat(); muatList();
     }, function (e) { sibuk = false; roti(e.message + ' Ketuk Ajukan lagi (tidak akan dobel).'); lapis(); });
@@ -139,7 +153,7 @@
     panggil('putus', [id, kep, alasan || ''], 45000).then(function (h) {
       sibuk = false; yakin = ''; tolakId = '';
       if (!h || !h.ok) { roti((h && h.pesan) || 'Belum bisa disimpan.'); lapis(); return; }
-      if (R.bunyi) R.bunyi('sukses'); roti(kep === 'ACC' ? 'Lembur di-ACC.' : 'Lembur ditolak.');
+      if (R.bunyi) R.bunyi('sukses'); roti(h.pesan || (kep === 'ACC' ? 'Lembur di-ACC' + (h.sampai ? ' s/d ' + jamTitik(h.sampai) : '') + '.' : h.status === 'DICABUT' ? 'Lembur dicabut.' : 'Lembur ditolak.'));
       ANTRE = (ANTRE || []).filter(function (a) { return a.id !== id; }); if (ST) ST.menunggu = ANTRE.length; lapis(); muat();
     }, function (e) { sibuk = false; roti(e.message); lapis(); });
   }
