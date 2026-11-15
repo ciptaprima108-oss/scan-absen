@@ -223,10 +223,12 @@
     var t0 = ''; try { t0 = sessionStorage.getItem('whlV2Tab') || ''; } catch (e) { /* */ }
     var h = (location.hash || '').replace('#', ''); if (/^(beranda|unit|absen|apps|akun|kotak|aktivitas)$/.test(h)) t0 = h;
     keTab(/^(beranda|unit|absen|apps|akun|kotak|aktivitas)$/.test(t0) ? t0 : 'beranda');
+    muatIkonPilih().then(function () { if (tab === 'beranda' && IKON_PILIH) gambar(); }); /* v3.14 ikon Beranda pilihan sendiri */
     muatCacheRingkas().then(function () { muatRingkasan(false); }); muatAbsen(); muatProfil(false); muatKsn(); setTimeout(muatForum, 1200);
     setTimeout(function () { if (NOTIF.tiket && bolehUnit()) aturNotif(true); }, 1500); // pastikan jadwal cek latar terpasang
     setTimeout(function () { if (SESI && API.Pusat.asli()) pasangPush(); }, 2500); // notif-push-13nov
     setTimeout(function () { if (window.WHL_RILIS) window.WHL_RILIS.cekOtomatis(); }, 4000);
+    muatAksesGaji(); /* v3.14 akses-gaji-15nov: flag menu Gaji/Kasbon dari server (pusatGajiAkses) */
     setTimeout(function () { if (window.WHL_NOTA && window.WHL_NOTA.boleh(SESI)) { window.WHL_NOTA.pasang(ctxNota()); window.WHL_NOTA.kirimAntrean(); } if (window.WHL_KASBON && window.WHL_KASBON.boleh(SESI)) { window.WHL_KASBON.pasang(ctxNota()); window.WHL_KASBON.kirimAntrean(); } }, 6000); /* v3.10: kirim ulang ajuan nota tertunda */ // v3.3: ada versi baru? (maks 1x per 6 jam)
     bukaDariAlamat();
   }
@@ -366,7 +368,7 @@
   }
 
   /* ---------- Forum (v2.11): forum.js; di sini cuma pintu + lencana ---------- */
-  API.Pusat.saatBerubah = function () { if (SESI && FORUM && FORUM.disiapkan && API.Pusat.punya('pusatForumToken')) { FORUM = null; muatForum(); } try { if (SESI && tab === 'beranda' && !$('layarApp').classList.contains('sembunyi')) gambar(); } catch (e) { /* gaji-driver-app-15nov: menu baru muncul sesudah ping ulang */ } };
+  API.Pusat.saatBerubah = function () { if (SESI && FORUM && FORUM.disiapkan && API.Pusat.punya('pusatForumToken')) { FORUM = null; muatForum(); } try { if (SESI && tab === 'beranda' && !$('layarApp').classList.contains('sembunyi')) gambar(); } catch (e) { /* gaji-driver-app-15nov: menu baru muncul sesudah ping ulang */ } muatAksesGaji(); };
   function ctxForum() { return { sesi: SESI, roti: roti, perbarui: function () { aturTanda(); if (tab === 'beranda' || tab === 'apps') gambar(); } }; }
   /* ---------- v2.14 Notifikasi tiket perlu ditindak ---------- */
   var NOTIF = { tiket: false }, TINDAK_LALU = null;
@@ -548,6 +550,7 @@
   function muatForum() { if (!SESI || !window.WHL_FORUM || !API.Pusat.asli()) return; FORUM_ST = 'menyambung'; window.WHL_FORUM.mulai(ctxForum()).then(function (h) { FORUM = h; FORUM_ST = h && h.ok ? 'ok' : (h && h.disiapkan && !API.Pusat.dikenal()) || !(h && h.disiapkan) ? 'gagal' : 'disiapkan'; if (h && h.ok) { forumCoba = 0; clearTimeout(forumTunda); } else if (!h || (!h.ditolak && !h.disiapkan)) forumUlang(); else if (h.disiapkan) forumUlang(); gambar(); if (h && h.ok && window.WHL_BANNER) window.WHL_BANNER.muat().then(function (ada) { if (ada && tab === 'beranda') gambar(); }); if (h && h.ok && window.WHL_ONLINE) window.WHL_ONLINE.mulai({ sesi: function () { return SESI; }, perbarui: function () { if (tab === 'beranda') gambar(); } }); }); }
   /* v3.9: nama staf yang sedang bertugas (absen hari ini) untuk mengisi peserta banner — hanya dipakai admin di Kelola banner */
   function bertugasNama() { return API.Pusat.ringkasan(SESI, 'bertugas', true).then(function (r) { var P = (r && r.bertugas && r.bertugas.petugas) || []; return P.map(function (x) { return String(x.nama || '').trim(); }).filter(Boolean); }); }
+  function muatAksesGaji() { if (!window.WHL_GAJI || !SESI) return; window.WHL_GAJI.muatAkses(ctxNota()).then(function () { try { if (SESI && tab === 'beranda' && !$('layarApp').classList.contains('sembunyi')) gambar(); } catch (e) { /* */ } }); }
   function ctxNota() { return { sesi: function () { return SESI; }, roti: roti, perbarui: function () { if (tab === 'beranda') gambar(); } }; }
   function ctxBanner() { return { bertugas: bertugasNama, roti: roti, perbarui: function () { if (tab === 'beranda') gambar(); }, tab: function (t) { keTab(t); }, web: bukaWeb,
     forum: function (r) { if (window.WHL_FORUM) window.WHL_FORUM.bukaKe(ctxForum(), r); }, aksi: function (n) { if (n === 'ksn' && window.WHL_KSN) window.WHL_KSN.buka(ctxKsn()); } }; }
@@ -651,23 +654,109 @@
   var STATUS = { siap: ['Sudah dicek', '#16a34a'], belum: ['Belum masuk', '#6366f1'], nunggu: ['Nunggu mekanik', '#eab308'], dikerjakan: ['Lagi diperbaiki', '#f97316'], standby: ['Standby', '#a3acb9'] };
   var WARNA_TINDAK = { tindak: '#dc2626' };
 
-  /* Grid ikon bulat "layanan" (pola beranda app dompet/belanja): jalan pintas yang paling sering dipakai peran ini. */
-  function layanan() {
-    var L = [];
-    if (SESI.user.peran !== 'driver') L.push(['absen', 'Absen', 'tab:absen']);
-    if (bolehUnit()) L.push(['truk', 'Unit', 'tab:unit', daftarTindak().total]);
-    if (forumTampil()) L.push(['forum', 'Forum', 'forum', forumBaru()]);
-    L.push(['input', 'Input', 'lapor']);
-    if (window.WHL_NOTA && window.WHL_NOTA.boleh(SESI)) L.push(['dokumen', 'Nota bengkel', 'nota']); /* v3.10 khusus pengawas / admin / pimpinan */
-    if (window.WHL_LABA && window.WHL_LABA.boleh(SESI)) L.push(['laba', 'Laba unit', 'laba']); /* laba-pimpinan-15nov: khusus pimpinan / penuh */
-    if (window.WHL_GAJI && window.WHL_GAJI.boleh(SESI)) L.push(['gaji', 'Gaji driver', 'gaji']); /* gaji-driver-app-15nov: admin / pimpinan / penuh / pengawas */
-    if (KSN && (KSN.ada || KSN.perluPin) && SESI.user.peran !== 'driver') L.push(['kuesioner', 'Kuesioner', 'ksn', KSN.ada && KSN.buka ? KSN.sisa : 0]);
-    L.push(['profil', 'Nilai saya', 'tab:akun']);
-    if (window.WHL_KASBON && window.WHL_KASBON.boleh(SESI)) L.push(['kasbon', 'Ajuan kasbon', 'kasbon']); /* gaji-driver-app-15nov: semua staf (cicilan HP diri sendiri) */
-    appsSaya().forEach(function (a) { L.push([IKON_DIV[a.d] || 'web', a.n.replace(/ WHL$/, '').replace(/^Live Monitor /, '').replace(/^Dashboard /, ''), 'web:' + alamat(a)]); });
-    L = L.slice(0, 7); L.push(['lainnya', 'Lainnya', 'lainnya']); // 2 baris x 4 ikon, ikon ke-8 selalu "Lainnya" (lembar bawah semua layanan)
-    return '<div class="layanan">' + L.map(function (x) { return '<button type="button" class="ly" data-ke="' + esc(x[2]) + '"><span>' + ILUS(x[0]) + (x[3] ? '<i class="tanda angka">' + (x[3] > 9 ? '9+' : x[3]) + '</i>' : '') + '</span><b>' + esc(x[1]) + '</b></button>'; }).join('') + '</div>';
+  /* v3.14 ATUR BERANDA (Reza: "ikon itu mungkin bisa di edit semua aja sesuai selera"): pengguna memilih ikon grid Beranda + urutannya.
+     Disimpan per akun di HP (whlBerandaIkon_<akun>, daftar id). Hanya menu yang boleh untuk akun itu yang bisa dipilih; ikon "Lainnya" selalu terakhir.
+     item = [ikon, label, ke (aksi), lencana, id simpan] */
+  var IKON_PILIH = null, IKON_MAKS = 11, IKON_BAWAAN = 7;
+  function kunciIkon() { return 'whlBerandaIkon_' + String((SESI && (SESI.idProfil || SESI.idKetik)) || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+  function muatIkonPilih() { IKON_PILIH = null; return Simpan.ambil(kunciIkon()).then(function (v) { try { var a = JSON.parse(v || 'null'); IKON_PILIH = Array.isArray(a) && a.length ? a : null; } catch (e) { IKON_PILIH = null; } }); }
+  function kandidatLayanan() {
+    var L = [], tambah = function (x) { if (!L.some(function (y) { return y[4] === x[4]; })) L.push(x); };
+    if (SESI.user.peran !== 'driver') tambah(['absen', 'Absen', 'tab:absen', 0, 'absen']);
+    if (bolehUnit()) tambah(['truk', 'Unit', 'tab:unit', daftarTindak().total, 'unit']);
+    if (forumTampil()) tambah(['forum', 'Forum', 'forum', forumBaru(), 'forum']);
+    tambah(['input', 'Input', 'lapor', 0, 'input']);
+    if (window.WHL_NOTA && window.WHL_NOTA.boleh(SESI)) tambah(['dokumen', 'Nota bengkel', 'nota', 0, 'nota']); /* v3.10 khusus pengawas / admin / pimpinan */
+    if (window.WHL_LABA && window.WHL_LABA.boleh(SESI)) tambah(['laba', 'Laba unit', 'laba', 0, 'laba']); /* laba-pimpinan-15nov: khusus pimpinan / penuh */
+    if (window.WHL_GAJI && window.WHL_GAJI.boleh(SESI)) tambah(['gaji', window.WHL_GAJI.judul(SESI), 'gaji', 0, 'gaji']); /* gaji-driver-app-15nov (v3.14: hak dari pusatGajiAkses) */
+    if (KSN && (KSN.ada || KSN.perluPin) && SESI.user.peran !== 'driver') tambah(['kuesioner', 'Kuesioner', 'ksn', KSN.ada && KSN.buka ? KSN.sisa : 0, 'ksn']);
+    tambah(['profil', 'Nilai saya', 'tab:akun', 0, 'profil']);
+    if (window.WHL_KASBON && window.WHL_KASBON.boleh(SESI)) tambah(['kasbon', 'Ajuan kasbon', 'kasbon', 0, 'kasbon']); /* gaji-driver-app-15nov: semua staf (cicilan HP diri sendiri) */
+    appsSaya().forEach(function (a) { tambah([IKON_DIV[a.d] || 'web', a.n.replace(/ WHL$/, '').replace(/^Live Monitor /, '').replace(/^Dashboard /, ''), 'web:' + alamat(a), 0, 'app:' + a.n]); });
+    /* tambahan yang biasanya cuma di "Lainnya" (boleh dipasang di Beranda juga) */
+    tambah(['kotak', 'Kotak masuk', 'tab:kotak', kotakBelum(), 'kotak']);
+    if (hitungProyeksi()) tambah(['grafik', 'Proyeksi', 'proyeksi', 0, 'proyeksi']);
+    if (KSN && KSN.ada && KSN.k3) tambah(['insiden', 'Penilaian K3', 'k3', 0, 'k3']);
+    if (window.WHL_BANNER && window.WHL_BANNER.admin()) tambah(['kreatif', 'Kelola banner', 'kelolaBanner', 0, 'kelolaBanner']);
+    return L;
   }
+  /** bawaan: urutan lama (7 ikon pertama) tanpa tambahan "Lainnya"; pimpinan/penuh: Ajuan kasbon ikut tampil (Reza 15 Nov) */
+  function bawaanLayanan(K) {
+    var ekstra = ['kotak', 'proyeksi', 'k3', 'kelolaBanner'], U = K.filter(function (x) { return ekstra.indexOf(x[4]) < 0; });
+    if (['pimpinan', 'penuh'].indexOf(SESI.user.peran) >= 0) {
+      var kb = U.filter(function (x) { return x[4] === 'kasbon'; })[0];
+      if (kb && U.indexOf(kb) >= IKON_BAWAAN) { U = U.filter(function (x) { return x !== kb; }); U.splice(IKON_BAWAAN - 1, 0, kb); }
+    }
+    return U.slice(0, IKON_BAWAAN);
+  }
+  function layananBeranda() {
+    var K = kandidatLayanan(), L = null;
+    if (IKON_PILIH) { var peta = {}; K.forEach(function (x) { peta[x[4]] = x; }); L = IKON_PILIH.map(function (id) { return peta[id]; }).filter(Boolean).slice(0, IKON_MAKS); }
+    return L && L.length ? L : bawaanLayanan(K);
+  }
+  /* Grid ikon bulat "layanan" (pola beranda app dompet/belanja). v3.14: isi & urutan bisa diatur sendiri (tombol "Atur ikon" / tekan lama ikon). */
+  function layanan() {
+    var L = layananBeranda().concat([['lainnya', 'Lainnya', 'lainnya']]); // ikon terakhir selalu "Lainnya" (lembar bawah semua layanan)
+    return '<div class="layanan" id="gridBeranda">' + L.map(function (x) { return '<button type="button" class="ly" data-ke="' + esc(x[2]) + '"><span>' + ILUS(x[0]) + (x[3] ? '<i class="tanda angka">' + (x[3] > 9 ? '9+' : x[3]) + '</i>' : '') + '</span><b>' + esc(x[1]) + '</b></button>'; }).join('') + '</div>'
+      + '<div class="atrBaris"><button type="button" class="atrTombol" data-ke="aturBeranda" aria-label="Atur ikon Beranda">✏️ Atur ikon</button></div>';
+  }
+  /* layar Atur Beranda */
+  var atrEl = null, ATR = [];
+  function gayaAtur() {
+    if (document.getElementById('atrGaya')) return;
+    var st = document.createElement('style'); st.id = 'atrGaya';
+    st.textContent = '.atrBaris{display:flex;justify-content:flex-end;margin:-2px 0 2px}.lembarLy .atrBaris{margin:0 0 -34px}.atrTombol{font-size:12px;font-weight:700;color:var(--redup);padding:6px 10px;border-radius:99px;min-height:32px;background:var(--panel2)}'
+      + '.atrLapis .ksnIsi{padding-bottom:30px}.atrBar{display:flex;align-items:center;gap:8px;padding:8px 2px;border-top:1px solid var(--garis)}.atrBar:first-child{border-top:0}'
+      + '.atrBar .ik{width:40px;height:40px;flex:none}.atrBar .ik .ilus{width:40px;height:40px}.atrBar b{flex:1;min-width:0;font-size:14.5px}.atrBar .no{width:20px;color:var(--redup);font-size:12px;font-weight:800;text-align:center;flex:none}'
+      + '.atrBar button{width:40px;height:40px;border-radius:12px;background:var(--panel2);font-size:17px;font-weight:800;color:var(--teks);flex:none}.atrBar button:disabled{opacity:.3}'
+      + '.atrBar button.tbh{width:auto;padding:0 12px;font-size:13px;color:var(--utama)}.atrBar button.hps{color:var(--tMerah)}.atrBar.geser{background:var(--tint);border-radius:12px}';
+    document.head.appendChild(st);
+  }
+  function bukaAturBeranda() {
+    gayaAtur(); ATR = layananBeranda().map(function (x) { return x[4]; });
+    if (atrEl) atrEl.remove();
+    atrEl = document.createElement('div'); atrEl.className = 'lapis ksnLapis atrLapis'; document.body.appendChild(atrEl);
+    requestAnimationFrame(function () { if (atrEl) atrEl.classList.add('tampil'); });
+    atrEl.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-t]'); if (!b) return; var n = b.getAttribute('data-t'), id = b.getAttribute('data-id'), i = ATR.indexOf(id);
+      if (n === 'tutup') { tutupAtur(); return; }
+      if (n === 'naik' && i > 0) { ATR.splice(i, 1); ATR.splice(i - 1, 0, id); }
+      else if (n === 'turun' && i >= 0 && i < ATR.length - 1) { ATR.splice(i, 1); ATR.splice(i + 1, 0, id); }
+      else if (n === 'hapus' && i >= 0) { if (ATR.length <= 1) { roti('Sisakan minimal 1 ikon.'); return; } ATR.splice(i, 1); }
+      else if (n === 'tambah' && i < 0) { if (ATR.length >= IKON_MAKS) { roti('Maksimal ' + IKON_MAKS + ' ikon di Beranda.'); return; } ATR.push(id); }
+      else if (n === 'simpan') { IKON_PILIH = ATR.slice(); Simpan.taruh(kunciIkon(), JSON.stringify(IKON_PILIH)); R.bunyi('sukses'); R.getar('sukses'); roti('Ikon Beranda disimpan.'); tutupAtur(); return; }
+      else if (n === 'bawaan') { IKON_PILIH = null; Simpan.taruh(kunciIkon(), null); R.getar(); roti('Ikon Beranda kembali ke bawaan.'); tutupAtur(); return; }
+      else return;
+      R.getar(); gambarAtur(id);
+    });
+    gambarAtur();
+  }
+  function gambarAtur(sorot) {
+    if (!atrEl) return;
+    var K = kandidatLayanan(), peta = {}; K.forEach(function (x) { peta[x[4]] = x; }); ATR = ATR.filter(function (id) { return peta[id]; });
+    var gulir = atrEl.querySelector('.ksnIsi'), y = gulir ? gulir.scrollTop : 0;
+    var baris = function (x, i) {
+      return '<div class="atrBar' + (x[4] === sorot ? ' geser' : '') + '"><span class="no">' + (i + 1) + '</span><span class="ik">' + ILUS(x[0]) + '</span><b>' + esc(x[1]) + '</b>'
+        + '<button type="button" data-t="naik" data-id="' + esc(x[4]) + '" aria-label="Naik"' + (i === 0 ? ' disabled' : '') + '>↑</button><button type="button" data-t="turun" data-id="' + esc(x[4]) + '" aria-label="Turun"' + (i === ATR.length - 1 ? ' disabled' : '') + '>↓</button>'
+        + '<button type="button" class="hps" data-t="hapus" data-id="' + esc(x[4]) + '" aria-label="Sembunyikan dari Beranda">✕</button></div>';
+    };
+    var sisa = K.filter(function (x) { return ATR.indexOf(x[4]) < 0; });
+    atrEl.innerHTML = '<div class="ksnKp"><button type="button" class="kb" data-t="tutup" aria-label="Kembali">‹</button><div class="nm">Sesuai selera<b>Atur ikon Beranda</b></div></div>'
+      + '<div class="ksnIsi"><div class="kecil" style="margin:0 4px 10px;line-height:1.5">Pilih ikon yang tampil di Beranda (maks ' + IKON_MAKS + ') dan urutannya dengan ↑ ↓. Ikon <b>Lainnya</b> selalu di paling akhir. Tersimpan di HP ini untuk akunmu.</div>'
+      + '<h2 class="bagW">Tampil di Beranda <span>' + ATR.length + '/' + IKON_MAKS + '</span></h2><div class="kartu">' + ATR.map(function (id, i) { return baris(peta[id], i); }).join('') + '</div>'
+      + (sisa.length ? '<h2 class="bagW">Bisa ditambahkan <span>' + sisa.length + '</span></h2><div class="kartu">' + sisa.map(function (x) { return '<div class="atrBar"><span class="ik">' + ILUS(x[0]) + '</span><b>' + esc(x[1]) + '</b><button type="button" class="tbh" data-t="tambah" data-id="' + esc(x[4]) + '">+ Tambah</button></div>'; }).join('') + '</div>' : '')
+      + '<button type="button" class="tUtama" data-t="simpan">Simpan</button><button type="button" class="tKecil" data-t="bawaan" style="width:100%;margin-top:10px">Kembalikan bawaan</button></div>';
+    var g2 = atrEl.querySelector('.ksnIsi'); if (g2) g2.scrollTop = y;
+  }
+  function tutupAtur() { if (!atrEl) return; var d = atrEl; atrEl = null; d.classList.remove('tampil'); setTimeout(function () { d.remove(); }, 200); if (tab === 'beranda') gambar(); }
+  /* tekan lama ikon grid Beranda (0,6 dtk) = buka Atur ikon */
+  (function () {
+    var t = null, lama = false;
+    document.addEventListener('pointerdown', function (e) { var b = e.target.closest && e.target.closest('#gridBeranda .ly'); if (!b) return; lama = false; clearTimeout(t); t = setTimeout(function () { lama = true; R.getar('sedang'); bukaAturBeranda(); }, 600); });
+    ['pointerup', 'pointercancel', 'pointerleave', 'pointermove'].forEach(function (n) { document.addEventListener(n, function (e) { if (n === 'pointermove' && Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0) < 6) return; clearTimeout(t); }, true); });
+    document.addEventListener('click', function (e) { if (lama && e.target.closest && e.target.closest('#gridBeranda')) { lama = false; e.stopPropagation(); e.preventDefault(); } }, true);
+    document.addEventListener('contextmenu', function (e) { if (e.target.closest && e.target.closest('#gridBeranda')) e.preventDefault(); });
+  })();
   /* v3.0 lembar "Lainnya": semua layanan asli + aplikasi web WHL, ikon ilustrasi berwarna (buatan sendiri, palet WHL) */
   var ILUS = window.WHL_ILUS;
   function petakLy(x) { return '<button type="button" class="ly lyL" data-ke="' + esc(x[2]) + '"><span>' + ILUS(x[0]) + (x[3] ? '<i class="tanda angka">' + (x[3] > 9 ? '9+' : x[3]) + '</i>' : '') + (x[4] ? '<i class="baru">Baru</i>' : '') + '</span><b>' + esc(x[1]) + '</b></button>'; }
@@ -679,7 +768,7 @@
     A.push(['input', 'Input cepat', 'lapor']);
     if (window.WHL_NOTA && window.WHL_NOTA.boleh(SESI)) A.push(['dokumen', 'Nota bengkel', 'nota', 0, 1]);
     if (window.WHL_LABA && window.WHL_LABA.boleh(SESI)) A.push(['laba', 'Laba unit', 'laba', 0, 1]); /* laba-pimpinan-15nov */
-    if (window.WHL_GAJI && window.WHL_GAJI.boleh(SESI)) A.push(['gaji', 'Gaji driver', 'gaji', 0, 1]); /* gaji-driver-app-15nov */
+    if (window.WHL_GAJI && window.WHL_GAJI.boleh(SESI)) A.push(['gaji', window.WHL_GAJI.judul(SESI), 'gaji', 0, 1]); /* gaji-driver-app-15nov */
     if (window.WHL_KASBON && window.WHL_KASBON.boleh(SESI)) A.push(['kasbon', 'Ajuan kasbon', 'kasbon', 0, 1]); /* gaji-driver-app-15nov */
     A.push(['kotak', 'Kotak masuk', 'tab:kotak', kotakBelum(), 1]);
     if (hitungProyeksi()) A.push(['grafik', 'Proyeksi target', 'proyeksi', 0, 1]);
@@ -690,7 +779,7 @@
     if (window.WHL_BANNER && window.WHL_BANNER.admin()) A.push(['kreatif', 'Kelola banner', 'kelolaBanner', 0, 1]);
     var W = appsSaya().map(function (a) { return [IKON_DIV[a.d] || 'web', a.n.replace(/ WHL$/, '').replace(/^Live Monitor /, ''), 'web:' + alamat(a), 0, a.baru]; });
     W.push(['rumahWeb', 'Pusat WHL web', 'web:' + K.DASH + '?mode=pusat']);
-    bukaLembar('<div class="lembarLy"><h3>Layanan WHL</h3><div class="layanan">' + A.map(petakLy).join('') + '</div>'
+    bukaLembar('<div class="lembarLy"><div class="atrBaris"><button type="button" class="atrTombol" data-ke="aturBeranda">✏️ Atur ikon Beranda</button></div><h3>Layanan WHL</h3><div class="layanan">' + A.map(petakLy).join('') + '</div>'
       + '<h3>Aplikasi WHL</h3><div class="kecil" style="margin:-4px 0 10px">Halaman web, dibuka di dalam app. Tombol Kembali membawa kamu ke sini lagi.</div><div class="layanan">' + W.map(petakLy).join('') + '</div></div>');
   }
 
@@ -1207,7 +1296,7 @@
     b = t.closest('[data-kt]'); if (b) { R.getar(); lembarTopik(b.getAttribute('data-kt')); return; }
     if (t.closest('#btnTema')) { var tb = document.documentElement.getAttribute('data-tema') === 'gelap' ? 'terang' : 'gelap'; pasangTema(tb); Simpan.taruh(KUNCI_TEMA, tb); gambar(); return; }
     if (t.closest('#btnSuara')) { R.aturSetel('suara', !R.setel.suara); pasangSuara(); if (R.setel.suara) R.bunyi('notifikasi'); if (tab === 'akun') gambar(); return; }
-    b = t.closest('[data-ke]'); if (b) { var ke = b.getAttribute('data-ke'); if (b.closest('#lembar') && ke !== 'lainnya') tutupLembar(); if (ke === 'nota') window.WHL_NOTA.buka(ctxNota()); else if (ke === 'laba') window.WHL_LABA.buka(ctxNota()); else if (ke === 'gaji') window.WHL_GAJI.buka(ctxNota()); else if (ke === 'kasbon') window.WHL_KASBON.buka(ctxNota()); else if (ke === 'lainnya') lembarLainnya(); else if (ke === 'kelolaBanner') { window.WHL_BANNER.pasang(ctxBanner()); window.WHL_BANNER.kelola(); } else if (ke === 'proyeksi') { keTab('beranda'); setTimeout(function () { var pq = document.querySelector('.proy'); if (pq) pq.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 120); } else if (ke === 'lapor') lembarLapor(); else if (ke === 'forum') window.WHL_FORUM.buka(ctxForum()); else if (ke === 'ksn') window.WHL_KSN.buka(ctxKsn()); else if (ke === 'k3') window.WHL_KSN.bukaK3(ctxKsn()); else if (ke.indexOf('tab:') === 0) keTab(ke.slice(4)); else if (ke.indexOf('web:') === 0) bukaWeb(ke.slice(4)); return; }
+    b = t.closest('[data-ke]'); if (b) { var ke = b.getAttribute('data-ke'); if (b.closest('#lembar') && ke !== 'lainnya') tutupLembar(); if (ke === 'nota') window.WHL_NOTA.buka(ctxNota()); else if (ke === 'laba') window.WHL_LABA.buka(ctxNota()); else if (ke === 'gaji') window.WHL_GAJI.buka(ctxNota()); else if (ke === 'aturBeranda') bukaAturBeranda(); else if (ke === 'kasbon') window.WHL_KASBON.buka(ctxNota()); else if (ke === 'lainnya') lembarLainnya(); else if (ke === 'kelolaBanner') { window.WHL_BANNER.pasang(ctxBanner()); window.WHL_BANNER.kelola(); } else if (ke === 'proyeksi') { keTab('beranda'); setTimeout(function () { var pq = document.querySelector('.proy'); if (pq) pq.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 120); } else if (ke === 'lapor') lembarLapor(); else if (ke === 'forum') window.WHL_FORUM.buka(ctxForum()); else if (ke === 'ksn') window.WHL_KSN.buka(ctxKsn()); else if (ke === 'k3') window.WHL_KSN.bukaK3(ctxKsn()); else if (ke.indexOf('tab:') === 0) keTab(ke.slice(4)); else if (ke.indexOf('web:') === 0) bukaWeb(ke.slice(4)); return; }
     b = t.closest('[data-web]'); if (b) { var u = b.getAttribute('data-web'); if (u) bukaWeb(u); else roti('Link belum tersedia.'); return; }
     b = t.closest('[data-saring]'); if (b) { saringUnit = b.getAttribute('data-saring'); gambar(); return; }
     b = t.closest('[data-aksi]'); if (!b) return;

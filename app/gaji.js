@@ -26,7 +26,33 @@
   function norm(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
 
   function serverPunya() { var X = API.Pusat; return !!(X.punya && X.punya('pusatGajiDriver')); }
-  function boleh(S) { S = S || sesi(); return !!(S && S.user && PERAN.indexOf(S.user.peran) >= 0) && serverPunya(); }
+  /* v3.14 akses-gaji-15nov: hak dari server lewat pusatGajiAkses (ringan) -> {bolehGaji, bolehStaf, bolehAcc, bolehAjuDriver, bolehAjuDiri}.
+     Server lama (belum punya pusatGajiAkses) = perilaku 3.13 (peran admin/pimpinan/penuh/pengawas). */
+  var AKSES = null; // { akun, h }
+  function aksesBaru() { var X = API.Pusat; return !!(X.punya && X.punya('pusatGajiAkses')); }
+  function akunDari(S) { return String((S && (S.idProfil || S.idKetik)) || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+  /** flag hak akun ini (null = belum terbaca / server lama) */
+  function akses(S) { S = S || sesi(); return AKSES && S && AKSES.akun === akunDari(S) ? AKSES.h : null; }
+  function muatAkses(ctx) {
+    CTX = ctx || CTX; var S = sesi(); if (!S || !S.user || !aksesBaru()) return Promise.resolve(null);
+    var akun = akunDari(S), kunci = 'whlGajiAkses_' + akun, Simpan = API.Simpan;
+    var dariHp = AKSES && AKSES.akun === akun ? Promise.resolve() : Simpan.ambil(kunci).then(function (v) { try { var c = JSON.parse(v || 'null'); if (c && typeof c === 'object' && !AKSES) AKSES = { akun: akun, h: c }; } catch (e) { /* */ } });
+    return dariHp.then(function () {
+      return API.Pusat.gajiAkses(S).then(function (h) {
+        if (h && h.ok) { var a = { bolehGaji: !!h.bolehGaji, bolehStaf: !!h.bolehStaf, bolehAcc: !!h.bolehAcc, bolehAjuDriver: !!h.bolehAjuDriver, bolehAjuDiri: h.bolehAjuDiri !== false }; AKSES = { akun: akun, h: a }; Simpan.taruh(kunci, JSON.stringify(a)); }
+        return akses(S);
+      }, function () { return akses(S); });
+    });
+  }
+  function boleh(S) {
+    S = S || sesi(); if (!S || !S.user || S.user.peran === 'driver' || !serverPunya()) return false;
+    if (aksesBaru()) { var A = akses(S); return !!(A && (A.bolehGaji || A.bolehStaf)); }
+    return PERAN.indexOf(S.user.peran) >= 0;
+  }
+  /** judul menu: "Cicilan karyawan" kalau cuma boleh rekap karyawan */
+  function judul(S) { var A = aksesBaru() ? akses(S) : null; return A && !A.bolehGaji && A.bolehStaf ? 'Cicilan karyawan' : 'Gaji driver'; }
+  function gajiOk() { var A = aksesBaru() ? akses() : null; if (H && H.bolehGaji === false) return false; if (A && !A.bolehGaji) return false; return true; }
+  function stafOk() { var A = aksesBaru() ? akses() : null; if (H) return !!H.bolehStaf; return !!(A && A.bolehStaf); }
 
   /* sisa gaji tampil tidak minus; merah kalau habis karena potongan (atau gaji rit sendiri minus) */
   function sisaTampil(o) { return Math.max(0, Number(o.bersih) || 0); }
@@ -92,7 +118,7 @@
       lapisEl.addEventListener('input', function (ev) { if (ev.target && ev.target.id === 'gjiCari') { cari = ev.target.value; var d = document.getElementById('gjiDaftar'); if (d) d.innerHTML = daftarHtml(); } });
     }
     var gulir = lapisEl.querySelector('.ksnIsi'), y = gulir ? gulir.scrollTop : 0;
-    lapisEl.innerHTML = '<div class="ksnKp"><button type="button" class="kb" data-g="kembali" aria-label="Kembali">‹</button><div class="nm">Perkiraan<b>Gaji driver</b></div><span class="sp"></span>'
+    lapisEl.innerHTML = '<div class="ksnKp"><button type="button" class="kb" data-g="kembali" aria-label="Kembali">‹</button><div class="nm">' + (gajiOk() ? 'Perkiraan<b>Gaji driver' : 'Rekap HRD<b>Cicilan karyawan') + '</b></div><span class="sp"></span>'
       + '<button type="button" class="kb segar' + (memuat ? ' putar' : '') + '" data-g="segar" aria-label="Hitung ulang">⟳</button></div>'
       + '<div class="ksnIsi' + (memuat && H ? ' redup' : '') + '">' + isi() + '</div>';
     var g2 = lapisEl.querySelector('.ksnIsi'); if (g2) g2.scrollTop = y;
@@ -101,7 +127,8 @@
 
   function buka(ctx) {
     CTX = ctx || CTX;
-    if (!boleh()) { roti('Gaji driver khusus admin, pimpinan, dan pengawas.'); return; }
+    if (!boleh()) { roti('Gaji driver khusus admin, pengawas, dan orang yang ditunjuk.'); return; }
+    if (!gajiOk()) tab = 'staf'; else if (tab === 'staf' && !stafOk()) tab = 'driver';
     terbuka = {}; lapis(); muat(false);
   }
   function muat(paksa) {
@@ -113,7 +140,7 @@
       memuat = false;
       if (h && h.login === false) { galat = 'Sesi habis. Keluar lalu masuk lagi.'; H = null; }
       else if (!h || !h.ok) { galat = (h && h.pesan) || 'Data gaji belum bisa diambil.'; if (h && h.tolak) H = null; }
-      else { H = h; periode = h.periode; SIMPAN[periode] = SIMPAN[k] = { t: Date.now(), h: h }; if (tab === 'staf' && !h.bolehStaf) tab = 'driver'; if (paksa) roti(h.dariCache ? 'Baru saja dihitung, ini data terakhir' : 'Data terbaru dimuat'); }
+      else { H = h; periode = h.periode; SIMPAN[periode] = SIMPAN[k] = { t: Date.now(), h: h }; if (tab === 'staf' && !h.bolehStaf) tab = 'driver'; if (h.bolehGaji === false) tab = 'staf'; if (paksa) roti(h.dariCache ? 'Baru saja dihitung, ini data terakhir' : 'Data terbaru dimuat'); }
       if (lapisEl) lapis();
     }, function (e) {
       if (saya !== urutan) return;
@@ -128,11 +155,15 @@
     var per = (H && H.periodes) || [];
     if (per.length) h += '<div class="saring" role="group" aria-label="Periode">' + per.slice(0, 6).map(function (p) { var on = p === (H && H.periode); return '<button type="button" class="' + (on ? 'on' : '') + '" data-g="per:' + esc(p) + '" aria-pressed="' + on + '">' + esc(bulanPendek(p)) + '</button>'; }).join('') + '</div>';
     if (galat && !H) return h + '<div class="kartu kosongKm">' + IK('alarm', 'besar') + '<b>Gaji driver belum bisa dibuka</b><small>' + esc(galat) + '</small><button type="button" class="tKecil" data-g="ulang" style="margin-top:10px">Coba lagi</button></div>';
-    if (!H) return h + '<div class="kartu gjiMuat"><span class="putar"></span><br>Menghitung gaji driver…<br><small>Pertama kali bisa 20–40 detik (server membaca DO, kasbon, cicilan).</small></div>';
+    if (!H) return h + '<div class="kartu gjiMuat"><span class="putar"></span><br>' + (gajiOk() ? 'Menghitung gaji driver…' : 'Memuat cicilan karyawan…') + '<br><small>Pertama kali bisa 20–40 detik (server membaca DO, kasbon, cicilan).</small></div>';
     if (galat) h += '<div class="pitaData gagal">' + IK('alarm') + '<span>' + esc(galat) + ' Angka di bawah dari muatan sebelumnya.</span></div>';
     if (H.tutupBuku) h += '<div class="pitaData">' + IK('centang') + '<span>Gaji ' + esc(bulan(H.periode)) + ' sudah tutup buku.</span></div>';
     if (!H.terbawaSiap && H.terbawaMulai && H.periode > H.terbawaMulai) h += '<div class="pitaData gagal">' + IK('alarm') + '<span>Bulan lalu belum tutup buku: sisa kasbon terbawa belum ikut dihitung.</span></div>';
 
+    if (!gajiOk()) { /* v3.14: cuma hak rekap cicilan karyawan (tanpa angka gaji driver) */
+      h += '<button type="button" class="tKecil" data-g="rekapStaf" style="width:100%;margin:0 0 10px">' + IK('dokumen') + ' Rekap PDF untuk HRD · ' + esc(bulan(H.periode)) + '</button>';
+      return h + '<div id="gjiDaftar">' + stafHtml() + '</div><div class="gjiKaki">Rekap potongan cicilan HP karyawan untuk HRD. Gaji karyawan tidak dihitung sistem.</div>';
+    }
     var T = H.total || {}, DL = H.driver || [];
     /* jumlah sisa = jumlah sisa tampil per driver (tidak minus), "habis" = sisa Rp 0 karena potongan atau gaji rit minus */
     var sisaTot = DL.length ? DL.reduce(function (s, o) { return s + sisaTampil(o); }, 0) : Math.max(0, T.bersih), nHabis = DL.length ? DL.filter(habis).length : T.minus;
@@ -143,7 +174,7 @@
       + (T.terbawa ? '<div><small>Kasbon terbawa</small><b style="color:var(--tKuning)">' + esc(rp(T.terbawa)) + '</b></div>' : '')
       + (nHabis ? '<div class="merah"><small>Sisa gaji Rp 0</small><b>' + num(nHabis) + ' driver</b></div>' : '') + '</div></div>';
 
-    var tabs = [['driver', 'Per driver'], ['unit', 'Per unit']]; if (H.bolehStaf) tabs.push(['staf', 'Cicilan karyawan']);
+    var tabs = [['driver', 'Per driver'], ['unit', 'Per unit']]; if (stafOk()) tabs.push(['staf', 'Cicilan karyawan']);
     h += '<div class="segmen gjiTab" style="--n:' + tabs.length + '">' + tabs.map(function (t) { return '<button type="button" data-g="tab:' + t[0] + '" class="' + (tab === t[0] ? 'on' : '') + '">' + t[1] + '</button>'; }).join('') + '</div>';
     if (tab !== 'staf') h += '<div class="gjiCari">' + IK('cari') + '<input id="gjiCari" class="isian" type="search" autocomplete="off" placeholder="Cari nama driver / lambung" value="' + esc(cari) + '"></div>';
     else h += '<button type="button" class="tKecil" data-g="rekapStaf" style="width:100%;margin:0 0 10px">' + IK('dokumen') + ' Rekap PDF untuk HRD</button>';
@@ -248,6 +279,6 @@
     if (n.indexOf('surat:') === 0) { ambilPdf(API.Pusat.kasbonPdf(sesi(), n.slice(6))); return; }
   }
   function kembali() { if (!lapisEl) return false; tutup(); return true; }
-  function lupakan() { SIMPAN = {}; H = null; galat = ''; periode = ''; cari = ''; tab = 'driver'; if (lapisEl) tutup(); }
-  window.WHL_GAJI = { boleh: boleh, buka: buka, kembali: kembali, lupakan: lupakan, bukaPdf: bukaPdf };
+  function lupakan() { SIMPAN = {}; H = null; galat = ''; periode = ''; cari = ''; tab = 'driver'; AKSES = null; if (lapisEl) tutup(); }
+  window.WHL_GAJI = { boleh: boleh, buka: buka, kembali: kembali, lupakan: lupakan, bukaPdf: bukaPdf, judul: judul, akses: function (S) { return aksesBaru() ? akses(S) : null; }, muatAkses: muatAkses };
 })();

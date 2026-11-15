@@ -33,7 +33,16 @@
   function aturan() { return (OPSI && OPSI.aturan) || ATURAN0; }
   function serverPunya() { var X = API.Pusat; return !!(X.punya && X.punya('pusatKasbonAjukan') && X.punya('pusatKasbonSaya')); }
   /* semua karyawan non-driver (cicilan HP diri sendiri); ajuan untuk driver ditentukan server lewat OPSI.bolehDriver */
-  function boleh(S) { S = S || sesi(); return !!(S && S.user && S.user.peran && S.user.peran !== 'driver') && serverPunya(); }
+  /* v3.14 akses-gaji-15nov: flag hak dari server (pusatGajiAkses lewat WHL_GAJI.akses); null = server lama / belum terbaca -> perilaku 3.13 */
+  function AK(S) { var G = window.WHL_GAJI; return G && G.akses ? G.akses(S || sesi()) : null; }
+  function boleh(S) {
+    S = S || sesi(); if (!(S && S.user && S.user.peran && S.user.peran !== 'driver') || !serverPunya()) return false;
+    var A = AK(S); return A ? !!(A.bolehAjuDriver || A.bolehAjuDiri || A.bolehAcc) : true;
+  }
+  function bolehDrv() { var A = AK(); return !!(OPSI && OPSI.bolehDriver) && (!A || A.bolehAjuDriver); }
+  function bolehDiri() { var A = AK(); return !A || A.bolehAjuDiri; }
+  /** angka gaji driver boleh tampil? (server mengirim null kalau akun tidak punya hak gaji) */
+  function angkaGaji(d) { var A = AK(); return !!d && d.sisa != null && !(A && !A.bolehGaji) && !(OPSI && OPSI.bolehGaji === false); }
   function akun() { var S = sesi(); return String((S && (S.idProfil || S.idKetik)) || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
   function kunciAntre() { return 'whlKasbonAntre_' + akun(); }
   function kunciDraf() { return 'whlKasbonDraf_' + akun(); }
@@ -53,7 +62,7 @@
   function sisaSesudah() { var d = driverPilih(); return d ? d.sisa - potonganIni() : null; }
   /** perkiraan aturan ACC Pak Fanza (info saja; server menghitung ulang). Keputusan Reza 15 Nov: sisa gaji SESUDAH ajuan ini < batas. */
   function perluPimpinan() {
-    var A = aturan(), a = [], s = F.untuk === DRV ? sisaSesudah() : null;
+    var A = aturan(), a = [], s = F.untuk === DRV && angkaGaji(driverPilih()) ? sisaSesudah() : null;
     if (F.jenis === HP) a.push('semua cicilan HP di-ACC Pak Fanza');
     if (F.jenis === KASBON && F.nominal > A.batasKasbon) a.push('kasbon lebih dari ' + rp(A.batasKasbon));
     if (s != null && s < A.batasSisa) a.push('perkiraan sisa gaji sesudah ajuan ' + rp(Math.max(0, s)) + ' (di bawah ' + rp(A.batasSisa) + ')');
@@ -149,6 +158,7 @@
   function buka(ctx, keTab) {
     CTX = ctx || CTX; if (!boleh()) { roti('Ajuan kasbon belum tersedia untuk akunmu.'); return; }
     tab = keTab || 'daftar'; tolakId = ''; pesanForm = '';
+    var A0 = AK(); if (A0) BOLEHACC = !!A0.bolehAcc; /* v3.14: tab Perlu ACC langsung dari flag server */
     lapis(memuatHtml());
     if (tab === 'baru') bukaForm(); else daftar();
     muatOpsi(false).then(function () { if (lapisEl && tab !== 'baru') segarTab(); }, function () { /* form akan menampilkan galatnya sendiri */ });
@@ -184,7 +194,7 @@
       + '<div class="kbNom">' + rp(x.nominal) + '</div><div class="kbRinci">' + rinciAjuan(x) + '</div>'
       + '<div class="kbRinci">' + (x.untuk === KRY ? 'Karyawan' + (x.jabatan ? ' · ' + esc(x.jabatan) : '') : 'Driver' + (x.lambung ? ' · ' + esc(x.lambung) : '')) + (x.nik ? ' · ' + esc(x.nik) : '') + '</div>'
       + '<div class="kbJejak">' + esc(x.waktu || '') + ' · ' + esc(x.id) + (acc || x.pengaju ? '<br>Diajukan <b>' + esc(x.pengaju || '') + '</b>' + (x.peranPengaju ? ' · ' + esc(x.peranPengaju) : '') : '')
-      + (x.sisaGaji != null && x.sisaGaji !== '' && x.untuk !== KRY ? '<br>Perkiraan sisa gaji saat diajukan <b>' + rp(Math.max(0, x.sisaGaji)) + '</b>' : '')
+      + (x.sisaGaji != null && x.sisaGaji !== '' && x.untuk !== KRY && !(AK() && !AK().bolehGaji) ? '<br>Perkiraan sisa gaji saat diajukan <b>' + rp(Math.max(0, x.sisaGaji)) + '</b>' : '')
       + (x.accAdmin ? '<br>✓ ACC admin <b>' + esc(x.accAdmin) + '</b> ' + esc(x.accAdminWaktu || '') : '')
       + (x.accPimpinan ? '<br>✓ ACC Pak Fanza <b>' + esc(x.accPimpinan) + '</b> ' + esc(x.accPimpinanWaktu || '') : '') + '</div>';
     if (x.perluPimpinan && x.status !== 'DITOLAK' && x.status !== 'DISETUJUI') h += '<div class="kbAcc biru">' + IK('alarm') + '<span>Butuh ACC Pak Fanza' + (x.alasanPimpinan ? ': ' + esc(x.alasanPimpinan) : '') + '</span></div>';
@@ -237,8 +247,8 @@
 
   /* ---------- form ---------- */
   function formKosong() {
-    var bd = !!(OPSI && OPSI.bolehDriver);
-    return { untuk: bd ? DRV : KRY, driver: '', jenis: bd ? KASBON : HP, nominal: 0, alasan: '', barang: '', harga: 0, tenor: 0, mulai: (OPSI && OPSI.mulaiPilihan && OPSI.mulaiPilihan[0]) || '', foto: '', ttd: '', drafDipulihkan: false };
+    var bd = bolehDrv();
+    return { untuk: bd || !bolehDiri() ? DRV : KRY, driver: '', jenis: bd ? KASBON : HP, nominal: 0, alasan: '', barang: '', harga: 0, tenor: 0, mulai: (OPSI && OPSI.mulaiPilihan && OPSI.mulaiPilihan[0]) || '', foto: '', ttd: '', drafDipulihkan: false };
   }
   function bukaForm(isi) {
     tab = 'baru'; pesanForm = '';
@@ -260,7 +270,7 @@
   /** jaga isian tetap sah terhadap hak & aturan terbaru */
   function rapikan() {
     if (!OPSI) return;
-    if (!OPSI.bolehDriver) F.untuk = KRY;
+    if (!bolehDrv()) F.untuk = KRY; else if (!bolehDiri()) F.untuk = DRV;
     if (F.untuk === KRY) { F.jenis = HP; F.driver = ''; }
     if (F.driver && !driverPilih()) F.driver = '';
     var mx = (aturan().tenorMaks || {})[F.untuk] || 3; if (F.tenor > mx) F.tenor = 0;
@@ -273,7 +283,9 @@
   function namaOrang() { return F.untuk === KRY ? ((OPSI && OPSI.diri && OPSI.diri.nama) || 'kamu') : (F.driver || 'driver'); }
   function infoHtml() {
     var A = aturan(), d = driverPilih(), h = '', ren = F.jenis === HP && F.harga > 0 && F.tenor > 0 ? rencana(F.harga, F.tenor) : [];
-    if (F.untuk === DRV && d) {
+    if (F.untuk === DRV && d && !angkaGaji(d)) {
+      h += '<div class="kbInfo"><div class="kecil">Angka gaji driver tidak ditampilkan untuk akunmu. Server tetap memeriksa perkiraan sisa gaji sesudah ajuan untuk aturan ACC Pak Fanza.</div></div>';
+    } else if (F.untuk === DRV && d) {
       var potIni = potonganIni(), stl = d.sisa - potIni;
       h += '<div class="kbInfo"><div class="br"><span>Gaji kotor ' + esc(bulan(OPSI.periode)) + '</span><b>' + rp(d.gajiKotor) + '</b></div>'
         + '<div class="br"><span>Potongan tercatat (cicilan + kasbon)</span><b>' + rp(-d.potongan) + '</b></div>'
@@ -290,6 +302,7 @@
     var ada = F.jenis === HP ? (F.untuk === KRY ? (OPSI.diri || {}).cicilanAda : d && d.cicilanAda) : '';
     if (ada) h += '<div class="kbAcc merah">' + IK('alarm') + '<span>' + esc(namaOrang()) + ' masih punya cicilan HP: ' + esc(ada) + '. Satu orang hanya boleh 1 cicilan HP berjalan.</span></div>';
     var p = perluPimpinan();
+    if (!p.length && F.untuk === DRV && d && !angkaGaji(d)) return h + '<div class="kbAcc biru">' + IK('centang') + '<span>Cukup ACC admin, kecuali perkiraan sisa gaji driver sesudah ajuan di bawah ' + rp(A.batasSisa) + ' (dicek server, lalu perlu ACC Pak Fanza).</span></div>';
     h += p.length ? '<div class="kbAcc">' + IK('alarm') + '<span>Butuh ACC Pak Fanza sesudah admin: ' + esc(p.join('; ')) + '.</span></div>'
       : '<div class="kbAcc biru">' + IK('centang') + '<span>Cukup ACC admin (Input DO).</span></div>';
     return h;
@@ -301,10 +314,11 @@
       + ' · ' + esc(bulan(F.mulai)) + (r.length > 1 ? ' – ' + esc(bulan(geser(F.mulai, r.length - 1))) : '') + (sama ? '' : '<br>Dibulatkan ke ribuan, sisa pembulatan di cicilan terakhir.') + '</div>';
   }
   function gambarForm() {
-    var A = aturan(), mx = (A.tenorMaks || {})[F.untuk] || 3, bd = !!OPSI.bolehDriver, h = '';
+    var A = aturan(), mx = (A.tenorMaks || {})[F.untuk] || 3, bd = bolehDrv(), di = bolehDiri(), h = '';
+    if (!bd && !di) { lapis('<div class="kartu kosongKm">' + IK('alarm', 'besar') + '<b>Belum ada hak mengajukan</b><small>Akunmu tidak bisa mengajukan kasbon / cicilan HP.</small></div>'); return; }
     if (F.drafDipulihkan) h += '<div class="pitaData">' + IK('dokumen') + '<span>Draf terakhir dipulihkan.</span><button type="button" data-k="buangDraf">Mulai baru</button></div>';
     h += '<div class="kartu notaForm">';
-    if (bd) h += '<label class="lb">Ajuan untuk</label><div class="segmen">' + pilih('untuk', DRV, IK('truk') + 'Driver') + pilih('untuk', KRY, IK('profil') + 'Saya sendiri') + '</div>';
+    if (bd && di) h += '<label class="lb">Ajuan untuk</label><div class="segmen">' + pilih('untuk', DRV, IK('truk') + 'Driver') + pilih('untuk', KRY, IK('profil') + 'Saya sendiri') + '</div>';
     if (F.untuk === DRV) {
       var D = (OPSI.drivers || []);
       h += '<label class="lb" for="kbDriver">Driver <i class="wajib">wajib</i></label><select class="isian" id="kbDriver" data-f="driver"><option value="">Pilih driver (' + D.length + ')</option>'

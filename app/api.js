@@ -132,6 +132,7 @@
     /* laba-pimpinan-15nov: Laba Unit khusus pimpinan/penuh (DASHBOARD LabaPusat.gs; server menolak peran lain). Baca pertama bisa 20-40 dtk. */
     labaUnit: function (sesi, dari, sampai, armada, paksa) { return rpc(K.DASH, 'pusat', 'pusatLabaUnit', [sesi.tokenPusat, dari || '', sampai || '', armada || 'SEMUA', !!paksa], K.BATAS_LABA || 90000); },
     /* gaji-driver-app-15nov (KONTRAK-APP.md Dodi): gaji driver admin/pimpinan/penuh/pengawas + ajuan kasbon & cicilan HP. Hitungan pertama bisa 20-40 dtk. */
+    gajiAkses: function (sesi) { return rpc(K.DASH, 'pusat', 'pusatGajiAkses', [sesi.tokenPusat], 20000); }, /* v3.14 akses-gaji-15nov: flag menu (ringan) */
     gajiDriver: function (sesi, periode, paksa) { return rpc(K.DASH, 'pusat', 'pusatGajiDriver', [sesi.tokenPusat, periode || '', !!paksa], K.BATAS_GAJI || 90000); },
     kasbonOpsi: function (sesi) { return rpc(K.DASH, 'pusat', 'pusatKasbonOpsi', [sesi.tokenPusat], K.BATAS_GAJI || 90000); },
     kasbonAjukan: function (sesi, d) { return rpc(K.DASH, 'pusat', 'pusatKasbonAjukan', [sesi.tokenPusat, d], K.BATAS_NOTA || 90000); },
