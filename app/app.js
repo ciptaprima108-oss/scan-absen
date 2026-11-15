@@ -431,7 +431,8 @@
     d = d || {}; if (!SESI) return;
     if (d.jenis === 'forum' && window.WHL_FORUM) window.WHL_FORUM.bukaKe(ctxForum(), String(d.ruang || 'umum'));
     else if (d.jenis === 'tiket' && d.l) window.WHL_TINDAK(String(d.l));
-    else if (/^kasbon_/.test(String(d.jenis || '')) && window.WHL_KASBON && window.WHL_KASBON.boleh(SESI)) window.WHL_KASBON.buka(ctxNota(), d.jenis === 'kasbon_pimpinan' ? 'acc' : 'daftar'); /* gaji-driver-app-15nov */
+    else if (/^kasbon_/.test(String(d.jenis || '')) && window.WHL_KASBON && window.WHL_KASBON.boleh(SESI)) window.WHL_KASBON.buka(ctxNota(), d.jenis === 'kasbon_pimpinan' ? 'acc' : 'daftar'); /* gaji-driver-app-15nov; v3.18 kasbon_transfer (admin: siap ditransfer) -> layar kasbon */
+    else if (d.jenis === 'kasbon_transfer' && window.WHL_DOKKAS && window.WHL_DOKKAS.boleh(SESI)) window.WHL_DOKKAS.buka(ctxNota()); /* v3.18: akun tanpa menu Ajuan kasbon -> Dokumen kasbon */
     else if (d.jenis === 'lembur' && window.WHL_LEMBUR) bukaLemburNotif(); /* v3.16 lembur-acc-15nov: pimpinan -> Persetujuan, staf -> Lembur saya */
   }
   /* v2.18: alur aktifkan notifikasi per langkah dengan status & galat ASLI: cek app -> ping server ulang -> izin -> token FCM -> daftar ke server.
@@ -573,7 +574,7 @@
   /* v3.9: nama staf yang sedang bertugas (absen hari ini) untuk mengisi peserta banner — hanya dipakai admin di Kelola banner */
   function bertugasNama() { return API.Pusat.ringkasan(SESI, 'bertugas', true).then(function (r) { var P = (r && r.bertugas && r.bertugas.petugas) || []; return P.map(function (x) { return String(x.nama || '').trim(); }).filter(Boolean); }); }
   function muatAksesGaji() { if (!window.WHL_GAJI || !SESI) return; window.WHL_GAJI.muatAkses(ctxNota()).then(function () { try { if (SESI && tab === 'beranda' && !$('layarApp').classList.contains('sembunyi')) gambar(); } catch (e) { /* */ } }); }
-  function ctxNota() { return { sesi: function () { return SESI; }, roti: roti, perbarui: function () { if (tab === 'beranda') gambar(); } }; }
+  function ctxNota() { return { sesi: function () { return SESI; }, roti: roti, bukaWeb: bukaWeb, perbarui: function () { if (tab === 'beranda') gambar(); } }; } /* v3.18: bukaWeb untuk tautan bukti transfer / foto driver */
   function ctxLembur() { return { sesi: function () { return SESI; }, roti: roti, perbarui: function () { try { if (SESI && (tab === 'beranda' || tab === 'absen') && !$('layarApp').classList.contains('sembunyi')) gambar(); } catch (e) { /* */ } } }; }
   function bukaLemburNotif() {
     var L = window.WHL_LEMBUR, buka = function () { if (L.ringkas().bolehAcc) L.bukaAcc(ctxLembur()); else L.bukaAju(ctxLembur()); };

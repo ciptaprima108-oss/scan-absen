@@ -13,6 +13,11 @@
   var CTX = null, lapisEl = null, H = null, galat = '', memuat = false, urutan = 0, periode = '', tab = 'ajuan', fStatus = 'semua', fJenis = 'semua', terbuka = {}, DITOLAK = {};
   var SIMPAN = {};
   var STATUS = { 'MENUNGGU ADMIN': ['kuning', 'Menunggu admin'], 'MENUNGGU PIMPINAN': ['kuning', 'Menunggu Pak Fanza'], DISETUJUI: ['hijau', 'Disetujui'], DITOLAK: ['merah', 'Ditolak'] };
+  /* v3.18 kasbon-bukti-transfer-15nov: server baru mengirim buktiUrl (alur pimpinan dulu -> admin transfer + bukti) -> label baru; server lama -> label di atas */
+  var STATUS_BARU = { 'MENUNGGU ADMIN': ['kuning', 'Siap ditransfer'], 'MENUNGGU PIMPINAN': ['kuning', 'Menunggu pimpinan'], DISETUJUI: ['hijau', 'Ditransfer'], DITOLAK: ['merah', 'Ditolak'] };
+  function alurBaru() { return ((H && H.ajuan) || []).some(function (a) { return a && a.buktiUrl !== undefined; }); }
+  function labelSt(a) { var w = (a.buktiUrl !== undefined ? STATUS_BARU : STATUS)[a.status] || ['abu', a.status]; if (a.buktiUrl !== undefined && a.status === 'DISETUJUI' && a.jenis === 'CICILAN HP') w = ['hijau', 'Disetujui']; return w; }
+  function urlAman(u) { return /^https:\/\/[^\s"<>]+$/.test(String(u || '')) ? String(u) : ''; }
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function IK(n, c) { return window.WHL_IKON ? window.WHL_IKON(n, c) : ''; }
@@ -100,19 +105,23 @@
     var A = H.ajuan || [], Rk = H.rekap || [];
     h += '<div class="segmen"><button type="button" data-d="tab:ajuan" class="' + (tab === 'ajuan' ? 'on' : '') + '">Ajuan ' + A.length + '</button><button type="button" data-d="tab:rekap" class="' + (tab === 'rekap' ? 'on' : '') + '">Rekap potongan</button></div>';
     if (tab === 'rekap') return h + rekapHtml();
-    h += '<div class="dkSaringJ">Status</div><div class="saring">' + chip('st', 'semua', 'Semua', fStatus) + chip('st', 'admin', 'Menunggu admin', fStatus) + chip('st', 'pimpinan', 'Menunggu Pak Fanza', fStatus) + chip('st', 'setuju', 'Disetujui', fStatus) + chip('st', 'tolak', 'Ditolak', fStatus) + '</div>';
+    h += '<div class="dkSaringJ">Status</div><div class="saring">' + chip('st', 'semua', 'Semua', fStatus) + (alurBaru() ? chip('st', 'pimpinan', 'Menunggu pimpinan', fStatus) + chip('st', 'admin', 'Siap ditransfer', fStatus) + chip('st', 'setuju', 'Ditransfer', fStatus)
+      : chip('st', 'admin', 'Menunggu admin', fStatus) + chip('st', 'pimpinan', 'Menunggu Pak Fanza', fStatus) + chip('st', 'setuju', 'Disetujui', fStatus)) + chip('st', 'tolak', 'Ditolak', fStatus) + '</div>';
     h += '<div class="dkSaringJ">Jenis</div><div class="saring">' + chip('jn', 'semua', 'Semua', fJenis) + chip('jn', 'kasbon', 'Kasbon', fJenis) + chip('jn', 'hp', 'Cicilan HP', fJenis) + (H.bolehStaf ? chip('jn', 'karyawan', 'Karyawan', fJenis) : '') + '</div>';
     var L = saringAjuan();
     h += '<h2 class="bagW">' + esc(bulan(H.periode)) + ' <span>' + L.length + (L.length !== A.length ? ' dari ' + A.length : '') + '</span></h2>';
     if (!L.length) return h + '<div class="kartu dkKosong">' + (A.length ? 'Tidak ada ajuan yang cocok dengan saringan.' : 'Belum ada ajuan di bulan ini.') + '</div>';
     h += '<div class="kartu notaDaftar">' + L.map(function (a) {
-      var w = STATUS[a.status] || ['abu', a.status];
+      var w = labelSt(a), ub = urlAman(a.buktiUrl), uf = urlAman(a.fotoDriverUrl);
       return '<div class="dkKartu"><div class="dkAtas"><b>' + (a.jenis === 'CICILAN HP' ? '📱 ' : '🧾 ') + esc(a.nama) + (a.untuk === 'KARYAWAN' ? ' <span class="gjiChip abu">karyawan</span>' : '') + '</b><em class="notaSt ' + w[0] + '">' + esc(w[1]) + '</em></div>'
         + '<div class="dkNom">' + rp(a.nominal) + '</div><div class="dkKecil">' + (a.jenis === 'CICILAN HP' ? esc(a.barang) + ' · ' + esc(a.tenor) + 'x ' + rp(a.perBulan) + (a.mulai ? ' · mulai ' + esc(bulan(a.mulai)) : '') : esc(a.alasan || '')) + '</div>'
         + '<div class="dkKecil">' + esc(a.id) + ' · ' + esc(a.waktu) + (a.lambung ? ' · ' + esc(a.lambung) : '') + '<br>Diajukan <b>' + esc(a.pengaju) + '</b>'
-        + (a.accAdmin ? '<br>✓ Admin <b>' + esc(a.accAdmin) + '</b> ' + esc(a.accAdminWaktu || '') : '') + (a.accPimpinan ? '<br>✓ Pak Fanza <b>' + esc(a.accPimpinan) + '</b> ' + esc(a.accPimpinanWaktu || '') : '')
+        + (a.accAdmin ? '<br>✓ Admin <b>' + esc(a.accAdmin) + '</b> ' + esc(a.accAdminWaktu || '') : '') + (a.accPimpinan ? '<br>✓ ' + (a.buktiUrl !== undefined ? 'Pimpinan' : 'Pak Fanza') + ' <b>' + esc(a.accPimpinan) + '</b> ' + esc(a.accPimpinanWaktu || '') : '')
+        + (a.buktiWaktu || a.buktiOleh ? '<br>✓ Ditransfer <b>' + esc(a.buktiOleh || '') + '</b> ' + esc(a.buktiWaktu || '') : '') + (a.alasanTanpaBukti ? '<br>Tanpa bukti: ' + esc(a.alasanTanpaBukti) : '')
         + (a.status === 'DITOLAK' ? '<br><span style="color:var(--tMerah);font-weight:700">Ditolak: ' + esc(a.alasanTolak || '-') + '</span>' : '') + (a.idTercatat ? '<br>Tercatat <b>' + esc(a.idTercatat) + '</b>' : '') + '</div>'
-        + '<button type="button" class="tKecil kbDokumen" data-d="pdf:' + esc(a.id) + '">' + IK('dokumen') + ' PDF ajuan</button></div>';
+        + '<button type="button" class="tKecil kbDokumen" data-d="pdf:' + esc(a.id) + '">' + IK('dokumen') + ' PDF ajuan</button>'
+        + (ub ? ' <button type="button" class="tKecil kbDokumen" data-d="url:' + esc(a.id) + ':bukti">Lihat bukti transfer</button>' : '')
+        + (uf ? ' <button type="button" class="tKecil kbDokumen" data-d="url:' + esc(a.id) + ':foto">Foto driver</button>' : '') + '</div>';
     }).join('') + '</div>';
     return h;
   }
@@ -175,7 +184,11 @@
   function kolom(i) { var s = ''; i++; while (i > 0) { var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
   function lembar(baris) {
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'
-      + baris.map(function (r, i) { return '<row r="' + (i + 1) + '">' + r.map(function (v, j) { var ref = kolom(j) + (i + 1), st = i === 0 ? ' s="1"' : ''; return typeof v === 'number' && isFinite(v) ? '<c r="' + ref + '"' + st + '><v>' + v + '</v></c>' : '<c r="' + ref + '" t="inlineStr"' + st + '><is><t xml:space="preserve">' + xmlEsc(v) + '</t></is></c>'; }).join('') + '</row>'; }).join('')
+      + baris.map(function (r, i) { return '<row r="' + (i + 1) + '">' + r.map(function (v, j) { var ref = kolom(j) + (i + 1), st = i === 0 ? ' s="1"' : '';
+        /* v3.18: sel tautan {url, teks} -> rumus =HYPERLINK("url","teks") + nilai tersimpan teks */
+        if (v && typeof v === 'object' && v.url) { var fu = String(v.url).replace(/"/g, '""'), ft = String(v.teks || 'Buka').replace(/"/g, '""'); return '<c r="' + ref + '" t="str"><f>' + xmlEsc('HYPERLINK("' + fu + '","' + ft + '")') + '</f><v>' + xmlEsc(v.teks || 'Buka') + '</v></c>'; }
+        if (v && typeof v === 'object') v = '';
+        return typeof v === 'number' && isFinite(v) ? '<c r="' + ref + '"' + st + '><v>' + v + '</v></c>' : '<c r="' + ref + '" t="inlineStr"' + st + '><is><t xml:space="preserve">' + xmlEsc(v) + '</t></is></c>'; }).join('') + '</row>'; }).join('')
       + '</sheetData></worksheet>';
   }
   function xlsx(sheets) {
@@ -199,9 +212,11 @@
   function bukuExcel() {
     var Rk = (H.rekap || []).map(function (o, i) { return [i + 1, o.nama, o.nik || '', o.lambung || '', o.kasbon || 0, o.kasbonMasuk || 0, o.cicilan || 0, o.potongan || 0, o.dipotong || 0, o.terbawa || 0]; }), T = H.total || {};
     var sh = [['Rekap driver', [['No', 'Driver', 'NIK', 'Lambung', 'Kasbon bulan ini', 'Terbawa bulan lalu', 'Cicilan HP', 'Total potongan', 'Terpotong', 'Terbawa ke bulan depan']].concat(Rk, [['', 'TOTAL ' + (T.orang || Rk.length) + ' driver', '', '', T.kasbon || 0, T.kasbonMasuk || 0, T.cicilan || 0, T.potongan || 0, T.dipotong || 0, T.terbawa || 0]])],
-      ['Ajuan', [['ID', 'Waktu', 'Untuk', 'Nama', 'NIK/NRP', 'Lambung', 'Jenis', 'Nominal', 'Alasan / HP', 'Tenor', 'Per bulan', 'Mulai', 'Pengaju', 'Status', 'ACC admin', 'ACC Pak Fanza', 'Alasan tolak', 'ID tercatat']].concat((H.ajuan || []).map(function (a) {
+      ['Ajuan', [['ID', 'Waktu', 'Untuk', 'Nama', 'NIK/NRP', 'Lambung', 'Jenis', 'Nominal', 'Alasan / HP', 'Tenor', 'Per bulan', 'Mulai', 'Pengaju', 'Status', 'ACC admin', alurBaru() ? 'ACC pimpinan' : 'ACC Pak Fanza', 'Alasan tolak', 'ID tercatat', 'Bukti transfer', 'Waktu transfer', 'Admin transfer', 'Alasan tanpa bukti', 'Foto driver']].concat((H.ajuan || []).map(function (a) {
+        var ub = urlAman(a.buktiUrl), uf = urlAman(a.fotoDriverUrl);
         return [a.id, a.waktu, a.untuk, a.nama, a.nik || '', a.lambung || '', a.jenis, Number(a.nominal) || 0, a.jenis === 'CICILAN HP' ? a.barang : a.alasan, a.tenor === '' ? '' : Number(a.tenor) || '', Number(a.perBulan) || '', a.mulai || '', a.pengaju, a.status,
-          a.accAdmin ? a.accAdmin + ' ' + (a.accAdminWaktu || '') : '', a.accPimpinan ? a.accPimpinan + ' ' + (a.accPimpinanWaktu || '') : '', a.alasanTolak || '', a.idTercatat || ''];
+          a.accAdmin ? a.accAdmin + ' ' + (a.accAdminWaktu || '') : '', a.accPimpinan ? a.accPimpinan + ' ' + (a.accPimpinanWaktu || '') : '', a.alasanTolak || '', a.idTercatat || '',
+          ub ? { url: ub, teks: 'Lihat bukti' } : '', a.buktiWaktu || '', a.buktiOleh || '', a.alasanTanpaBukti || '', uf ? { url: uf, teks: 'Lihat foto' } : ''];
       }))]];
     if (H.bolehStaf && (H.staf || []).length) sh.push(['Cicilan karyawan', [['Nama', 'NRP', 'Jabatan', 'HP', 'Harga', 'Tenor', 'Per bulan', 'Mulai', 'Ke', 'Potong bulan ini', 'Sisa utang', 'Status']].concat(H.staf.map(function (c) { return [c.nama, c.nrp, c.jabatan || '', c.barang, Number(c.harga) || 0, Number(c.tenor) || 0, Number(c.perBulan) || 0, c.mulai || '', c.ke ? c.ke + '/' + c.n : '', Number(c.potong) || 0, Number(c.sisa) || 0, c.status]; }))]);
     return xlsx(sh);
@@ -234,6 +249,12 @@
     if (n.indexOf('jn:') === 0) { fJenis = n.slice(3); lapis(); return; }
     if (n.indexOf('buka:') === 0) { var k = n.slice(5); terbuka[k] = !terbuka[k]; lapis(); return; }
     if (n.indexOf('pdf:') === 0) { ambilPdf(API.Pusat.kasbonPdf(sesi(), n.slice(4))); return; }
+    if (n.indexOf('url:') === 0) {
+      var ip = n.lastIndexOf(':'), idU = n.slice(4, ip), jn = n.slice(ip + 1), aU = ((H && H.ajuan) || []).filter(function (z) { return z.id === idU; })[0];
+      var u = aU ? urlAman(jn === 'foto' ? aU.fotoDriverUrl : aU.buktiUrl) : ''; if (!u) return;
+      if (CTX && CTX.bukaWeb) CTX.bukaWeb(u); else { try { window.open(u, '_blank', 'noopener'); } catch (e) { /* */ } }
+      return;
+    }
     if (n === 'rekapPdf') { ambilPdf(API.Pusat.kasbonRekapPdf(sesi(), H ? H.periode : '')); return; }
     if (n === 'excel') { if (H) excel(); return; }
     if (n === 'csv') { if (H) csv(); return; }
