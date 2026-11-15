@@ -67,7 +67,7 @@
       s.docChanges().forEach(function (ch) {
         if (ch.type !== 'added' || ch.doc.metadata.hasPendingWrites) return; var x = ch.doc.data({ serverTimestamps: 'estimate' });
         if (x.uid === INFO.uid || x.hapus || !x.waktu || x.waktu.toMillis() < mulaiMs) return;
-        var disebut = (x.sebut || []).indexOf(INFO.uid) >= 0, ruangNm = (KF.ruang.filter(function (q) { return q.id === r; })[0] || {}).nama || r;
+        var disebut = (x.sebut || []).indexOf(INFO.uid) >= 0 || (x.sebut || []).indexOf('*') >= 0, ruangNm = (KF.ruang.filter(function (q) { return q.id === r; })[0] || {}).nama || r;
         if (aktif === r && document.visibilityState === 'visible') return;
         if (Date.now() - nadaTerakhir > 4000) { nadaTerakhir = Date.now(); R.bunyi(disebut ? 'pengumumanWhl' : 'pesanWhl'); R.getar(disebut ? 'awas' : undefined); }
         if (CTX.roti) CTX.roti((disebut ? '@ Kamu disebut · ' : '💬 ') + ruangNm + ': ' + pendek(x.nama) + ' — ' + cuplik(x).slice(0, 60));
@@ -75,7 +75,7 @@
       if (lapisEl && !aktif) gambarDaftar(); if (CTX.perbarui) CTX.perbarui();
     }, function () { });
   }
-  function cuplik(x) { return x.hapus ? 'pesan dihapus' : x.jenis === 'foto' ? '📷 Foto' + (x.teks ? ': ' + x.teks : '') : x.jenis === 'suara' ? '🎤 Pesan suara ' + durTeks(x.media && x.media.dur) : String(x.teks || ''); }
+  function cuplik(x) { return x.hapus ? 'pesan dihapus' : x.jenis === 'foto' ? '📷 Foto' + (x.teks ? ': ' + polos(x.teks) : '') : x.jenis === 'suara' ? '🎤 Pesan suara ' + durTeks(x.media && x.media.dur) : polos(x.teks || ''); }
   function totalBaru() { var n = 0; Object.keys(BARU).forEach(function (r) { n += BARU[r] || 0; }); return n; }
 
   /** Dipanggil app sesudah login (diam-diam). -> Promise<{ok, baru}> */
@@ -159,11 +159,26 @@
   function gambarSematan() {
     var el = document.getElementById('fmSem'); if (!el) return;
     if (!SEMATAN || !SEMATAN.teks) { el.hidden = true; return; }
-    el.hidden = false; el.innerHTML = '<span>📌</span><div><b>Pengumuman</b><small>' + esc(SEMATAN.teks) + '</small><em>disematkan ' + esc(pendek(SEMATAN.oleh)) + '</em></div>' + (INFO.admin ? '<button type="button" class="kbK" data-f="lepas" aria-label="Lepas sematan">✕</button>' : '');
+    el.hidden = false; el.innerHTML = '<span>📌</span><div><b>Pengumuman</b><small>' + esc(polos(SEMATAN.teks)) + '</small><em>disematkan ' + esc(pendek(SEMATAN.oleh)) + '</em></div>' + (INFO.admin ? '<button type="button" class="kbK" data-f="lepas" aria-label="Lepas sematan">✕</button>' : '');
+  }
+  /* format-wa-15nov: *tebal* _miring_ ~coret~ ```kode``` ala WhatsApp. Teks di-escape dulu; penanda hanya berlaku kalau menempel di kata (2 * 3 tetap biasa). */
+  var WA_TEPI = '(^|[\\s([{;«“‘-])', WA_AKHIR = '(?=$|[\\s.,!?:;)\\]}&»”’-])'; /* ; dan & = tanda kutip yang sudah di-escape */
+  function formatWa(h) {
+    var kode = [];
+    h = h.replace(/```([\s\S]+?)```/g, function (m, isi) { kode.push(isi); return '\u0000' + (kode.length - 1) + '\u0000'; });
+    [['\\*', 'b'], ['_', 'i'], ['~', 's']].forEach(function (p) {
+      var re = new RegExp(WA_TEPI + p[0] + '(?![\\s' + p[0] + '])([^\\n]*?[^\\s\\n])' + p[0] + WA_AKHIR, 'g');
+      h = h.replace(re, function (m, a, isi) { return a + '<' + p[1] + '>' + isi + '</' + p[1] + '>'; });
+    });
+    return h.replace(/\u0000(\d+)\u0000/g, function (m, i) { return '<code class="fmKode">' + kode[+i] + '</code>'; });
+  }
+  function polos(t) {
+    return String(t == null ? '' : t).replace(/```([\s\S]+?)```/g, '$1')
+      .replace(/(^|[\s([{"'«“‘-])([*_~])(?![\s*_~])([^\n]*?[^\s\n])\2(?=$|[\s.,!?:;)\]}"'»”’-])/g, '$1$3');
   }
   function teksHtml(t) {
-    var h = esc(t).replace(/\n/g, '<br>');
-    return h.replace(/@([A-Za-z][A-Za-z.'-]*(?: [A-Za-z][A-Za-z.'-]*)?)/g, function (m, n) { var saya = INFO && pendek(INFO.nama).toLowerCase() === n.toLowerCase(); return '<b class="fmSebut' + (saya ? ' saya' : '') + '">@' + n + '</b>'; });
+    var h = formatWa(esc(t)).replace(/\n/g, '<br>');
+    return h.replace(/@([A-Za-z][A-Za-z.'-]*(?: [A-Za-z][A-Za-z.'-]*)?)/g, function (m, n) { var saya = n.toLowerCase() === 'semua' || INFO && pendek(INFO.nama).toLowerCase() === n.toLowerCase(); return '<b class="fmSebut' + (saya ? ' saya' : '') + '">@' + n + '</b>'; });
   }
   function gelHtml(gel, id) { var g = (gel && gel.length ? gel : [3, 5, 4, 6, 3, 5, 7, 4, 3, 5, 6, 4, 3, 2]); return '<span class="gel" id="gel_' + id + '">' + g.map(function (v) { return '<i style="height:' + (18 + Math.min(9, v) * 9) + '%"></i>'; }).join('') + '</span>'; }
   function gambarPesan(keBawah) {
@@ -216,7 +231,8 @@
   function kirimTeks() {
     var t = document.getElementById('fmTeks'), isi = t.value.trim(); if (!isi) return;
     var p = dasarPesan('teks'); p.teks = isi.slice(0, 2000);
-    Object.keys(KENAL).forEach(function (u) { if (u !== INFO.uid && p.sebut.length < 10 && isi.toLowerCase().indexOf('@' + pendek(KENAL[u]).toLowerCase()) >= 0) p.sebut.push(u); });
+    if (/(^|\s)@semua\b/i.test(isi)) p.sebut.push('*'); /* sebut-semua-15nov: '*' = semua anggota ruang dapat notifikasi "menyebutmu" */
+    else Object.keys(KENAL).forEach(function (u) { if (u !== INFO.uid && p.sebut.length < 10 && isi.toLowerCase().indexOf('@' + pendek(KENAL[u]).toLowerCase()) >= 0) p.sebut.push(u); });
     t.value = ''; aturTombol(); document.getElementById('fmSaran').hidden = true;
     var rgKirim = aktif; db.collection('ruang').doc(aktif).collection('pesan').add(p).then(function (ref) { selesaiKirim(); notifServer(rgKirim, ref && ref.id, 'pesan'); }, galatKirim); selesaiKirim();
   }
@@ -356,7 +372,8 @@
     var m = ev.target.value.match(/@([^@\n]{0,30})$/), s = document.getElementById('fmSaran');
     if (!m) { s.hidden = true; return; }
     var q = m[1].toLowerCase(), L = Object.keys(KENAL).filter(function (u) { return u !== INFO.uid && pendek(KENAL[u]).toLowerCase().indexOf(q) === 0; }).slice(0, 5);
-    s.hidden = !L.length; s.innerHTML = L.map(function (u) { return '<button type="button" data-sebut="' + esc(pendek(KENAL[u])) + '"><span class="bulat">' + esc(inisial(KENAL[u])) + '</span>' + esc(pendek(KENAL[u])) + '</button>'; }).join('');
+    var semuaBtn = 'semua'.indexOf(q) === 0 ? '<button type="button" data-sebut="semua"><span class="bulat">👥</span>semua <small>· semua anggota grup</small></button>' : '';
+    s.hidden = !L.length && !semuaBtn; s.innerHTML = semuaBtn + L.map(function (u) { return '<button type="button" data-sebut="' + esc(pendek(KENAL[u])) + '"><span class="bulat">' + esc(inisial(KENAL[u])) + '</span>' + esc(pendek(KENAL[u])) + '</button>'; }).join('');
   }
   function lihatFoto(src) { var d = document.createElement('div'); d.className = 'fmFotoBesar'; d.innerHTML = '<img src="' + src + '" alt="Foto"><button type="button" aria-label="Tutup">✕</button>'; d.onclick = function () { d.remove(); }; document.body.appendChild(d); }
 

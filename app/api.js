@@ -129,6 +129,8 @@
     notaVideoMulai: function (sesi, x) { return rpc(K.DASH, 'pusat', 'pusatNotaVideoMulai', [sesi.tokenPusat, x], 25000); },
     notaVideoPotong: function (sesi, upId, ke, b64) { return rpc(K.DASH, 'pusat', 'pusatNotaVideoPotong', [sesi.tokenPusat, upId, ke, b64], K.BATAS_VIDEO || 120000); },
     notaVideoSelesai: function (sesi, upId) { return rpc(K.DASH, 'pusat', 'pusatNotaVideoSelesai', [sesi.tokenPusat, upId], 60000); },
+    /* laba-pimpinan-15nov: Laba Unit khusus pimpinan/penuh (DASHBOARD LabaPusat.gs; server menolak peran lain). Baca pertama bisa 20-40 dtk. */
+    labaUnit: function (sesi, dari, sampai, armada, paksa) { return rpc(K.DASH, 'pusat', 'pusatLabaUnit', [sesi.tokenPusat, dari || '', sampai || '', armada || 'SEMUA', !!paksa], K.BATAS_LABA || 90000); },
     gantiPin: function (token, lama, baru) { return rpc(K.DASH, 'pusat', 'pusatGantiPin', [token, lama, baru]); },
     ringkasan: function (sesi, bagian, paksa) {
       if (pusatAsli) return rpc(K.DASH, 'pusat', 'ringkasanPusat', [bagian, !!paksa, '', sesi.tokenPusat], 30000); /* v3.9.2: 90 -> 30 dtk; data lama tetap tampil dari cache */

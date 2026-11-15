@@ -91,6 +91,11 @@
     alarm: function (F, K) { return '<path d="M32 7l25 44a4 4 0 0 1-3.5 6h-43A4 4 0 0 1 7 51z" fill="' + F('r') + '"/><path d="M32 7l25 44a4 4 0 0 1-3.5 6h-43A4 4 0 0 1 7 51z" fill="' + K + '"/><rect x="28.5" y="22" width="7" height="18" rx="3.5" fill="#fff"/><circle cx="32" cy="47" r="4" fill="#fff"/>'; },
     jam: function (F, K) { return '<circle cx="32" cy="33" r="23" fill="' + F('w') + '"/><circle cx="32" cy="33" r="23" fill="none" stroke="' + F('b') + '" stroke-width="5"/><path d="M32 20v14l9 6" fill="none" stroke="' + F('o') + '" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>'; }
   };
+  /* laba-pimpinan-15nov: tumpukan koin + panah naik (menu Laba unit pimpinan) */
+  B.laba = function (F, K) { return '<ellipse cx="25" cy="49" rx="16" ry="6" fill="' + F('y') + '"/><rect x="9" y="38" width="32" height="11" fill="' + F('y') + '"/><ellipse cx="25" cy="38" rx="16" ry="6" fill="' + F('y') + '"/>'
+      + '<rect x="9" y="27" width="32" height="11" fill="' + F('y') + '"/><ellipse cx="25" cy="27" rx="16" ry="6" fill="' + F('y') + '"/><ellipse cx="25" cy="27" rx="16" ry="6" fill="' + K + '"/>'
+      + '<path d="M18 27h14" stroke="#fff" stroke-opacity=".7" stroke-width="2.4" stroke-linecap="round"/>'
+      + '<path d="M38 40L50 26" fill="none" stroke="' + F('b') + '" stroke-width="7" stroke-linecap="round"/><path d="M42 20h12v12z" fill="' + F('b') + '"/>'; };
   B.monitorPos = B.monitor;
   var AKA = { notif: 'lonceng', unit: 'truk', skema: 'peta', storing: 'truk', pos: 'monitor', banner: 'pengumuman', kalender: 'jadwal', semua: 'lainnya', kpi: 'profil', ritase: 'grafik', inventaris: 'centang', absensi: 'kartuId' };
   function ilus(nama) {

@@ -175,9 +175,7 @@
     { n: 'Live Monitor Pos Kontrol', ic: '🖥️', d: 'pos', k: 'Tiket mekanik live', u: K.DASH + '?mode=monitor' },
     { n: 'GPS TrackSolid', ic: '📍', d: 'gps', k: 'Posisi live, muat/kosong, KM jalan', id: 'AKfycbwhemxEHZgsj9Z_9ex_siIvs3NmHLlHEns8WRSX-yKwjMlDlQHwXeR_1WdFHcMHvPpq' },
     { n: 'Analisa Insiden WHL', ic: '🦺', d: 'insiden', g: 'analisa', k: 'Insiden, PICA, Laporan Awal', id: 'AKfycbwYC0wJcbDt4jrvuKnWe9L_2Xe1AD25tRTGz-4ffAbi5ojTDgohcIdDsJ_dkaI3WU5e' },
-    { n: 'Input DO & Uang Jalan', ic: '🧮', d: 'do', g: 'inputdo', k: 'Uang jalan, lapor DO, voucher solar', u: K.INPUTDO, kunci: 'Login admin' },
-    { n: 'DO & Kendala WHL', ic: '🧾', d: 'do', k: 'Foto DO per lambung + tiket kendala', id: 'AKfycbyQVFHsikAi-ZERgngM_kEglGvs7nIgyAFKFdzzb42bSlgjRgPKOmPD1QUsyvjpqZDb' },
-    { n: 'Inputan DO', ic: '📄', d: 'do', k: 'Input DO per trip CBR-JNN', id: 'AKfycbxgNS2DIS1wAjzQ7v9PqyGh0wXLISMUWdYDwibH5sJeE8Vfo2b6ViZ1yfedasljaAnE' },
+    { n: 'Administrasi WHL', ic: '🧮', d: 'do', g: 'inputdo', k: 'DO, uang jalan, voucher, kwitansi & nota', u: K.INPUTDO, kunci: 'Login admin' },
     { n: 'Kuota 107', ic: '🚚', d: 'ritase', k: 'Bagi kuota 107 ke PORT per vendor', id: 'AKfycbwCMZzfqXSnNpl0wHb9UIaWcmHOuX-4pKmZmP532go0s3jrqh4pxoKM1oeq1IQtAHI' },
     { n: 'Stok Solar WHL', ic: '⛽', d: 'solar', k: 'Solar masuk/keluar tangki POOL 108', id: 'AKfycbwtQwcT7H-sRDTULlgzHWZpXg6g1CMzY5LrLG1hvCRVKOsoCvN4PxejxN8XTDD1VGSW' },
     { n: 'Ceklis Inventaris', ic: '✅', d: 'inventaris', k: 'Aset kantor per ruangan', id: 'AKfycbwDI5OEtGGN_IDxuN2rk74_5cjP7LSPYWivm8VUCL-2oZQAS9spOGVaEOb57plcU27-Yw' },
@@ -189,7 +187,7 @@
     { ic: '🦺', n: 'Input Insiden', k: 'Analisa Insiden · pilih menu ➕ Input Insiden', id: 'AKfycbwYC0wJcbDt4jrvuKnWe9L_2Xe1AD25tRTGz-4ffAbi5ojTDgohcIdDsJ_dkaI3WU5e' },
     { ic: '📇', n: 'Scan Absen (tablet briefing)', k: 'Operator: scan ID card, kamera live', u: 'https://ciptaprima108-oss.github.io/scan-absen/' },
     { ic: '📝', n: 'Commissioning & Kimper', k: 'Form vendor: pilih vendor lalu isi', id: 'AKfycbz9u33XobIts_QZA6jdBZYii5v-iySnej6SzuyyGCm9zGhyqlztUnp3TnT3ifQeUeQNLA' },
-    { ic: '🧮', n: 'Input DO & Uang Jalan', k: 'Uang jalan, lapor DO', u: K.INPUTDO, kunci: 'Login admin' },
+    { ic: '🧮', n: 'Administrasi WHL', k: 'DO, uang jalan, voucher, kwitansi & nota', u: K.INPUTDO, kunci: 'Login admin' },
     { ic: '📋', n: 'Menu Input lapangan', k: 'Pos Kontrol, P2H, Driver Baru', u: K.DASH + '?mode=menu' },
     { ic: '🖥️', n: 'Live Monitor Pos Kontrol', k: 'Tiket mekanik live', u: K.DASH + '?mode=monitor' },
     { ic: '📝', n: 'Pengajuan Izin', k: 'Izin / sakit / cuti', u: K.ABSEN + '?mode=izin' }
@@ -660,6 +658,7 @@
     if (forumTampil()) L.push(['forum', 'Forum', 'forum', forumBaru()]);
     L.push(['input', 'Input', 'lapor']);
     if (window.WHL_NOTA && window.WHL_NOTA.boleh(SESI)) L.push(['dokumen', 'Nota bengkel', 'nota']); /* v3.10 khusus pengawas / admin / pimpinan */
+    if (window.WHL_LABA && window.WHL_LABA.boleh(SESI)) L.push(['laba', 'Laba unit', 'laba']); /* laba-pimpinan-15nov: khusus pimpinan / penuh */
     if (KSN && (KSN.ada || KSN.perluPin) && SESI.user.peran !== 'driver') L.push(['kuesioner', 'Kuesioner', 'ksn', KSN.ada && KSN.buka ? KSN.sisa : 0]);
     L.push(['profil', 'Nilai saya', 'tab:akun']);
     appsSaya().forEach(function (a) { L.push([IKON_DIV[a.d] || 'web', a.n.replace(/ WHL$/, '').replace(/^Live Monitor /, '').replace(/^Dashboard /, ''), 'web:' + alamat(a)]); });
@@ -676,6 +675,7 @@
     if (forumTampil()) A.push(['forum', 'Forum', 'forum', forumBaru()]);
     A.push(['input', 'Input cepat', 'lapor']);
     if (window.WHL_NOTA && window.WHL_NOTA.boleh(SESI)) A.push(['dokumen', 'Nota bengkel', 'nota', 0, 1]);
+    if (window.WHL_LABA && window.WHL_LABA.boleh(SESI)) A.push(['laba', 'Laba unit', 'laba', 0, 1]); /* laba-pimpinan-15nov */
     A.push(['kotak', 'Kotak masuk', 'tab:kotak', kotakBelum(), 1]);
     if (hitungProyeksi()) A.push(['grafik', 'Proyeksi target', 'proyeksi', 0, 1]);
     if (KSN && (KSN.ada || KSN.perluPin)) A.push(['kuesioner', 'Kuesioner', 'ksn', KSN.ada && KSN.buka ? KSN.sisa : 0]);
@@ -755,7 +755,7 @@
   /* Rincian singkat satu topik (lembar bawah): baris kecil seperti di kartu web + tombol ke aplikasinya */
   function lembarTopik(k) {
     if (k === 'pos') { keTab('unit'); return; } if (k === 'absensi') { keTab('absen'); return; } if (k === 'apps') { keTab('apps'); return; } if (k === 'input') { lembarLapor(); return; }
-    var d = DIV[k] || DIV.apps, x = isiKartu(k), TUJU = { ritase: K.DASH, gps: alamat(APPS[4]), subcon: K.DASH, insiden: alamat(APPS[5]), 'do': K.INPUTDO, solar: alamat(APPS[10]), gudang: alamat(APPS[11]), kreatif: K.DASH + '?mode=kreatif' };
+    var d = DIV[k] || DIV.apps, x = isiKartu(k), TUJU = { ritase: K.DASH, gps: alamat(APPS[4]), subcon: K.DASH, insiden: alamat(APPS[5]), 'do': K.INPUTDO, solar: alamat(APPS[8]), gudang: alamat(APPS[9]), /* 15 Nov: DO & Kendala + Inputan DO dihapus, indeks geser 2 */ kreatif: K.DASH + '?mode=kreatif' };
     bukaLembar('<h3>' + d[1] + ' ' + esc(d[0]) + '</h3><div class="dt-angka" style="color:' + d[2] + '">' + (x.v != null ? rp(x.v) + esc(x.sat) : esc(x.ang)) + '</div><div class="kecil" style="font-size:14px;margin-bottom:10px">' + esc(x.art) + '</div>'
       + x.mini.map(function (m) { return '<div class="dt-mini" style="background:' + d[3] + ';color:#1f2430">' + esc(m) + '</div>'; }).join('')
       + (TUJU[k] ? '<button type="button" class="app" data-web="' + esc(TUJU[k]) + '" style="margin-top:12px"><span class="ik" style="background:' + d[3] + '">' + d[1] + '</span><span class="tx"><b>Buka rinciannya</b><small>Halaman web, dibuka di dalam app</small></span><span class="chip web">Web</span></button>' : '')
@@ -1202,7 +1202,7 @@
     b = t.closest('[data-kt]'); if (b) { R.getar(); lembarTopik(b.getAttribute('data-kt')); return; }
     if (t.closest('#btnTema')) { var tb = document.documentElement.getAttribute('data-tema') === 'gelap' ? 'terang' : 'gelap'; pasangTema(tb); Simpan.taruh(KUNCI_TEMA, tb); gambar(); return; }
     if (t.closest('#btnSuara')) { R.aturSetel('suara', !R.setel.suara); pasangSuara(); if (R.setel.suara) R.bunyi('notifikasi'); if (tab === 'akun') gambar(); return; }
-    b = t.closest('[data-ke]'); if (b) { var ke = b.getAttribute('data-ke'); if (b.closest('#lembar') && ke !== 'lainnya') tutupLembar(); if (ke === 'nota') window.WHL_NOTA.buka(ctxNota()); else if (ke === 'lainnya') lembarLainnya(); else if (ke === 'kelolaBanner') { window.WHL_BANNER.pasang(ctxBanner()); window.WHL_BANNER.kelola(); } else if (ke === 'proyeksi') { keTab('beranda'); setTimeout(function () { var pq = document.querySelector('.proy'); if (pq) pq.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 120); } else if (ke === 'lapor') lembarLapor(); else if (ke === 'forum') window.WHL_FORUM.buka(ctxForum()); else if (ke === 'ksn') window.WHL_KSN.buka(ctxKsn()); else if (ke === 'k3') window.WHL_KSN.bukaK3(ctxKsn()); else if (ke.indexOf('tab:') === 0) keTab(ke.slice(4)); else if (ke.indexOf('web:') === 0) bukaWeb(ke.slice(4)); return; }
+    b = t.closest('[data-ke]'); if (b) { var ke = b.getAttribute('data-ke'); if (b.closest('#lembar') && ke !== 'lainnya') tutupLembar(); if (ke === 'nota') window.WHL_NOTA.buka(ctxNota()); else if (ke === 'laba') window.WHL_LABA.buka(ctxNota()); else if (ke === 'lainnya') lembarLainnya(); else if (ke === 'kelolaBanner') { window.WHL_BANNER.pasang(ctxBanner()); window.WHL_BANNER.kelola(); } else if (ke === 'proyeksi') { keTab('beranda'); setTimeout(function () { var pq = document.querySelector('.proy'); if (pq) pq.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 120); } else if (ke === 'lapor') lembarLapor(); else if (ke === 'forum') window.WHL_FORUM.buka(ctxForum()); else if (ke === 'ksn') window.WHL_KSN.buka(ctxKsn()); else if (ke === 'k3') window.WHL_KSN.bukaK3(ctxKsn()); else if (ke.indexOf('tab:') === 0) keTab(ke.slice(4)); else if (ke.indexOf('web:') === 0) bukaWeb(ke.slice(4)); return; }
     b = t.closest('[data-web]'); if (b) { var u = b.getAttribute('data-web'); if (u) bukaWeb(u); else roti('Link belum tersedia.'); return; }
     b = t.closest('[data-saring]'); if (b) { saringUnit = b.getAttribute('data-saring'); gambar(); return; }
     b = t.closest('[data-aksi]'); if (!b) return;
