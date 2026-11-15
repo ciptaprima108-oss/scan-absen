@@ -12,9 +12,9 @@
   var NB = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
   var CTX = null, lapisEl = null, H = null, galat = '', memuat = false, urutan = 0, periode = '', tab = 'ajuan', fStatus = 'semua', fJenis = 'semua', terbuka = {}, DITOLAK = {};
   var SIMPAN = {};
-  var STATUS = { 'MENUNGGU ADMIN': ['kuning', 'Menunggu admin'], 'MENUNGGU PIMPINAN': ['kuning', 'Menunggu Pak Fanza'], DISETUJUI: ['hijau', 'Disetujui'], DITOLAK: ['merah', 'Ditolak'] };
+  var STATUS = { 'MENUNGGU ADMIN': ['kuning', 'Menunggu admin'], 'MENUNGGU PIMPINAN': ['kuning', 'Menunggu Pak Fanza'], DISETUJUI: ['hijau', 'Disetujui'], DITOLAK: ['merah', 'Ditolak'], BATAL: ['merah', 'BATAL'] };
   /* v3.18 kasbon-bukti-transfer-15nov: server baru mengirim buktiUrl (alur pimpinan dulu -> admin transfer + bukti) -> label baru; server lama -> label di atas */
-  var STATUS_BARU = { 'MENUNGGU ADMIN': ['kuning', 'Siap ditransfer'], 'MENUNGGU PIMPINAN': ['kuning', 'Menunggu pimpinan'], DISETUJUI: ['hijau', 'Ditransfer'], DITOLAK: ['merah', 'Ditolak'] };
+  var STATUS_BARU = { 'MENUNGGU ADMIN': ['kuning', 'Siap ditransfer'], 'MENUNGGU PIMPINAN': ['kuning', 'Menunggu pimpinan'], DISETUJUI: ['hijau', 'Ditransfer'], DITOLAK: ['merah', 'Ditolak'], BATAL: ['merah', 'BATAL'] };
   function alurBaru() { return ((H && H.ajuan) || []).some(function (a) { return a && a.buktiUrl !== undefined; }); }
   function labelSt(a) { var w = (a.buktiUrl !== undefined ? STATUS_BARU : STATUS)[a.status] || ['abu', a.status]; if (a.buktiUrl !== undefined && a.status === 'DISETUJUI' && a.jenis === 'CICILAN HP') w = ['hijau', 'Disetujui']; return w; }
   function urlAman(u) { return /^https:\/\/[^\s"<>]+$/.test(String(u || '')) ? String(u) : ''; }
@@ -119,7 +119,9 @@
         + (a.accAdmin ? '<br>✓ Admin <b>' + esc(a.accAdmin) + '</b> ' + esc(a.accAdminWaktu || '') : '') + (a.accPimpinan ? '<br>✓ ' + (a.buktiUrl !== undefined ? 'Pimpinan' : 'Pak Fanza') + ' <b>' + esc(a.accPimpinan) + '</b> ' + esc(a.accPimpinanWaktu || '') : '')
         + (a.buktiWaktu || a.buktiOleh ? '<br>✓ Ditransfer <b>' + esc(a.buktiOleh || '') + '</b> ' + esc(a.buktiWaktu || '') : '') + (a.alasanTanpaBukti ? '<br>Tanpa bukti: ' + esc(a.alasanTanpaBukti) : '')
         + (a.status === 'DITOLAK' ? '<br><span style="color:var(--tMerah);font-weight:700">Ditolak: ' + esc(a.alasanTolak || '-') + '</span>' : '') + (a.idTercatat ? '<br>Tercatat <b>' + esc(a.idTercatat) + '</b>' : '') + '</div>'
+        + (a.status === 'BATAL' ? '<div class="dkKecil" style="color:var(--tMerah);font-weight:700">Dibatalkan' + (a.batalOleh ? ' oleh ' + esc(a.batalOleh) : '') + (a.batalWaktu ? ' · ' + esc(a.batalWaktu) : '') + (a.alasanBatal ? '<br>Alasan: ' + esc(a.alasanBatal) : '') + '</div>' : '')
         + '<button type="button" class="tKecil kbDokumen" data-d="pdf:' + esc(a.id) + '">' + IK('dokumen') + ' PDF ajuan</button>'
+        + (H.bolehBatal && window.WHL_KASBON && window.WHL_KASBON.bisaBatal && window.WHL_KASBON.bisaBatal(a, true) ? ' <button type="button" class="tKecil kbDokumen" data-d="batal:' + esc(a.id) + '" style="color:var(--tMerah)">⛔ Batalkan</button>' : '')
         + (ub ? ' <button type="button" class="tKecil kbDokumen" data-d="url:' + esc(a.id) + ':bukti">Lihat bukti transfer</button>' : '')
         + (uf ? ' <button type="button" class="tKecil kbDokumen" data-d="url:' + esc(a.id) + ':foto">Foto driver</button>' : '') + '</div>';
     }).join('') + '</div>';
@@ -249,6 +251,7 @@
     if (n.indexOf('jn:') === 0) { fJenis = n.slice(3); lapis(); return; }
     if (n.indexOf('buka:') === 0) { var k = n.slice(5); terbuka[k] = !terbuka[k]; lapis(); return; }
     if (n.indexOf('pdf:') === 0) { ambilPdf(API.Pusat.kasbonPdf(sesi(), n.slice(4))); return; }
+    if (n.indexOf('batal:') === 0) { var ib = n.slice(6), xb = ((H && H.ajuan) || []).filter(function (z) { return z.id === ib; })[0]; if (xb && window.WHL_KASBON) window.WHL_KASBON.batalModal(xb, CTX, function () { SIMPAN = {}; muat(true); }); return; }
     if (n.indexOf('url:') === 0) {
       var ip = n.lastIndexOf(':'), idU = n.slice(4, ip), jn = n.slice(ip + 1), aU = ((H && H.ajuan) || []).filter(function (z) { return z.id === idU; })[0];
       var u = aU ? urlAman(jn === 'foto' ? aU.fotoDriverUrl : aU.buktiUrl) : ''; if (!u) return;
@@ -259,7 +262,7 @@
     if (n === 'excel') { if (H) excel(); return; }
     if (n === 'csv') { if (H) csv(); return; }
   }
-  function kembali() { if (!lapisEl) return false; tutup(); return true; }
+  function kembali() { if (window.WHL_KASBON && window.WHL_KASBON.tutupBatal && window.WHL_KASBON.tutupBatal()) return true; if (!lapisEl) return false; tutup(); return true; }
   function lupakan() { SIMPAN = {}; H = null; galat = ''; periode = ''; tab = 'ajuan'; fStatus = 'semua'; fJenis = 'semua'; if (lapisEl) tutup(); }
   window.WHL_DOKKAS = { boleh: boleh, buka: buka, kembali: kembali, lupakan: lupakan, _uji: { xlsx: function () { return H ? keB64(bukuExcel()) : ''; }, csv: function () { return H ? teksCsv() : ''; } } };
 })();

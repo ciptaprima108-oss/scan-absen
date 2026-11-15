@@ -10,7 +10,7 @@
  *   pusatKasbonSaya [token] -> {ok, bolehAcc, list[], pimpinan[]}
  *   pusatKasbonPutus [token, id, 'ACC'|'TOLAK', alasan] -> {ok, id, status}
  *   pusatKasbonPdf [token, id] -> {ok, nama, b64}
- * v3.18 kasbon-bukti-transfer-15nov: KASBON wajib foto driver (d.fotoDriver JPEG <=1280 px q0.8); urutan ACC baru MENUNGGU PIMPINAN -> MENUNGGU ADMIN (siap ditransfer)
+ * v3.18 kasbon-bukti-transfer-15nov: KASBON wajib foto driver (d.fotoDriver JPEG; v3.19: <=800 px q0.6, < 100 KB); urutan ACC baru MENUNGGU PIMPINAN -> MENUNGGU ADMIN (siap ditransfer)
  *   -> DISETUJUI (ditransfer, bukti admin); tab "Perlu ACC pimpinan" paling depan; info bukti adaBukti/buktiWaktu/buktiOleh/buktiUrl. Server lama = label lama.
  * Anti-dobel: cid per ajuan (kirim ulang cid sama -> server balas id lama). Draf form + antrean kirim ulang disimpan di HP per akun.
  */
@@ -58,18 +58,18 @@
     for (var i = 0; i < tenor && sisa > 0; i++) { var a = i === tenor - 1 ? sisa : Math.min(per, sisa); out.push(a); sisa -= a; }
     return out;
   }
-  /* v3.18 kasbon-bukti-transfer-15nov: foto driver (wajib untuk KASBON) -> JPEG sisi terpanjang maks 1280 px, kualitas 0.8 (turun pelan kalau masih > batas) */
-  var MAKS_FOTO_DRV = 450000;
+  /* v3.18 kasbon-bukti-transfer-15nov: foto driver (wajib untuk KASBON) -> JPEG sisi terpanjang maks 800 px, kualitas 0.6 (v3.19) (turun pelan kalau masih > batas) */
+  var MAKS_FOTO_DRV = 135000; /* v3.19 (Reza): PDF kasbon seringan mungkin -> sisi 800 px, JPEG 0.6, target < 100 KB */
   function fotoKecil(file) {
     return new Promise(function (ok, gagal) {
       var url = URL.createObjectURL(file), img = new Image();
       img.onload = function () {
-        var w = img.naturalWidth, h = img.naturalHeight, sk = Math.min(1, 1280 / Math.max(w, h)), q = 0.8, d = '';
+        var w = img.naturalWidth, h = img.naturalHeight, sk = Math.min(1, 800 / Math.max(w, h)), q = 0.6, d = '';
         for (var i = 0; i < 8; i++) {
           var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * sk)); c.height = Math.max(1, Math.round(h * sk));
           var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
           d = c.toDataURL('image/jpeg', q); if (d.length <= MAKS_FOTO_DRV) break;
-          if (q > 0.55) q -= 0.1; else sk *= 0.85;
+          if (q > 0.45) q -= 0.08; else sk *= 0.85;
         }
         URL.revokeObjectURL(url);
         if (!/^data:image\/jpeg;base64,/.test(d)) gagal(new Error('foto tidak bisa diolah')); else ok(d);
@@ -207,8 +207,8 @@
   /* ---------- daftar "Ajuan saya" + "Perlu ACC" ---------- */
   var ANTRE_TAMPIL = [], GALAT_DAFTAR = '', tabOtomatis = false;
   /* v3.18 alur baru: MENUNGGU PIMPINAN -> MENUNGGU ADMIN (siap ditransfer) -> DISETUJUI (ditransfer). Server lama (tanpa adaBukti) -> label lama. */
-  var STATUS = { 'MENUNGGU ADMIN': ['kuning', 'Menunggu transfer admin'], 'MENUNGGU PIMPINAN': ['kuning', 'Menunggu ACC pimpinan'], DISETUJUI: ['hijau', 'Ditransfer'], DITOLAK: ['merah', 'Ditolak'] };
-  var STATUS_LAMA = { 'MENUNGGU ADMIN': ['kuning', 'Menunggu admin'], 'MENUNGGU PIMPINAN': ['kuning', 'Menunggu Pak Fanza'], DISETUJUI: ['hijau', 'Disetujui'], DITOLAK: ['merah', 'Ditolak'] };
+  var STATUS = { 'MENUNGGU ADMIN': ['kuning', 'Menunggu transfer admin'], 'MENUNGGU PIMPINAN': ['kuning', 'Menunggu ACC pimpinan'], DISETUJUI: ['hijau', 'Ditransfer'], DITOLAK: ['merah', 'Ditolak'], BATAL: ['merah', 'BATAL'] };
+  var STATUS_LAMA = { 'MENUNGGU ADMIN': ['kuning', 'Menunggu admin'], 'MENUNGGU PIMPINAN': ['kuning', 'Menunggu Pak Fanza'], DISETUJUI: ['hijau', 'Disetujui'], DITOLAK: ['merah', 'Ditolak'], BATAL: ['merah', 'BATAL'] };
   function labelStatus(x) {
     var baru = !!x && x.adaBukti !== undefined, w = (baru ? STATUS : STATUS_LAMA)[x && x.status] || ['abu', (x && x.status) || '-'];
     if (baru && x.status === 'DISETUJUI' && x.jenis === HP) w = ['hijau', 'Disetujui'];
@@ -250,6 +250,8 @@
     }
     if (x.status === 'MENUNGGU ADMIN' && x.adaBukti !== undefined) h += '<div class="kbAcc biru">' + IK('alarm') + '<span>' + (x.accPimpinan ? 'Sudah di-ACC pimpinan. ' : '') + 'Menunggu transfer admin (bukti transfer diunggah admin di Input DO).</span></div>';
     else if (x.perluPimpinan && x.status !== 'DITOLAK' && x.status !== 'DISETUJUI') h += '<div class="kbAcc biru">' + IK('alarm') + '<span>Butuh ACC ' + (ALUR_BARU ? 'pimpinan' : 'Pak Fanza') + (x.alasanPimpinan ? ': ' + esc(x.alasanPimpinan) : '') + '</span></div>';
+    if (x.status === 'BATAL') h += '<div class="kbTolak">' + IK('alarm') + '<span>Dibatalkan' + (x.batalOleh ? ' oleh ' + esc(x.batalOleh) : '') + (x.batalWaktu ? ' · ' + esc(x.batalWaktu) : '') + (x.alasanBatal ? '<br>Alasan: ' + esc(x.alasanBatal) : '') + '</span></div>';
+    if (bisaBatal(x, BOLEHACC)) h += '<button type="button" class="tKecil kbDokumen" data-k="batalKb:' + esc(x.id) + '" style="color:var(--tMerah);margin-left:6px">⛔ Batalkan</button>';
     if (x.status === 'DITOLAK') h += '<div class="kbTolak">' + IK('alarm') + '<span>Alasan: ' + esc(x.alasanTolak || '-') + (x.ditolakOleh ? '<br><small style="font-weight:600">' + esc(x.ditolakOleh) + '</small>' : '') + '</span></div>';
     h += '<button type="button" class="tKecil kbDokumen" data-k="pdf:' + esc(x.id) + '">' + IK('dokumen') + ' Dokumen PDF' + (x.adaPdf ? '' : ' (dibuat saat dibuka)') + '</button>';
     if (acc) {
@@ -261,6 +263,35 @@
       }
     }
     return h + '</div>';
+  }
+  /* v3.19 BATALKAN KASBON (KONTRAK REVISI nama-driver-satu-15nov, DASHBOARD V502): khusus Fanza/Reza, kasbon MENUNGGU PIMPINAN/ADMIN/DISETUJUI, alasan wajib (modal sendiri) */
+  function bisaBatal(x, hak) { return !!hak && !!x && x.jenis === KASBON && ['MENUNGGU PIMPINAN', 'MENUNGGU ADMIN', 'DISETUJUI'].indexOf(x.status) >= 0 && !!(API.Pusat.punya && API.Pusat.punya('pusatKasbonBatal')); }
+  var mdlBatal = null;
+  function tutupBatal() { if (mdlBatal) { mdlBatal.remove(); mdlBatal = null; return true; } return false; }
+  function batalModal(x, ctx, selesai) {
+    pasangGaya(); tutupBatal();
+    var c = ctx || CTX, rt = function (t) { if (c && c.roti) c.roti(t); };
+    mdlBatal = document.createElement('div'); mdlBatal.className = 'kbBatalM';
+    mdlBatal.setAttribute('style', 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center');
+    mdlBatal.innerHTML = '<div style="background:var(--panel,#fff);color:var(--teks);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))">'
+      + '<b style="font-size:16px;display:block">⛔ Batalkan kasbon?</b><div class="kecil" style="margin:6px 0 10px;line-height:1.5">' + esc(x.nama || '') + ' · ' + rp(x.nominal) + ' · ' + esc(x.id) + '<br>Status jadi <b>BATAL</b>, tidak dipotong dari gaji. Pengaju & admin dapat notifikasi.</div>'
+      + '<label class="lb" for="kbAlasanBatal">Alasan pembatalan <i class="wajib">wajib</i></label><textarea class="isian bnrTA" id="kbAlasanBatal" rows="3" maxlength="200" placeholder="mis. driver batal ambil / salah input"></textarea>'
+      + '<div class="pesan" id="kbBatalPesan"></div><div class="kbTombol"><button type="button" class="tKecil" data-b="tutup">Kembali</button><button type="button" class="tUtama tMerah" data-b="kirim">Batalkan kasbon</button></div></div>';
+    document.body.appendChild(mdlBatal);
+    mdlBatal.addEventListener('click', function (ev) {
+      if (ev.target === mdlBatal) { tutupBatal(); return; }
+      var b = ev.target.closest('[data-b]'); if (!b) return;
+      if (b.getAttribute('data-b') === 'tutup') { tutupBatal(); return; }
+      var al = (document.getElementById('kbAlasanBatal').value || '').trim(), ps = document.getElementById('kbBatalPesan');
+      if (al.length < 3) { ps.textContent = 'Tulis alasan pembatalan.'; R.bunyi && R.bunyi('gagal'); return; }
+      b.disabled = true; b.innerHTML = '<span class="putar"></span> Membatalkan…';
+      var S = c && c.sesi ? c.sesi() : sesi();
+      API.Pusat.panggil('pusatKasbonBatal', [S && S.tokenPusat, x.id, al], 45000).then(function (h) {
+        if (h && h.ok) { tutupBatal(); R.bunyi && R.bunyi('sukses'); rt('Kasbon ' + x.id + ' dibatalkan.'); if (selesai) selesai(h); return; }
+        b.disabled = false; b.textContent = 'Batalkan kasbon'; ps.textContent = (h && h.pesan) || (h && h.tolak ? 'Pembatalan khusus Pak Fanza / Pak Reza.' : 'Belum bisa dibatalkan.');
+      }, function (e) { b.disabled = false; b.textContent = 'Batalkan kasbon'; ps.textContent = 'Belum terkirim: ' + ((e && e.message) || 'cek sinyal'); });
+    });
+    setTimeout(function () { var t = document.getElementById('kbAlasanBatal'); if (t) t.focus(); }, 80);
   }
   function gambarDaftar(A, galat) {
     A = A || [];
@@ -573,6 +604,7 @@
     }
     if (n.indexOf('tolak:') === 0) { tolakId = n.slice(6); tolakAlasan = ''; gambarAcc(); setTimeout(function () { var t2 = document.getElementById('kbAlasanTolak'); if (t2) t2.focus(); }, 60); return; }
     if (n === 'batalTolak') { tolakId = ''; gambarAcc(); return; }
+    if (n.indexOf('batalKb:') === 0) { var ik = n.slice(8), xk = (LIST || []).concat(PIMP).filter(function (z) { return z.id === ik; })[0]; if (xk) batalModal(xk, CTX, function () { OPSI_T = 0; daftar(tab === 'acc' ? 'acc' : 'daftar'); }); return; }
     if (n.indexOf('kirimTolak:') === 0) {
       var el = document.getElementById('kbAlasanTolak'); tolakAlasan = el ? el.value : tolakAlasan;
       if (!String(tolakAlasan).trim()) { roti('Tulis alasan penolakan dulu.'); R.bunyi && R.bunyi('gagal'); if (el) el.focus(); return; }
@@ -580,8 +612,9 @@
     }
   }
   /** untuk tombol Back HP (MainActivity -> WHL_KEMBALI menekan .ksnKp .kb lapis paling atas) */
-  function kembali() { if (ttdEl) { tutupTtd(); return true; } if (!lapisEl) return false; if (tab === 'baru' && F) { simpanIsian(); simpanDraf(); daftar('daftar'); } else tutup(); return true; }
+  function kembali() { if (tutupBatal()) return true; if (ttdEl) { tutupTtd(); return true; } if (!lapisEl) return false; if (tab === 'baru' && F) { simpanIsian(); simpanDraf(); daftar('daftar'); } else tutup(); return true; }
   function lupakan() { OPSI = null; OPSI_T = 0; LIST = null; PIMP = []; BOLEHACC = false; F = null; if (lapisEl) tutup(); }
   window.WHL_KASBON = { pasang: function (c) { CTX = c; }, boleh: boleh, buka: buka, kirimAntrean: kirimAntrean, kembali: kembali, lupakan: lupakan,
+    batalModal: batalModal, bisaBatal: bisaBatal, tutupBatal: tutupBatal,
     _uji: { rencana: rencana, isi: function () { return F; } } };
 })();
