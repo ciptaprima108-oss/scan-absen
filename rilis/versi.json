@@ -1,15 +1,14 @@
 {
- "versi": "3.16",
- "versionCode": 317,
+ "versi": "3.17",
+ "versionCode": 318,
  "wajib": false,
  "catatan": [
-  "Lembur tersambung ke server: ajukan lembur untuk shift yang sedang berjalan (1x ACC maks 2 jam, mau lanjut ajukan lagi)",
-  "Pimpinan ACC / tolak lembur dari app; status Dicabut dan Kedaluwarsa ikut tampil",
-  "Ketuk notifikasi lembur langsung membuka layar lembur",
-  "Menu Kehadiran, kotak absen Absen | Lembur, Dokumen kasbon & cicilan (dari 3.15)"
+  "Lembur: minta 1 sampai 6 jam, pimpinan menentukan jam saat ACC (bawaan = jam yang diminta)",
+  "Ajuan lembur untuk shift yang sedang berjalan; status Dicabut dan Kedaluwarsa ikut tampil; ketuk notifikasi lembur langsung membuka layar lembur",
+  "Menu Kehadiran, kotak absen Absen | Lembur, Dokumen kasbon & cicilan"
  ],
- "apk": "WHL-App-v3.16.apk",
- "ukuran": 8309445,
- "sha256": "6fea3a5c1d3dadd047cd8bc56df5ee07ac852bbc3fd261e6458e65dd6118279a",
- "dibuat": "2026-11-15 12:01"
+ "apk": "WHL-App-v3.17.apk",
+ "ukuran": 8310248,
+ "sha256": "db6c01f0155bcad2915779d1e3da84583baa7774284df68dc6f98523bf59079a",
+ "dibuat": "2026-11-15 12:34"
 }
