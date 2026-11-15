@@ -1,14 +1,14 @@
 {
- "versi": "3.17",
- "versionCode": 318,
+ "versi": "3.18",
+ "versionCode": 319,
  "wajib": false,
  "catatan": [
-  "Lembur: minta 1 sampai 6 jam, pimpinan menentukan jam saat ACC (bawaan = jam yang diminta)",
-  "Ajuan lembur untuk shift yang sedang berjalan; status Dicabut dan Kedaluwarsa ikut tampil; ketuk notifikasi lembur langsung membuka layar lembur",
-  "Menu Kehadiran, kotak absen Absen | Lembur, Dokumen kasbon & cicilan"
+  "Kasbon: wajib foto driver saat pengawas mengajukan kasbon",
+  "Alur baru: ACC pimpinan dulu, lalu admin transfer + bukti transfer; status Menunggu ACC pimpinan / Menunggu transfer admin / Ditransfer",
+  "Pimpinan: tab Perlu ACC pimpinan paling depan dengan jumlah; Dokumen kasbon + Excel ada tautan bukti transfer"
  ],
- "apk": "WHL-App-v3.17.apk",
- "ukuran": 8310248,
- "sha256": "db6c01f0155bcad2915779d1e3da84583baa7774284df68dc6f98523bf59079a",
- "dibuat": "2026-11-15 12:34"
+ "apk": "WHL-App-v3.18.apk",
+ "ukuran": 8312938,
+ "sha256": "489891c57492e476b3e8981854f28e24eccabdd454a504a82a45d973b1d795e9",
+ "dibuat": "2026-11-15 14:35"
 }
