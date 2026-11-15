@@ -1,14 +1,14 @@
 {
- "versi": "3.14",
- "versionCode": 315,
+ "versi": "3.15",
+ "versionCode": 316,
  "wajib": false,
  "catatan": [
-  "Menu baru Gaji driver: perkiraan sisa gaji per driver & per unit sesudah potongan kasbon dan cicilan HP (hak akses diatur server)",
-  "Menu baru Ajuan kasbon: kasbon / cicilan HP driver dan cicilan HP karyawan, tanda tangan jari peminjam di HP; Pak Fanza ACC / tolak dari app",
-  "Ikon Beranda bisa diatur sendiri: pilih & urutkan ikon (tombol Atur ikon atau tekan lama ikon)"
+  "Menu baru Kehadiran: absen masuk/pulang, izin / cuti, dan lembur di satu tempat (lembur aktif otomatis begitu server siap)",
+  "Kotak absen di Beranda: tombol Absen dan Lembur berdampingan; pimpinan lihat ACC lembur",
+  "Menu baru Dokumen kasbon & cicilan (admin/pimpinan): daftar ajuan per bulan, PDF per ajuan, rekap potongan + PDF / Excel / CSV"
  ],
- "apk": "WHL-App-v3.14.apk",
- "ukuran": 8290772,
- "sha256": "a00689e35eec913940a7cb3fff3f30aee07d051f8d4215d7062ceb740be8536d",
- "dibuat": "2026-11-15 10:32"
+ "apk": "WHL-App-v3.15.apk",
+ "ukuran": 8307942,
+ "sha256": "927498619ad01069c33b21e073624afd5e5a9c3e3c0e13fba98c63ed0cce17e6",
+ "dibuat": "2026-11-15 11:33"
 }
