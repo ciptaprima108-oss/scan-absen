@@ -1,14 +1,15 @@
 {
- "versi": "3.15",
- "versionCode": 316,
+ "versi": "3.16",
+ "versionCode": 317,
  "wajib": false,
  "catatan": [
-  "Menu baru Kehadiran: absen masuk/pulang, izin / cuti, dan lembur di satu tempat (lembur aktif otomatis begitu server siap)",
-  "Kotak absen di Beranda: tombol Absen dan Lembur berdampingan; pimpinan lihat ACC lembur",
-  "Menu baru Dokumen kasbon & cicilan (admin/pimpinan): daftar ajuan per bulan, PDF per ajuan, rekap potongan + PDF / Excel / CSV"
+  "Lembur tersambung ke server: ajukan lembur untuk shift yang sedang berjalan (1x ACC maks 2 jam, mau lanjut ajukan lagi)",
+  "Pimpinan ACC / tolak lembur dari app; status Dicabut dan Kedaluwarsa ikut tampil",
+  "Ketuk notifikasi lembur langsung membuka layar lembur",
+  "Menu Kehadiran, kotak absen Absen | Lembur, Dokumen kasbon & cicilan (dari 3.15)"
  ],
- "apk": "WHL-App-v3.15.apk",
- "ukuran": 8307942,
- "sha256": "927498619ad01069c33b21e073624afd5e5a9c3e3c0e13fba98c63ed0cce17e6",
- "dibuat": "2026-11-15 11:33"
+ "apk": "WHL-App-v3.16.apk",
+ "ukuran": 8309445,
+ "sha256": "6fea3a5c1d3dadd047cd8bc56df5ee07ac852bbc3fd261e6458e65dd6118279a",
+ "dibuat": "2026-11-15 12:01"
 }
