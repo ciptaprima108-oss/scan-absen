@@ -1,16 +1,17 @@
 {
- "versi": "3.28",
- "versionCode": 329,
+ "versi": "3.29",
+ "versionCode": 330,
  "wajib": false,
  "catatan": [
-  "Nota bengkel: tombol Retur untuk nota yang sudah Lunas (jumlah, alasan, foto bukti)",
-  "Banner bergambar tampil utuh, judul pindah ke bawah gambar",
-  "Label Baru hanya 7 hari dan hilang setelah dibuka",
-  "Ikon baru untuk Nota bengkel, Dokumen kasbon, Menu Input, Pos Kontrol, Dashboard Produksi, Proyeksi, Kuota 107",
-  "Nota bengkel: ajuan dibatalkan admin tampil merah beserta alasannya"
+  "Driver bisa masuk App WHL: Hari ini (ritase, KM dari DO, tonase) + progres target KM bulanan",
+  "Driver: ID card QR, Dokumen saya, DO saya",
+  "Forum Umum untuk staf dan driver (Forum Staf tetap)",
+  "Siapa online: ringkas ala WA, staf dan driver",
+  "Katalog unit (pimpinan, admin, pengawas)",
+  "Lebih cepat: data terakhir tampil dulu, menu dimuat di belakang"
  ],
- "apk": "WHL-App-v3.28.apk",
- "ukuran": 8349257,
- "sha256": "726bc4c2f232411d6b2cb0dc4dca6a625ada324b1a6f91ce1258ac6f8fa66ca5",
- "dibuat": "2026-11-16 15:24"
+ "apk": "WHL-App-v3.29.apk",
+ "ukuran": 8393838,
+ "sha256": "c103442e0ba26aa5110ecf390b21e8a1e66e8bd20665fe254b747a8f6f3d2c43",
+ "dibuat": "2026-11-16 16:41"
 }
