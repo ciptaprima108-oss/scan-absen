@@ -1,14 +1,14 @@
 {
- "versi": "3.19",
- "versionCode": 320,
+ "versi": "3.20",
+ "versionCode": 321,
  "wajib": false,
  "catatan": [
-  "Kehadiran: Izin / Sakit / Cuti / OFF langsung dari app (lampiran wajib), riwayat + batalkan, persetujuan izin untuk penyetuju (pilih potong gaji / tidak)",
-  "Riwayat lembur per bulan: jam ACC, jam tercatat, disetujui / ditolak",
-  "Kasbon: pimpinan bisa Batalkan (status BATAL); foto driver lebih ringan"
+  "Buka app lebih cepat: panggilan ke server tidak dobel lagi + 1 panggilan gabungan Beranda",
+  "iPhone: PDF / Excel kasbon, slip, rekap, lampiran izin dibuka di dalam app",
+  "App web: berkas tersimpan dibuka langsung dari HP (tidak menunggu sinyal)"
  ],
- "apk": "WHL-App-v3.19.apk",
- "ukuran": 8329519,
- "sha256": "c6b4d0571b63fc09f5b84c9aa979d81a732a6f8f22afe0a35e3d8402550fba66",
- "dibuat": "2026-11-15 16:28"
+ "apk": "WHL-App-v3.20.apk",
+ "ukuran": 8333439,
+ "sha256": "f2e9c0830fcca10bc335823a5fbca3a7eceeef3aeb018445be9ff47929e2f3df",
+ "dibuat": "2026-11-16 01:25"
 }
