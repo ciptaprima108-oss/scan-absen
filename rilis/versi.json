@@ -1,13 +1,16 @@
 {
- "versi": "3.26",
- "versionCode": 327,
+ "versi": "3.28",
+ "versionCode": 329,
  "wajib": false,
  "catatan": [
-  "Foto nota, bukti pengerjaan, WA/BA: tombol Kamera langsung + Galeri (bisa pilih beberapa)",
-  "Kamera juga di foto nota HP (cicilan), lampiran izin, Forum, dan banner"
+  "Nota bengkel: tombol Retur untuk nota yang sudah Lunas (jumlah, alasan, foto bukti)",
+  "Banner bergambar tampil utuh, judul pindah ke bawah gambar",
+  "Label Baru hanya 7 hari dan hilang setelah dibuka",
+  "Ikon baru untuk Nota bengkel, Dokumen kasbon, Menu Input, Pos Kontrol, Dashboard Produksi, Proyeksi, Kuota 107",
+  "Nota bengkel: ajuan dibatalkan admin tampil merah beserta alasannya"
  ],
- "apk": "WHL-App-v3.26.apk",
- "ukuran": 8343043,
- "sha256": "16133b7f9aaae8bd0befee1a2fd7fc54a3efa64e4ca8756635de0700f22f64d8",
- "dibuat": "2026-11-16 07:04"
+ "apk": "WHL-App-v3.28.apk",
+ "ukuran": 8349257,
+ "sha256": "726bc4c2f232411d6b2cb0dc4dca6a625ada324b1a6f91ce1258ac6f8fa66ca5",
+ "dibuat": "2026-11-16 15:24"
 }
