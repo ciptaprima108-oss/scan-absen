@@ -1,17 +1,17 @@
 {
- "versi": "3.29",
- "versionCode": 330,
+ "versi": "3.30",
+ "versionCode": 331,
  "wajib": false,
  "catatan": [
-  "Driver bisa masuk App WHL: Hari ini (ritase, KM dari DO, tonase) + progres target KM bulanan",
-  "Driver: ID card QR, Dokumen saya, DO saya",
-  "Forum Umum untuk staf dan driver (Forum Staf tetap)",
-  "Siapa online: ringkas ala WA, staf dan driver",
-  "Katalog unit (pimpinan, admin, pengawas)",
-  "Lebih cepat: data terakhir tampil dulu, menu dimuat di belakang"
+  "Kondisi jalan + Lapor hazard (foto, GPS, suara) + Validasi hazard HSE",
+  "Banner cuaca & ulang tahun, layar spesial ulang tahun, Kirim ucapan",
+  "Kuis safety driver (2 sesi/hari, 10 tercepat dapat poin)",
+  "Poin WHL: saldo, riwayat, target KM harian dari DO, setara ritase per rute",
+  "Tukar hadiah (katalog masih masa uji), ACC & rekap tukar admin",
+  "Papan peringkat mingguan"
  ],
- "apk": "WHL-App-v3.29.apk",
- "ukuran": 8393838,
- "sha256": "c103442e0ba26aa5110ecf390b21e8a1e66e8bd20665fe254b747a8f6f3d2c43",
- "dibuat": "2026-11-16 16:41"
+ "apk": "WHL-App-v3.30.apk",
+ "ukuran": 8471057,
+ "sha256": "2e7497b1912abf08765d3f4f63d50c1ef73140fb166f18caffa66a8fdcb65d6f",
+ "dibuat": "2026-11-16 20:14"
 }
