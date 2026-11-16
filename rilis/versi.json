@@ -1,12 +1,12 @@
 {
- "versi": "3.22",
- "versionCode": 323,
+ "versi": "3.23",
+ "versionCode": 324,
  "wajib": false,
  "catatan": [
-  "Nota bengkel: form lebih rapi, bengkel & kategori bisa dipilih dari daftar, rekening Bank / Nomor / Atas nama + rekening sebelumnya otomatis"
+  "Nota bengkel: Bengkel / toko dan Kategori sekarang pilihan (dropdown); bengkel baru lewat pilihan Bengkel baru"
  ],
- "apk": "WHL-App-v3.22.apk",
- "ukuran": 8338516,
- "sha256": "36c674e3aa038f3597cfd33d8a84d6e471041de65b7573a45a4f937b9952400a",
- "dibuat": "2026-11-16 03:35"
+ "apk": "WHL-App-v3.23.apk",
+ "ukuran": 8339137,
+ "sha256": "31de721a4dcd37a9050d90197f9d7b40588002363a7da53f4c1d1faf1493e71d",
+ "dibuat": "2026-11-16 03:46"
 }
