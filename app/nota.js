@@ -157,7 +157,7 @@
   function sesi() { return CTX && CTX.sesi(); }
   /* server lama (belum dipasang paket v3.11) -> sembunyikan Banyak nota & video supaya tidak menggantung di antrean */
   function fiturBaru() { var P = API.Pusat; return !(P.dikenal && P.dikenal()) || P.punya('pusatNotaAjukanBanyak'); }
-  function boleh(S) { S = S || sesi(); if (!S || !S.user) return false; return !!S.user.admin || ['pengawas', 'pimpinan', 'penuh', 'admin'].indexOf(S.user.peran) >= 0; }
+  function boleh(S) { S = S || sesi(); if (!S || !S.user) return false; return !!S.user.admin || ['pengawas', 'pimpinan', 'penuh', 'admin'].indexOf(S.user.peran) >= 0 || !!S.user.nota; } /* v3.25 nota-izin-orang-16nov: izin per orang dari server (user.nota) */
   function akun() { var S = sesi(); return String((S && (S.idProfil || S.idKetik)) || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
   function kunciAntre() { return 'whlNotaAntre_' + akun(); }
   function antre() { return Simpan.ambil(kunciAntre()).then(function (v) { try { var a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }); }
