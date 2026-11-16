@@ -58,15 +58,30 @@
       + '<input class="isian kapital" id="ntAtasNama" data-f="rekNama" placeholder="Atas nama" value="' + esc(F.rekNama) + '">'
       + (F.rekening && !F.rekNo ? '<div class="kecil">Tersimpan: ' + esc(F.rekening) + '</div>' : '') + '</div>';
   }
-  function dlBengkel(tanpaAf) { return '<datalist id="ntBengkelDaftar">' + daftarBengkel().filter(function (b) { return !(tanpaAf && b.af); }).map(function (b) { return '<option value="' + esc(b.nama) + '">'; }).join('') + '</datalist>'; }
-  function dlKategori() { return '<datalist id="ntKatDaftar">' + daftarKategori().map(function (k) { return '<option value="' + esc(k) + '">'; }).join('') + '</datalist>'; }
+  /* v3.23 (Reza 16 Nov 10.40): bengkel = DROPDOWN asli dari daftar server + "➕ Bengkel baru…" (baru muncul kotak ketik); kategori = dropdown SAJA. */
+  var BUKAN_BENGKEL = /KWITANSI|\bNOTA\b|PEMBAYARAN|^[^A-Z0-9]*$/; /* entri daftar server yang jelas bukan nama bengkel / toko disembunyikan */
+  var KATEGORI0 = { JASA: ['PERBAIKAN', 'STORING', 'BAN', 'KELISTRIKAN', 'SERVIS RUTIN', 'LAS / BODI'], KAS: ['POOL', 'LIGHT VEHICLE', 'ATK', 'KONSUMSI', 'SPAREPART', 'LAIN-LAIN'] };
+  function pilihanBengkel(mode2) { /* mode2: 'langsung' (tanpa af) | 'semua' */ var lihat = {}; return daftarBengkel().filter(function (b) { if (mode2 === 'langsung' && b.af) return false; if (BUKAN_BENGKEL.test(b.nama) || lihat[b.nama]) return false; lihat[b.nama] = 1; return true; }).map(function (b) { return b.nama; }); }
+  function tokoHtml(judul, mode2, ph) {
+    var D = pilihanBengkel(mode2), ada = D.indexOf(hurufBesar(F.toko)) >= 0, baru = !D.length || F.tokoBaru || (F.toko && !ada);
+    if (baru) return '<label class="lb" for="ntToko">' + judul + '</label><input class="isian kapital" id="ntToko" data-f="toko" autocomplete="off" placeholder="' + esc(ph) + '" value="' + esc(F.toko) + '">'
+      + (D.length ? '<button type="button" class="tKecil" data-n="tokoDaftar" style="margin-top:6px;min-height:38px">Pilih dari daftar (' + D.length + ')</button>' : '');
+    return '<label class="lb" for="ntToko">' + judul + '</label><select class="isian" id="ntToko" data-tokopil="1"><option value="">Pilih bengkel / toko (' + D.length + ')</option>'
+      + D.map(function (n) { return '<option value="' + esc(n) + '"' + (hurufBesar(F.toko) === n ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') + '<option value="__BARU__">➕ Bengkel baru…</option></select>';
+  }
+  function kategoriHtml(kas) {
+    var D = daftarKategori(); if (!D.length) D = KATEGORI0[kas ? 'KAS' : 'JASA'].slice(); var k = hurufBesar(F.kategori); if (k && D.indexOf(k) < 0) D.push(k);
+    return '<label class="lb" for="ntKat">Kategori <span class="kecil">(opsional)</span></label><select class="isian" id="ntKat" data-f="kategori"><option value="">Tanpa kategori</option>'
+      + D.map(function (n) { return '<option value="' + esc(n) + '"' + (k === n ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') + '</select>';
+  }
+
   function gayaNota() {
     if (document.getElementById('ntGaya322')) return; var st = document.createElement('style'); st.id = 'ntGaya322';
     st.textContent = '.notaForm .isian{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box}'
       + '.notaForm input[type=date].isian{-webkit-appearance:none;appearance:none;min-height:52px;line-height:1.2;text-align:left}'
       + '.notaForm input[type=date]::-webkit-date-and-time-value{text-align:left}'
       + '.notaForm .lb{margin-top:14px;margin-bottom:6px}.notaForm .ntGrup .isian + .isian,.notaForm .ntGrup .ntRek + .isian,.notaForm .ntGrup .isian + .ntRek{margin-top:8px}'
-      + '.notaForm .ntRek{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.4fr);gap:8px}.notaForm .ntRek .isian{margin:0}.notaForm .ntPilihRek{font-size:14px;margin-bottom:8px}';
+      + '.notaForm .ntRek{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.4fr);gap:8px}.notaForm .ntRek .isian{margin:0;height:100%;min-height:52px}.notaForm .ntRek{align-items:stretch}.notaForm .ntPilihRek{font-size:14px;margin-bottom:8px}';
     document.head.appendChild(st);
   }
   function maksUnit() { return (OPSI && Number(OPSI.maksUnit)) || 10; }
@@ -274,7 +289,7 @@
       + (b ? '<label class="lb" for="ntToko">Bengkel <i class="wajib">wajib</i></label><select class="isian" id="ntToko" data-f="toko"><option value="">Pilih bengkel terafiliasi</option>' + af.map(function (x) { return '<option' + (F.toko === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>'
         + rekeningHtml('Rekening <span class="kecil">(opsional)</span>')
         + '<label class="lb">Hari bayar <i class="wajib">wajib</i></label><div class="segmen kecilSeg">' + pilih('hariBayar', 'SELASA', 'Selasa') + pilih('hariBayar', 'JUMAT', 'Jumat') + '</div>'
-        : '<label class="lb" for="ntToko">Vendor <i class="wajib">wajib</i></label><input class="isian kapital" id="ntToko" data-f="toko" list="ntBengkelDaftar" autocomplete="off" placeholder="Pilih / ketik vendor" value="' + esc(F.toko) + '">' + dlBengkel(false)
+        : tokoHtml('Vendor <i class="wajib">wajib</i>', 'semua', 'Ketik nama vendor / toko baru')
         + '<label class="lb" for="ntKep">Keperluan / alasan <i class="wajib">wajib</i></label><textarea class="isian bnrTA" id="ntKep" data-f="keperluan" rows="3" placeholder="Kenapa perlu pengajuan ini">' + esc(F.keperluan) + '</textarea>'));
   }
   function lbUnit(idL, idU, fL, fU, vL, vU) {
@@ -287,9 +302,9 @@
       + '<div class="kecil" style="margin:-4px 2px 6px">' + esc(lab) + '. Kode nota langsung dibuat server saat dikirim; admin tinggal transfer + unggah bukti.</div>'
       + '<label class="lb">Jenis nota</label><div class="segmen kecilSeg">' + pilih('jenisNota', 'JASA', 'Jasa') + pilih('jenisNota', 'KAS', 'Kas') + '</div>'
       + '<label class="lb" for="ntTgl">Tanggal nota</label><input class="isian" type="date" id="ntTgl" data-f="tglNota" value="' + esc(F.tglNota) + '">'
-      + '<label class="lb" for="ntToko">Bengkel / toko <i class="wajib">wajib</i></label><input class="isian kapital" id="ntToko" data-f="toko" list="ntBengkelDaftar" autocomplete="off" placeholder="Pilih dari daftar / ketik bengkel baru" value="' + esc(F.toko) + '">' + dlBengkel(true)
+      + tokoHtml('Bengkel / toko <i class="wajib">wajib</i>', 'langsung', 'Ketik nama bengkel / toko baru')
       + rekeningHtml('Rekening <span class="kecil">(opsional, untuk admin transfer)</span>')
-      + '<label class="lb" for="ntKat">Kategori <span class="kecil">(opsional' + (kas ? ', mis. POOL' : ', mis. STORING') + ')</span></label><input class="isian kapital" id="ntKat" data-f="kategori" list="ntKatDaftar" autocomplete="off" placeholder="' + (kas ? 'POOL / ATK / ...' : 'STORING / BAN / ...') + '" value="' + esc(F.kategori) + '">' + dlKategori()
+      + kategoriHtml(kas)
       + '</div>' + dl
       + F.unitR.map(function (u, i) {
         return '<div class="kartu notaForm notaUnitK"><div class="notaAtas"><b>Unit ' + (i + 1) + '</b>' + (F.unitR.length > 1 ? '<button type="button" class="tKecil notaHapusB" data-n="hapusUnit:' + i + '">Hapus</button>' : '') + '</div>'
@@ -368,6 +383,8 @@
   }
   function ubah(ev) {
     var e = ev.target; if (!e.getAttribute) return;
+    if (e.getAttribute('data-tokopil')) { simpanIsian(); if (e.value === '__BARU__') { F.tokoBaru = true; F.toko = ''; gambarForm(); setTimeout(function () { var t = document.getElementById('ntToko'); if (t) t.focus(); }, 60); return; }
+      F.tokoBaru = false; F.toko = e.value; var rw4 = riwayatRek(F.toko); if (rw4.length && !F.rekNo && !F.rekening) isiRek(rw4[0]); gambarForm(); return; }
     if (e.getAttribute('data-rekpil')) { var rw2 = riwayatRek(F.toko)[+e.value]; if (rw2) { simpanIsian(); isiRek(rw2); gambarForm(); } return; }
     if (e.getAttribute('data-f')) { setNilai(e.getAttribute('data-f'), e.value); if (e.getAttribute('data-f') === 'rekBank' || e.tagName === 'SELECT' && e.getAttribute('data-f') === 'toko') { simpanIsian(); if (e.getAttribute('data-f') === 'toko') { var rw3 = riwayatRek(F.toko); if (rw3.length && !F.rekNo && !F.rekening) isiRek(rw3[0]); } gambarForm(); } return; }
     var p = document.getElementById('ntPesan');
@@ -510,9 +527,10 @@
     if (n.indexOf('tab:') === 0) { var t = n.slice(4); if (t === 'baru') formBaru(); else daftar(); return; }
     if (n.indexOf('baru:') === 0) { formBaru(null, n.slice(5)); return; }
     if (n.indexOf('mode:') === 0) { simpanIsian(); mode = n.slice(5); if (mode === 'banyak' && F.baris.length === 1 && !F.baris[0].lambung && F.lambung) F.baris[0] = { tglNota: F.tglNota, lambung: F.lambung, unit: F.unit, uraian: F.uraian, total: F.total, foto: F.foto.slice(), video: F.video.slice() }; gambarForm(); return; }
-    if (n.indexOf('set:') === 0) { simpanIsian(); var p = n.split(':'); F[p[1]] = p.slice(2).join(':'); if (p[1] === 'masukKe' && F.masukKe === BENGKEL && F.toko && (OPSI.bengkelAf || []).indexOf(F.toko) < 0) F.toko = ''; gambarForm(); R.getar(); return; }
+    if (n.indexOf('set:') === 0) { simpanIsian(); var p = n.split(':'); if (p[1] === 'jenisNota' && F.jenisNota !== p.slice(2).join(':')) F.kategori = ''; if (p[1] === 'masukKe') F.tokoBaru = false; F[p[1]] = p.slice(2).join(':'); if (p[1] === 'masukKe' && F.masukKe === BENGKEL && F.toko && (OPSI.bengkelAf || []).indexOf(F.toko) < 0) F.toko = ''; gambarForm(); R.getar(); return; }
     if (n.indexOf('hapusFoto:') === 0) { simpanIsian(); var q = n.slice(10), i0 = q.lastIndexOf(':'), tp = q.slice(0, i0); var L0 = ambilTempat(tp); L0.splice(+q.slice(i0 + 1), 1); gambarForm(); return; }
     if (n.indexOf('hapusVideo:') === 0) { simpanIsian(); var qv = n.slice(11), iv = qv.lastIndexOf(':'), tv = qv.slice(0, iv), Lv = ambilTempat(tv), x = Lv.splice(+qv.slice(iv + 1), 1)[0]; if (x) vHapus(x.vid).catch(function () { }); gambarForm(); return; }
+    if (n === 'tokoDaftar') { simpanIsian(); F.tokoBaru = false; F.toko = ''; gambarForm(); return; }
     if (n === 'tambahUnit') { simpanIsian(); if (F.unitR.length < maksUnit()) F.unitR.push(unitKosong()); gambarForm(); setTimeout(function () { var k = lapisEl && lapisEl.querySelectorAll('.notaUnitK'); if (k && k.length) k[k.length - 1].scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 60); return; }
     if (n.indexOf('hapusUnit:') === 0) { simpanIsian(); F.unitR.splice(+n.slice(10), 1); if (!F.unitR.length) F.unitR = [unitKosong()]; gambarForm(); return; }
     if (n === 'tambahBaris') { simpanIsian(); var akhir = F.baris[F.baris.length - 1] || barisKosong(); var nb = barisKosong(); nb.tglNota = akhir.tglNota || hariIni(); F.baris.push(nb); gambarForm(); setTimeout(function () { var k = lapisEl && lapisEl.querySelectorAll('.notaBarisK'); if (k && k.length) k[k.length - 1].scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 60); return; }
