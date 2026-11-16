@@ -14,7 +14,9 @@
     o: ['#FFB27A', '#FF7A33', '#D9480F'],   // oranye
     r: ['#FF9A9A', '#F2484D', '#B71C2C'],   // merah
     t: ['#8DF0E4', '#20C3B4', '#0B8A80'],   // toska
-    g: ['#7D8AA3', '#4A5872', '#2B3448']    // abu ban
+    g: ['#7D8AA3', '#4A5872', '#2B3448'],   // abu ban
+    u: ['#C9B8FF', '#7A5CF0', '#4B2FB8'],   // ungu (tahap1-16nov)
+    k: ['#5B5F6B', '#2E323B', '#14161B']    // arang / batu bara (tahap1-16nov)
   };
   function defs(u) {
     var h = '<defs>';
@@ -106,6 +108,30 @@
       + '<path d="M17 44c3-4 5 2 8-1s4-3 6 0" fill="none" stroke="' + F('bt') + '" stroke-width="2.4" stroke-linecap="round"/>'
       + '<circle cx="45" cy="44" r="13" fill="' + F('y') + '"/><circle cx="45" cy="44" r="13" fill="' + K + '"/><circle cx="45" cy="44" r="9" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="2"/>'
       + '<text x="45" y="48.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="11.5" fill="#9a5b00">Rp</text>'; };
+  /* tahap1-16nov (rancangan app-beranda-poin-16nov §2): 7 ikon kembar diganti bentuk sendiri-sendiri */
+  function kilau(x, y) { return '<path d="M' + x + ' ' + (y - 4) + 'l1.2 2.8 2.8 1.2-2.8 1.2-1.2 2.8-1.2-2.8-2.8-1.2 2.8-1.2z" fill="#fff"/>'; }
+  B.notaBengkel = function (F, K) { return '<path d="M10 10a4 4 0 0 1 4-4h26a4 4 0 0 1 4 4v44l-4-2.6-4 2.6-4-2.6-4 2.6-4-2.6-4 2.6-4-2.6-4 2.6-2-1.3z" fill="' + F('w') + '"/><path d="M10 10a4 4 0 0 1 4-4h26a4 4 0 0 1 4 4v44l-4-2.6-4 2.6-4-2.6-4 2.6-4-2.6-4 2.6-4-2.6-4 2.6-2-1.3z" fill="' + K + '"/>'
+      + '<path d="M16 16h18M16 23h22M16 30h14" stroke="#9CC3F2" stroke-width="3.2" stroke-linecap="round"/><path d="M16 40h10" stroke="' + F('o') + '" stroke-width="3.6" stroke-linecap="round"/>'
+      + '<g transform="rotate(45 47 41)"><rect x="43.5" y="38" width="7" height="24" rx="3.5" fill="' + F('o') + '"/><circle cx="47" cy="34" r="9.5" fill="' + F('o') + '"/><rect x="44" y="23" width="6" height="10" rx="1.5" fill="' + F('w') + '"/><circle cx="47" cy="34" r="9.5" fill="' + K + '"/></g>' + kilau(54, 10); };
+  B.dokKasbon = function (F, K) { return '<path d="M6 17a5 5 0 0 1 5-5h13l5 5h24a5 5 0 0 1 5 5v6H6z" fill="' + F('o') + '"/>'
+      + '<rect x="13" y="13" width="34" height="26" rx="3" fill="' + F('w') + '" transform="rotate(-6 30 26)"/><path d="M18 21h18M18 27h12" stroke="#9CC3F2" stroke-width="3" stroke-linecap="round" transform="rotate(-6 30 26)"/>'
+      + '<path d="M6 27h52v22a6 6 0 0 1-6 6H12a6 6 0 0 1-6-6z" fill="' + F('y') + '"/><path d="M6 27h52v22a6 6 0 0 1-6 6H12a6 6 0 0 1-6-6z" fill="' + K + '"/><rect x="14" y="33" width="14" height="4" rx="2" fill="#fff" opacity=".7"/>'
+      + '<circle cx="47" cy="45" r="11" fill="' + F('t') + '"/><circle cx="47" cy="45" r="11" fill="' + K + '"/><circle cx="47" cy="45" r="7.6" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.8"/><text x="47" y="49" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="10" fill="#fff">Rp</text>'; };
+  B.menuInput = function (F, K) { return '<rect x="12" y="4" width="30" height="54" rx="8" fill="' + F('bt') + '"/><rect x="12" y="4" width="30" height="54" rx="8" fill="' + K + '"/><rect x="15.5" y="10" width="23" height="40" rx="4" fill="' + F('w') + '"/>'
+      + '<rect x="19" y="14" width="16" height="5" rx="2.5" fill="#B9D3F3"/><rect x="19" y="22" width="16" height="5" rx="2.5" fill="#B9D3F3"/><rect x="19" y="30" width="11" height="5" rx="2.5" fill="#B9D3F3"/><rect x="19" y="40" width="16" height="6" rx="3" fill="' + F('t') + '"/><rect x="23" y="53" width="8" height="2.4" rx="1.2" fill="#fff" opacity=".6"/>'
+      + '<circle cx="47" cy="43" r="11" fill="' + F('o') + '"/><circle cx="47" cy="43" r="11" fill="' + K + '"/><path d="M47 37.5v11M41.5 43h11" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>' + kilau(52, 12); };
+  B.posKontrol = function (F, K) { return '<rect x="7" y="24" width="24" height="31" rx="3" fill="' + F('b') + '"/><rect x="7" y="24" width="24" height="31" rx="3" fill="' + K + '"/><path d="M3 26L19 13l16 13z" fill="' + F('r') + '"/><path d="M3 26L19 13l16 13z" fill="' + K + '"/>'
+      + '<rect x="11" y="30" width="16" height="11" rx="2" fill="#CFE7FF"/><path d="M13 31l5 9" stroke="#fff" stroke-width="2" opacity=".7"/><rect x="16" y="45" width="6" height="10" rx="1" fill="' + F('bt') + '"/>'
+      + '<circle cx="19" cy="9" r="4.5" fill="' + F('y') + '"/><circle cx="19" cy="9" r="8" fill="#FFC530" opacity=".25"/>'
+      + '<rect x="35" y="37" width="7" height="18" rx="2.5" fill="' + F('g') + '"/><g transform="rotate(-14 38 37)"><rect x="36" y="33" width="26" height="7" rx="3.5" fill="' + F('w') + '"/><rect x="41" y="33" width="5" height="7" fill="' + F('r') + '"/><rect x="51" y="33" width="5" height="7" fill="' + F('r') + '"/></g><circle cx="38.5" cy="37" r="3.6" fill="' + F('y') + '"/>'; };
+  B.dashProduksi = function (F, K) { return '<path d="M5 42a27 27 0 0 1 54 0v5a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5z" fill="' + F('bt') + '"/><path d="M5 42a27 27 0 0 1 54 0v5a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5z" fill="' + K + '"/>'
+      + '<g fill="none" stroke-width="5.5" stroke-linecap="round"><path d="M13 43a19 19 0 0 1 7.5-15.1" stroke="' + F('t') + '"/><path d="M25.5 25.2a19 19 0 0 1 13 0" stroke="' + F('y') + '"/><path d="M43.5 27.9A19 19 0 0 1 51 43" stroke="' + F('o') + '"/></g>'
+      + '<path d="M32 43L45 29" stroke="#fff" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="43" r="5.5" fill="' + F('w') + '"/><circle cx="32" cy="43" r="2" fill="' + F('r') + '"/>'
+      + '<path d="M8 60l3-6 6-1 4 3-1 4z" fill="' + F('k') + '"/><path d="M44 60l2-5 5 0 3 3-1 2z" fill="' + F('k') + '"/><path d="M11 55l3 0" stroke="#fff" stroke-opacity=".5" stroke-width="1.4"/>'; };
+  B.proyeksi = function (F, K) { return '<circle cx="28" cy="36" r="22" fill="' + F('r') + '"/><circle cx="28" cy="36" r="22" fill="' + K + '"/><circle cx="28" cy="36" r="15" fill="' + F('w') + '"/><circle cx="28" cy="36" r="8.5" fill="' + F('r') + '"/><circle cx="28" cy="36" r="3.4" fill="' + F('w') + '"/>'
+      + '<path d="M29 35L51 13" stroke="' + F('bt') + '" stroke-width="4" stroke-linecap="round"/><path d="M48 8l4.5 1.5L51 14l4.5 1.5L60 10 55 5z" fill="' + F('y') + '"/><path d="M48 8l7-3 5 5-4 1z" fill="' + F('o') + '"/>' + kilau(10, 12); };
+  B.kuota107 = function (F, K) { return '<circle cx="29" cy="30" r="23" fill="' + F('b') + '"/><path d="M29 30V7a23 23 0 0 1 21.9 16z" fill="' + F('y') + '"/><path d="M29 30l21.9-7A23 23 0 0 1 44 47.5z" fill="' + F('o') + '"/><circle cx="29" cy="30" r="23" fill="' + K + '"/><circle cx="29" cy="30" r="9" fill="' + F('bt') + '"/>'
+      + '<rect x="30" y="42" width="30" height="17" rx="8.5" fill="' + F('t') + '"/><rect x="30" y="42" width="30" height="17" rx="8.5" fill="' + K + '"/><text x="45" y="54.5" text-anchor="middle" font-family="Nunito,Arial,sans-serif" font-weight="900" font-size="12" fill="#fff">107</text>'; };
   B.monitorPos = B.monitor;
   var AKA = { notif: 'lonceng', unit: 'truk', skema: 'peta', storing: 'truk', pos: 'monitor', banner: 'pengumuman', kalender: 'jadwal', semua: 'lainnya', kpi: 'profil', ritase: 'grafik', inventaris: 'centang', absensi: 'kartuId' };
   function ilus(nama) {

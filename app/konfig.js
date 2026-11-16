@@ -6,12 +6,17 @@
 (function () {
   var S = 'https://script.google.com/macros/s/';
   var K = {
-    VERSI: '3.26', KODE: 327, /* KODE = versionCode APK (dipakai cek pembaruan di browser; di APK dibaca dari Android) */
+    VERSI: '3.28', KODE: 329, /* KODE = versionCode APK (dipakai cek pembaruan di browser; di APK dibaca dari Android) */
     RILIS: 'https:' + '/' + '/ciptaprima108-oss.github.io/scan-absen/rilis/', /* v3.3 pembaruan dari dalam app: versi.json + APK */
     DASH: S + 'AKfycbzqJ0nKotpl-TjuTHLTMcOZpYZSeWdE9VWHFw0h712aoMagPDZJMQ--7W-kDtCxPvw/exec',     /* DASHBOARD: Pusat WHL */
     ABSEN: S + 'AKfycbyJBXvN79b4y9eunDSRigMXmDOS4kW3K5ZF0ZEbGCKT1-WPqi-zEica0r7M__-dqwqhDQ/exec',  /* Absensi Tambang: api abm */
     INPUTDO: S + 'AKfycbyKhvU4gKQZuD63XdBMpHuBO52c7XX1sYnfkG9eBbZheulntIPJGS8iFdpvhIx8ADSb/exec', /* Input DO: ?mode=kpi, profil */
-    UJI: false
+    UJI: false,
+    /* tahap1-16nov: label "Baru" = 7 hari sejak tanggal rilis (06.00 WIB) DAN belum pernah dibuka di HP ini (localStorage whlBaruDibuka).
+       Fitur tanpa tanggal di sini tidak pernah dapat label. id = id ikon Atur Beranda (kehadiran, nota, laba, gaji, kasbon, dokkas, kotak, proyeksi, kelolaBanner, app:<nama>). */
+    RILIS_FITUR: {
+      nota: '2026-11-14', laba: '2026-11-15', gaji: '2026-11-15', kasbon: '2026-11-15', dokkas: '2026-11-15', kehadiran: '2026-11-15'
+    }
   };
   try {
     if (location.port && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {

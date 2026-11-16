@@ -55,9 +55,10 @@
 
   /* ---------- karusel ---------- */
   function html() {
-    var L = daftar();
-    return '<div class="bnrKotak"><div class="bnrGeser" id="bnrGeser">' + L.map(function (b, i) {
-      var isi = b.gambar ? '<img src="' + esc(b.gambar) + '" alt="" loading="lazy">' + (b.judul ? '<div class="bnrTeks gelap"><b>' + esc(b.judul) + '</b>' + (b.sub ? '<small>' + esc(b.sub) + '</small>' : '') + '</div>' : '')
+    var L = daftar(), adaCap = L.some(function (b) { return !!b.gambar; });
+    /* tahap1-16nov: banner bergambar -> gambar utuh (teks tidak ditimpa di atas poster), judul/keterangan di strip bawah; sembunyiJudul = strip kosong */
+    return '<div class="bnrKotak' + (adaCap ? ' adaCap' : '') + '" style="--nt:' + L.length + '"><div class="bnrGeser" id="bnrGeser">' + L.map(function (b, i) {
+      var isi = b.gambar ? '<span class="bnrGbr"><img src="' + esc(b.gambar) + '" alt="" loading="lazy"></span><span class="bnrCap">' + (b.judul && !b.sembunyiJudul ? '<b>' + esc(b.judul) + '</b>' + (b.sub ? '<small>' + esc(b.sub) + '</small>' : '') : '') + '</span>'
         : '<span class="bnrIlus">' + ilus(b.ilus) + '</span><div class="bnrTeks"><b>' + esc(b.judul) + '</b><small>' + esc(b.sub || '') + '</small></div>';
       return '<button type="button" class="bnr ' + (b.warna || 'biru') + (b.gambar ? ' foto' : '') + '" data-bnr="' + i + '" aria-label="' + esc(b.judul) + '">' + isi + '</button>';
     }).join('') + '</div><div class="bnrTitik" id="bnrTitik">' + L.map(function (b, i) { return '<i class="' + (i ? '' : 'on') + '"></i>'; }).join('') + '</div>'
@@ -166,6 +167,7 @@
       + '<label class="tKecil bnrPilih">' + IK('absen') + ' 📷 Kamera<input type="file" accept="image/*" capture="environment" id="bnrKamera" hidden></label><label class="tKecil bnrPilih">' + IK('kotak') + ' 🖼️ Galeri<input type="file" accept="image/*" id="bnrFile" hidden></label><div class="kecil" id="bnrInfo" style="margin:6px 2px 0">Gambar dikompres di HP ini sampai ≤300 KB.</div>'
       + '<label class="lb" for="bnrJudul">Judul</label><input class="isian" id="bnrJudul" maxlength="80" value="' + esc(b && b.judul || '') + '">'
       + '<label class="lb" for="bnrSub">Keterangan (boleh kosong)</label><input class="isian" id="bnrSub" maxlength="140" value="' + esc(b && b.sub || '') + '">'
+      + '<label class="bnrSembunyi"><input type="checkbox" id="bnrSembunyiJudul"' + (b && b.sembunyiJudul ? ' checked' : '') + '> Sembunyikan judul di Beranda (poster yang tulisannya sudah lengkap)</label>'
       + '<label class="lb" for="bnrIsi">Isi / catatan lengkap (tampil di halaman detail)</label><textarea class="isian bnrTA" id="bnrIsi" maxlength="3000" rows="5" placeholder="Mis.\n- Bahas unit storing KM 40\n- Wajib APD lengkap">' + esc(b && b.isi || '') + '</textarea>'
       + '<label class="lb" for="bnrPeserta">Peserta (satu nama per baris, maks 80)</label><textarea class="isian bnrTA" id="bnrPeserta" rows="5" placeholder="Nama peserta...">' + esc((b && Array.isArray(b.peserta) ? b.peserta : []).join('\n')) + '</textarea>'
       + '<button type="button" class="tKecil bnrPilih" data-k="ambilPeserta">' + IK('absen') + ' Ambil dari yang sedang bertugas (absen hari ini)</button><div class="kecil" id="bnrPesertaInfo" style="margin:6px 2px 0">Daftar bisa diedit dulu sebelum disimpan. Hanya nama yang kamu simpan di banner ini yang terlihat staf.</div>'
@@ -205,6 +207,7 @@
     if (pes.length > 80) return salah('Peserta maksimal 80 nama (sekarang ' + pes.length + ').');
     var d = { judul: jd.slice(0, 80), sub: nilai('bnrSub').slice(0, 140), isi: nilai('bnrIsi').slice(0, 3000), peserta: pes, gambar: FOTO, tujuan: { jenis: tj, nilai: tj === 'tidak' ? '' : nl.slice(0, 300) }, mulai: nilai('bnrMulai') || null, sampai: nilai('bnrSampai') || null,
       aktif: document.getElementById('bnrAktif').checked, urut: ur, oleh: F.info.nama, waktu: F.FV.serverTimestamp() };
+    var sj = document.getElementById('bnrSembunyiJudul'); if (sj && sj.checked) d.sembunyiJudul = true; /* tahap1-16nov: field baru hanya dikirim kalau dicentang (banner lama tetap sama) */
     p.textContent = 'Menyimpan...';
     var ref = EDIT ? F.db.collection('banner').doc(EDIT.id) : F.db.collection('banner').doc();
     ref.set(d).then(function () { R.bunyi('sukses'); muat().then(gambarDaftar); }, function (e) { salah('Gagal menyimpan: ' + (e && e.message || e)); });

@@ -276,7 +276,7 @@
   }
 
   /* ---------- daftar "Ajuan saya" + antrean di HP ---------- */
-  var WARNA = { DIAJUKAN: ['kuning', 'Menunggu ACC'], 'DI-ACC': ['hijau', 'Di-ACC'], DITOLAK: ['merah', 'Ditolak'], 'MENUNGGU TRANSFER': ['kuning', 'Menunggu transfer'], DIBAYAR: ['hijau', 'Lunas'] };
+  var WARNA = { DIAJUKAN: ['kuning', 'Menunggu ACC'], 'DI-ACC': ['hijau', 'Di-ACC'], DITOLAK: ['merah', 'Ditolak'], DIBATALKAN: ['merah', 'Dibatalkan'], 'MENUNGGU TRANSFER': ['kuning', 'Menunggu transfer'], DIBAYAR: ['hijau', 'Lunas'] }; /* v3.27: DIBATALKAN = nota dibatalkan admin di Input DO (V309), alasan dari server, TANPA ajukan ulang */
   function namaMasuk(m) { return m === LANGSUNG ? 'Pengajuan langsung' : m === BENGKEL ? 'Bengkel terafiliasi' : m === AJU ? 'Pengajuan > 3 jt' : String(m || ''); }
   function daftar() {
     tab = 'daftar';
@@ -308,10 +308,99 @@
         + ((x.status === 'DI-ACC' || x.status === 'MENUNGGU TRANSFER' || x.status === 'DIBAYAR') && x.kode ? '<div class="notaKode">' + IK('centang') + 'Kode nota <b>' + esc(x.kode) + '</b></div>' : '')
         + (x.status === 'MENUNGGU TRANSFER' ? '<div class="kecil" style="margin-top:4px">Tulis kode ini di nota fisik. Admin mentransfer lalu mengunggah bukti.</div>' : '')
         + (x.status === 'DIBAYAR' ? '<div class="kecil" style="margin-top:4px;color:var(--tHijau);font-weight:700">Lunas' + (x.noRef ? ' · ref ' + esc(x.noRef) : '') + (x.dibayarWaktu ? ' · ' + esc(x.dibayarWaktu) : '') + '</div>' : '')
+        + returHtml(G, x, tot)
         + (x.status === 'DITOLAK' ? '<div class="notaTolak">' + IK('alarm') + '<span>Alasan: ' + esc(x.alasan || '-') + '</span></div><button type="button" class="tUtama notaUlang" data-n="ulang:' + esc(x.id) + '">' + (x.masukKe === LANGSUNG ? 'Ajukan lagi (kode baru)' : 'Perbaiki &amp; ajukan ulang') + '</button>' : '')
+        + (x.status === 'DIBATALKAN' ? '<div class="notaTolak notaBatal">' + IK('alarm') + '<span>' + esc(x.alasan || 'Dibatalkan admin') + '</span></div>' : '')
         + '</div>';
     }).join('') + '</div>' : (R.kosong ? R.kosong('Belum ada ajuan', 'Nota yang kamu ajukan tampil di sini beserta status dari admin.') : '');
     lapis(h);
+  }
+
+  /* ---------- nota-retur-16nov: RETUR nota Lunas (spesifikasi Upgrade\nota-retur-16nov\app\SPESIFIKASI-APP.txt; server DASHBOARD pusatNotaRetur, ACC admin di Input DO V310).
+     Tombol "↩ Retur" hanya kalau pusatPing memuat pusatNotaRetur; status retur (x.retur dari pusatNotaSaya) tetap ditampilkan. ---------- */
+  function returAktif() { return API.Pusat.punya('pusatNotaRetur'); }
+  function returDari(G) { var L = [], lihat = {}; G.forEach(function (y) { (Array.isArray(y.retur) ? y.retur : []).forEach(function (r) { var k = r.id || JSON.stringify(r); if (!lihat[k]) { lihat[k] = 1; L.push(r); } }); }); return L; }
+  function returSisa(G, tot) { return Math.max(0, tot - returDari(G).filter(function (r) { return r.status === 'DIAJUKAN' || r.status === 'DITERIMA'; }).reduce(function (s, r) { return s + (Number(r.jumlah) || 0); }, 0)); }
+  function returHtml(G, x, tot) {
+    var L = returDari(G), terima = L.filter(function (r) { return r.status === 'DITERIMA'; }).reduce(function (s, r) { return s + (Number(r.jumlah) || 0); }, 0), h = '';
+    if (L.length) h += '<div class="notaRetur">' + L.map(function (r) {
+      if (r.status === 'DITERIMA') return '<span class="notaSt hijau">↩ Retur diterima ' + rp(r.jumlah) + (r.tglRetur ? ' · ' + esc(r.tglRetur) : '') + '</span>';
+      if (r.status === 'DITOLAK') return '<span class="notaSt merah">↩ Retur ditolak: ' + esc(r.alasanTolak || '-') + '</span>';
+      return '<span class="notaSt kuning">↩ Retur diajukan ' + rp(r.jumlah) + '</span>';
+    }).join('') + (terima ? '<div class="kecil notaBersih">Nilai bersih <b>' + rp(tot - terima) + '</b></div>' : '') + '</div>';
+    if (returAktif() && x.status === 'DIBAYAR' && x.kode && returSisa(G, tot) > 0) h += '<button type="button" class="tKecil notaReturT" data-n="retur:' + esc(x.id) + '">↩ Retur</button>';
+    return h;
+  }
+  var RT = null, rtEl = null;
+  function gayaRetur() {
+    if (document.getElementById('notaReturGaya')) return; var st = document.createElement('style'); st.id = 'notaReturGaya';
+    st.textContent = '.notaRetur{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.notaRetur .notaSt{white-space:normal;text-align:left}.notaBersih{flex-basis:100%;margin-top:2px}.notaReturT{margin-top:10px;width:100%}'
+      + '.rtLapis .ksnIsi{padding-bottom:40px}.rtInfo{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13.5px}.rtInfo span{color:var(--redup)}.rtInfo b{text-align:right}'
+      + '.rtAlasan{text-transform:uppercase;min-height:80px;resize:vertical}.rtFoto{display:flex;gap:8px;margin-top:6px}.rtFoto .notaTambah{flex:1}.rtPra{position:relative;margin-top:8px}.rtPra img{width:100%;max-height:260px;object-fit:contain;border-radius:14px;background:var(--panel2)}.rtPra button{position:absolute;top:8px;right:8px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff}';
+    document.head.appendChild(st);
+  }
+  function tutupRetur() { if (!rtEl) return false; var d = rtEl; rtEl = null; RT = null; d.classList.remove('tampil'); setTimeout(function () { d.remove(); }, 200); return true; }
+  function bukaRetur(id) {
+    var x = (LIST || []).filter(function (y) { return y.id === id; })[0]; if (!x) return;
+    var G = (LIST || []).filter(function (y) { return x.grup ? y.grup === x.grup : y.id === x.id; }), tot = G.reduce(function (s, y) { return s + Number(y.total || 0); }, 0), sisa = returSisa(G, tot);
+    if (sisa <= 0) { CTX.roti('Nilai nota ini sudah habis diretur.'); return; }
+    gayaRetur(); tutupRetur();
+    RT = { id: G[0].id, x: x, tot: tot, sisa: sisa, jumlah: sisa, alasan: '', foto: '', cid: 'r' + idAcak(), kirim: false, pesan: '' };
+    rtEl = document.createElement('div'); rtEl.className = 'lapis ksnLapis rtLapis'; document.body.appendChild(rtEl);
+    requestAnimationFrame(function () { if (rtEl) rtEl.classList.add('tampil'); });
+    rtEl.addEventListener('click', klikRetur); rtEl.addEventListener('change', ubahRetur);
+    rtEl.addEventListener('focusout', function (ev) { var e = ev.target; if (!RT) return; if (e.id === 'rtJumlah') { RT.jumlah = angka(e.value); e.value = RT.jumlah ? rp(RT.jumlah) : ''; } if (e.id === 'rtAlasan') { RT.alasan = e.value.toUpperCase().replace(/\s+/g, ' ').trim(); e.value = RT.alasan; } });
+    gambarRetur(); R.bunyi('sheet');
+  }
+  function gambarRetur() {
+    if (!rtEl || !RT) return; var x = RT.x;
+    rtEl.innerHTML = '<div class="ksnKp"><button type="button" class="kb" data-r="tutup" aria-label="Kembali">‹</button><div class="nm">' + esc(x.kode || 'Nota bengkel') + '<b>↩ Retur nota</b></div></div>'
+      + '<div class="ksnIsi notaIsi"><div class="kartu rtInfo"><span>Bengkel</span><b>' + esc(x.toko || '-') + '</b><span>Nilai nota</span><b>' + rp(RT.tot) + '</b><span>Bisa diretur</span><b>' + rp(RT.sisa) + '</b></div>'
+      + '<label class="lb" for="rtJumlah">Jumlah retur (Rp) <i class="wajib">wajib</i></label><input class="isian" id="rtJumlah" inputmode="numeric" value="' + (RT.jumlah ? rp(RT.jumlah) : '') + '">'
+      + '<label class="lb" for="rtAlasan">Alasan retur <i class="wajib">wajib</i></label><textarea class="isian rtAlasan" id="rtAlasan" maxlength="300" placeholder="MIS. BARANG TIDAK SESUAI, DIKEMBALIKAN KE TOKO">' + esc(RT.alasan) + '</textarea>'
+      + '<label class="lb">Foto bukti retur <i class="wajib">wajib</i></label>'
+      + (RT.foto ? '<div class="rtPra"><img src="' + RT.foto + '" alt="Foto bukti retur"><button type="button" data-r="hapusFoto" aria-label="Hapus foto">✕</button></div>'
+        : '<div class="rtFoto"><label class="notaTambah notaKamera">' + IK('absen') + '<small>📷 Kamera</small><input type="file" accept="image/*" capture="environment" data-rtfoto="1" hidden></label><label class="notaTambah notaGaleri">' + IK('kotak') + '<small>🖼️ Galeri</small><input type="file" accept="image/*" data-rtfoto="1" hidden></label></div>')
+      + '<div class="pesan" id="rtPesan">' + esc(RT.pesan) + '</div><button type="button" class="tUtama" data-r="kirim"' + (RT.kirim ? ' disabled' : '') + '>' + (RT.kirim ? '<span class="putar"></span> Mengirim...' : 'Kirim retur') + '</button>'
+      + '<div class="kecil" style="margin-top:10px;text-align:center">Retur dicek & di-ACC admin. Kalau diterima, nilai nota berkurang.</div></div>';
+  }
+  function bacaIsianRetur() { if (!rtEl || !RT) return; var j = document.getElementById('rtJumlah'), a = document.getElementById('rtAlasan'); if (j) RT.jumlah = angka(j.value); if (a) RT.alasan = a.value.toUpperCase().replace(/\s+/g, ' ').trim(); }
+  function pesanRetur(t) { if (!RT) return; RT.pesan = t; var p = document.getElementById('rtPesan'); if (p) p.textContent = t; }
+  /* foto bukti: sisi terpanjang 1600 px, JPEG 0.8, SESUDAH gambar onload; < 9000 karakter = foto kosong/putih (kasus K569) */
+  function kompresRetur(file) {
+    return new Promise(function (ok, gagal) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var w = img.naturalWidth, h = img.naturalHeight, sk = Math.min(1, 1600 / Math.max(w || 1, h || 1)), c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(w * sk)); c.height = Math.max(1, Math.round(h * sk)); var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+        var d = c.toDataURL('image/jpeg', 0.8); URL.revokeObjectURL(url);
+        if (!w || !h || d.length < 9000) gagal(new Error('Foto kosong/putih, ulangi')); else ok(d);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); gagal(new Error('gambar tidak bisa dibaca')); };
+      img.src = url;
+    });
+  }
+  function ubahRetur(ev) {
+    var e = ev.target; if (!RT || !e.getAttribute || !e.getAttribute('data-rtfoto') || !e.files || !e.files[0]) return;
+    var f = e.files[0]; e.value = ''; bacaIsianRetur(); pesanRetur('Menyiapkan foto...');
+    kompresRetur(f).then(function (d) { if (!RT) return; RT.foto = d; RT.pesan = ''; gambarRetur(); R.getar(); }, function (x) { pesanRetur(x.message); R.bunyi('gagal'); });
+  }
+  function kirimRetur() {
+    bacaIsianRetur(); var j = RT.jumlah;
+    if (!(j > 0)) { pesanRetur('Isi jumlah retur.'); R.bunyi('gagal'); return; }
+    if (j > RT.sisa) { pesanRetur('Jumlah retur maksimal ' + rp(RT.sisa) + '.'); R.bunyi('gagal'); return; }
+    if (!RT.alasan) { pesanRetur('Isi alasan retur.'); R.bunyi('gagal'); return; }
+    if (!RT.foto) { pesanRetur('Lampirkan foto bukti retur.'); R.bunyi('gagal'); return; }
+    RT.kirim = true; RT.pesan = ''; gambarRetur(); var aku = RT;
+    API.Pusat.panggil('pusatNotaRetur', [sesi().tokenPusat, { id: RT.id, jumlah: j, alasan: RT.alasan, foto: RT.foto, cid: RT.cid }], 90000).then(function (h) {
+      if (RT !== aku) return; RT.kirim = false;
+      if (h && h.ok) { if (API.Pusat.lupakanSimpanan) API.Pusat.lupakanSimpanan(); tutupRetur(); R.bunyi('sukses'); R.getar('sukses'); CTX.roti('Retur terkirim, menunggu ACC admin'); if (lapisEl) daftar(); return; }
+      gambarRetur(); pesanRetur(h && h.login === false ? 'Sesi habis, masuk lagi.' : ((h && h.pesan) || 'Retur ditolak server.')); R.bunyi('gagal');
+    }, function () { if (RT !== aku) return; RT.kirim = false; gambarRetur(); pesanRetur('Koneksi putus. Ketuk Kirim retur lagi (tidak akan tercatat dobel).'); R.bunyi('gagal'); }); /* cid sama -> server tidak menyimpan dobel */
+  }
+  function klikRetur(ev) {
+    var b = ev.target.closest('[data-r]'); if (!b || !RT) return; var n = b.getAttribute('data-r');
+    if (n === 'tutup') { R.bunyi('tutup'); tutupRetur(); } else if (n === 'hapusFoto') { bacaIsianRetur(); RT.foto = ''; gambarRetur(); } else if (n === 'kirim' && !RT.kirim) kirimRetur();
   }
 
   /** ajuan dengan grup sama (1 bukti nota beberapa unit) dijadikan 1 kartu; urutan dipertahankan */
@@ -607,6 +696,7 @@
     if (n.indexOf('hapusBaris:') === 0) { simpanIsian(); var hb = F.baris.splice(+n.slice(11), 1)[0]; (hb && hb.video || []).forEach(function (v) { vHapus(v.vid).catch(function () { }); }); gambarForm(); return; }
     if (n === 'kirim') { if (!mengirim) kirim(); return; }
     if (n === 'kirimSekarang') { kirimAntrean().then(function () { daftar(); }); return; }
+    if (n.indexOf('retur:') === 0) { bukaRetur(n.slice(6)); return; } /* nota-retur-16nov */
     if (n.indexOf('ulang:') === 0) {
       var id = n.slice(6), xu = (LIST || []).filter(function (y) { return y.id === id; })[0]; if (!xu) return;
       if (xu.masukKe === LANGSUNG) { var gr = (LIST || []).filter(function (y) { return xu.grup ? y.grup === xu.grup : y.id === xu.id; }); formBaru({ masukKe: LANGSUNG, toko: xu.toko, unitR: gr.map(function (y) { return { lambung: y.lambung || '', uraian: y.uraian || '', total: Number(y.total) || 0 }; }) }, 'satu'); return; } /* kontrak: tanpa idUlang, kode baru */
@@ -624,7 +714,7 @@
     }
   }
   /** untuk tombol Back HP */
-  function kembali() { if (tutupPemilih()) return true; if (!lapisEl) return false; if (tab === 'baru' && F) { simpanIsian(); daftar(); } else tutup(); return true; }
+  function kembali() { if (tutupPemilih()) return true; if (tutupRetur()) return true; if (!lapisEl) return false; if (tab === 'baru' && F) { simpanIsian(); daftar(); } else tutup(); return true; }
   window.WHL_PEMILIH = { buka: pemilih, tutup: tutupPemilih, gaya: gayaNota };
   window.WHL_NOTA = { pasang: function (c) { CTX = c; }, boleh: boleh, buka: buka, kirimAntrean: kirimAntrean, kembali: kembali, _uji: { form: function (isi, m) { formBaru(isi, m); }, isi: function () { return F; } } };
 })();
