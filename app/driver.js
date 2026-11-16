@@ -62,6 +62,7 @@
     h += '<div class="kartu hiKartu drvHi" data-ke="drvDo" role="group" aria-label="Kerja saya hari ini"><div class="hiBar"><b>Hari ini</b><span>' + (d.lambung ? esc(d.lambung) + ' · ' : '') + (d.diperbarui ? 'update ' + esc(String(d.diperbarui).replace(':', '.')) : '') + ' ›</span></div>'
       + '<div class="hiStrip">' + S.map(function (x) { return '<div class="hs ' + x[2] + '"><small>' + x[0] + '</small><b>' + x[1] + (x[3] && x[1] !== '–' ? '<em>' + x[3] + '</em>' : '') + '</b></div>'; }).join('') + '</div>'
       + (Number(d.tonaseBelumAda) > 0 ? '<div class="drvKet">' + ang(d.tonaseBelumAda, 0) + ' tiket hari ini belum ada tonase bongkar.</div>' : '')
+      + setaraHtml({ setara: d.setaraRit, targetKmHari: d.targetKmHari != null ? d.targetKmHari : d.setaraRit && d.setaraRit.targetKmHari, kmHariIni: d.km, target: d.target, kmBulan: d.kmBulan }) /* v3.30 setara ritase per rute */
       + targetHtml(d) + '</div>';
     return h;
   }
@@ -156,6 +157,74 @@
     else if (n.indexOf('foto:') === 0 && CTX.bukaWeb) CTX.bukaWeb(n.slice(5));
   }
   function lupakan() { HI = null; PROF = null; DOS = null; tutup(); }
+
+  /* ---------- v3.30 SETARA RITASE per rute (Reza 17 Nov) ----------
+   * Field server `setaraRit` (pusatHariIniDriver & pusatPoinSaya, Armand). Bentuk yang diterima (longgar):
+   *   setaraRit: [ {rute:'107-PORT', kmRit:107}, ... ]   ATAU   { rute:[...], targetKmHari, kmHariIni, kurangKmHari }
+   *   tiap rute: nama = rute|nama, km 1 rit = kmRit|km|jarak; opsional hitungan server: ritHari, ritKurang, ritBulan ([per tingkat] / angka).
+   * Urutan rute = urutan server (2 teratas tampil ringkas, ketuk = semua rute + per bulan ke target bonus). Field tidak ada = tidak tampil. */
+  var SETARA = null, setaraEl = null;
+  function setaraDaftar(s) {
+    var L = Array.isArray(s) ? s : (s && (s.rute || s.daftar)) || [];
+    var pilih = function () { for (var i = 0; i < arguments.length; i++) if (arguments[i] != null && arguments[i] !== '') return arguments[i]; return null; };
+    return (Array.isArray(L) ? L : []).map(function (x) {
+      if (!x) return null; /* server V522: {rute, kmPerRit, ritPerHari, ritPerBulan, sisaRitHariIni, dipakaiBulanIni}; hitungan server dipakai, hitung lokal = cadangan */
+      var n = { ritHari: pilih(x.ritHari, x.ritPerHari), ritKurang: pilih(x.ritKurang, x.sisaRitHariIni), ritBulan: pilih(x.ritBulan, x.ritPerBulan) };
+      ['ritHari', 'ritKurang'].forEach(function (k) { if (n[k] != null && !isFinite(Number(n[k]))) n[k] = null; });
+      if (n.ritBulan != null && !Array.isArray(n.ritBulan) && isFinite(Number(n.ritBulan))) n.ritBulan = Number(n.ritBulan); else if (!Array.isArray(n.ritBulan)) n.ritBulan = null;
+      return { rute: String(x.rute || x.nama || x.jalur || '').trim(), km: Number(pilih(x.kmPerRit, x.kmRit, x.km, x.jarak)) || 0, x: n };
+    })
+      .filter(function (o) { return o && o.rute && o.km > 0; });
+  }
+  function setaraData(opt) {
+    var s = opt && opt.setara, L = setaraDaftar(s); if (!L.length) return null;
+    var hi = (HI && HI.d) || {}, so = Array.isArray(s) ? {} : (s || {});
+    var num = function () { for (var i = 0; i < arguments.length; i++) { var v = arguments[i]; if (v != null && v !== '' && isFinite(Number(v))) return Number(v); } return null; };
+    var tKm = num(so.targetKmHari, opt.targetKmHari, hi.targetKmHari, hi.setaraRit && hi.setaraRit.targetKmHari);
+    var kmHi = num(so.kmHariIni, opt.kmHariIni, hi.km);
+    var kurang = num(so.kurangKmHari, tKm != null && kmHi != null ? Math.max(0, tKm - kmHi) : null);
+    var T = opt.target || hi.target, tingkat = T && Array.isArray(T.tingkat) ? T.tingkat.filter(function (x) { return Number(x.km) > 0; }) : [];
+    return { L: L, tKm: tKm, kmHi: kmHi, kurang: kurang, tingkat: tingkat, sisaBln: T && T.sisaKm != null ? Number(T.sisaKm) : null, berikut: T && T.berikut, kmBulan: num(opt.kmBulan, hi.kmBulan) };
+  }
+  function rit(km, o) { return ang(Math.round(km / o.km * 10) / 10, 1) + ' rit ' + esc(o.rute); }
+  function setaraHtml(opt) {
+    var D = setaraData(opt); if (!D) return ''; SETARA = D; gaya(); setaraGaya();
+    var dua = D.L.slice(0, 2), b1, b2 = '';
+    if (D.tKm != null && D.tKm > 0) {
+      b1 = 'Target hari ini <b>' + ang(D.tKm, 0) + ' km</b> ≈ ' + dua.map(function (o) { return o.x.ritHari != null ? ang(o.x.ritHari, 1) + ' rit ' + esc(o.rute) : rit(D.tKm, o); }).join(' · ');
+      if (D.kurang != null) b2 = D.kurang > 0 ? 'Kurang <b>' + ang(D.kurang, 0) + ' km</b> ≈ ' + dua.map(function (o) { return o.x.ritKurang != null ? ang(o.x.ritKurang, 1) + ' rit ' + esc(o.rute) : rit(D.kurang, o); }).join(' · ') : '<b class="ok">Target KM hari ini tercapai ✓</b>';
+    } else b1 = 'Setara: ' + dua.map(function (o) { return '1 rit ' + esc(o.rute) + ' = ' + ang(o.km, 0) + ' km'; }).join(' · ');
+    return '<button type="button" class="drvSetara" data-ke="setaraRit"><span>' + b1 + (b2 ? '<br>' + b2 : '') + '</span><i>' + (D.L.length > 2 ? 'Semua rute' : 'Rinci') + ' ›</i></button>';
+  }
+  function setaraGaya() {
+    if (document.getElementById('drvSetaraGaya')) return; var st = document.createElement('style'); st.id = 'drvSetaraGaya';
+    st.textContent = '.drvSetara{display:flex;align-items:center;gap:8px;width:100%;text-align:left;margin-top:9px;padding:9px 11px;border-radius:12px;background:var(--panel2);color:var(--teks);font:inherit;font-size:12.5px;font-weight:600;line-height:1.45;border:0}.drvSetara span{flex:1;min-width:0}.drvSetara b.ok{color:#16a34a}.drvSetara i{flex:none;font-style:normal;font-size:11.5px;font-weight:800;color:var(--utama)}'
+      + '.stRute{padding:12px 14px;margin-bottom:10px}.stRute h3{margin:0 0 6px;font-size:15px;display:flex;justify-content:space-between;gap:8px}.stRute h3 small{color:var(--redup);font-size:12px;font-weight:700}.stBrs{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--garis);font-size:13px}.stBrs:first-of-type{border-top:0}.stBrs span{color:var(--redup)}.stBrs b{text-align:right}.stBrs b.ok{color:#16a34a}';
+    document.head.appendChild(st);
+  }
+  function setaraBuka() {
+    var D = SETARA; if (!D) return; gaya(); setaraGaya();
+    var h = '<div class="kecil" style="margin:0 4px 10px;line-height:1.5">KM dihitung dari DO (tiket Input DO × jarak 1 rit rute). Angka rit = perkiraan kalau semua trip di rute itu.</div>';
+    h += D.L.map(function (o) {
+      var r = '<div class="kartu stRute"><h3>' + esc(o.rute) + '<small>1 rit = ' + ang(o.km, 0) + ' km</small></h3>';
+      if (D.tKm != null && D.tKm > 0) r += '<div class="stBrs"><span>Target hari ini (' + ang(D.tKm, 0) + ' km)</span><b>≈ ' + (o.x.ritHari != null ? ang(o.x.ritHari, 1) : ang(Math.round(D.tKm / o.km * 10) / 10, 1)) + ' rit</b></div>';
+      if (D.kurang != null && D.tKm) r += '<div class="stBrs"><span>Kurang hari ini' + (D.kurang > 0 ? ' (' + ang(D.kurang, 0) + ' km)' : '') + '</span>' + (D.kurang > 0 ? '<b>≈ ' + (o.x.ritKurang != null ? ang(o.x.ritKurang, 1) : ang(Math.round(D.kurang / o.km * 10) / 10, 1)) + ' rit</b>' : '<b class="ok">Tercapai ✓</b>') + '</div>';
+      var RB = o.x.ritBulan;
+      D.tingkat.forEach(function (t, i) { var n = Array.isArray(RB) && RB[i] != null ? Number(RB[i]) : (typeof RB === 'number' && i === 0 ? RB : Math.ceil(Number(t.km) / o.km)); r += '<div class="stBrs"><span>Sebulan untuk bonus ' + uangPendek(t.bonus) + ' (' + ang(t.km, 0) + ' km)</span><b>' + ang(n, 0) + ' rit</b></div>'; });
+      if (D.berikut && D.sisaBln > 0) r += '<div class="stBrs"><span>Sisa bulan ini ke bonus ' + uangPendek(D.berikut.bonus) + ' (' + ang(D.sisaBln, 0) + ' km)</span><b>' + ang(Math.ceil(D.sisaBln / o.km), 0) + ' rit</b></div>';
+      return r + '</div>';
+    }).join('');
+    if (setaraEl && !document.body.contains(setaraEl)) setaraEl = null;
+    if (!setaraEl) {
+      setaraEl = document.createElement('div'); setaraEl.className = 'lapis ksnLapis drvLapis'; document.body.appendChild(setaraEl);
+      requestAnimationFrame(function () { if (setaraEl) setaraEl.classList.add('tampil'); });
+      setaraEl.addEventListener('click', function (ev) { if (ev.target.closest('[data-d="tutup"]')) { R.bunyi('tutup'); setaraTutup(); } });
+    }
+    setaraEl.innerHTML = '<div class="ksnKp"><button type="button" class="kb" data-d="tutup" aria-label="Kembali">‹</button><div class="nm">Target KM dari DO<b>Setara ritase per rute</b></div></div><div class="ksnIsi">' + h + '</div>';
+  }
+  function setaraTutup() { if (!setaraEl) return false; var d = setaraEl; setaraEl = null; d.classList.remove('tampil'); setTimeout(function () { d.remove(); }, 200); return true; }
+  document.addEventListener('click', function (ev) { var b = ev.target.closest && ev.target.closest('[data-ke="setaraRit"]'); if (!b) return; ev.stopPropagation(); ev.preventDefault(); if (R.getar) R.getar(); setaraBuka(); }, true);
+  window.WHL_SETARA = { html: setaraHtml, buka: setaraBuka, tutup: setaraTutup, _daftar: setaraDaftar };
 
   window.WHL_DRIVER = { siap: siap, driver: driver, punya: punya, muat: muat, hariIniHtml: hariIniHtml, buka: buka, tutup: tutup, lupakan: lupakan };
 })();

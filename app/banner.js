@@ -27,7 +27,7 @@
     return L;
   }
   function aktif(b) { var h = hariIni(); return b.aktif !== false && (!b.mulai || b.mulai <= h) && (!b.sampai || b.sampai >= h); }
-  function daftar() { return DARI.filter(aktif).sort(function (a, b) { return (a.urut || 0) - (b.urut || 0); }).slice(0, 8).concat(bawaan()); }
+  function daftar() { return (window.WHL_KEGIATAN ? window.WHL_KEGIATAN.slide() : []).concat(DARI.filter(aktif).sort(function (a, b) { return (a.urut || 0) - (b.urut || 0); }).slice(0, 8)).concat(bawaan()); } /* tahap3 Andro-A: slide otomatis ulang tahun & cuaca (kegiatan.js) */
 
   /* ---------- muat dari Firestore (sesudah login forum) ---------- */
   Simpan.ambil(SIMPAN).then(function (v) { try { var a = JSON.parse(v || '[]'); if (Array.isArray(a) && !DARI.length) DARI = a; } catch (e) { /* */ } });
@@ -58,7 +58,7 @@
     var L = daftar(), adaCap = L.some(function (b) { return !!b.gambar; });
     /* tahap1-16nov: banner bergambar -> gambar utuh (teks tidak ditimpa di atas poster), judul/keterangan di strip bawah; sembunyiJudul = strip kosong */
     return '<div class="bnrKotak' + (adaCap ? ' adaCap' : '') + '" style="--nt:' + L.length + '"><div class="bnrGeser" id="bnrGeser">' + L.map(function (b, i) {
-      var isi = b.gambar ? '<span class="bnrGbr"><img src="' + esc(b.gambar) + '" alt="" loading="lazy"></span><span class="bnrCap">' + (b.judul && !b.sembunyiJudul ? '<b>' + esc(b.judul) + '</b>' + (b.sub ? '<small>' + esc(b.sub) + '</small>' : '') : '') + '</span>'
+      var isi = b.html ? b.html : b.gambar ? '<span class="bnrGbr"><img src="' + esc(b.gambar) + '" alt="" loading="lazy"></span><span class="bnrCap">' + (b.judul && !b.sembunyiJudul ? '<b>' + esc(b.judul) + '</b>' + (b.sub ? '<small>' + esc(b.sub) + '</small>' : '') : '') + '</span>'
         : '<span class="bnrIlus">' + ilus(b.ilus) + '</span><div class="bnrTeks"><b>' + esc(b.judul) + '</b><small>' + esc(b.sub || '') + '</small></div>';
       return '<button type="button" class="bnr ' + (b.warna || 'biru') + (b.gambar ? ' foto' : '') + '" data-bnr="' + i + '" aria-label="' + esc(b.judul) + '">' + isi + '</button>';
     }).join('') + '</div><div class="bnrTitik" id="bnrTitik">' + L.map(function (b, i) { return '<i class="' + (i ? '' : 'on') + '"></i>'; }).join('') + '</div>'
@@ -71,7 +71,7 @@
     g.addEventListener('scroll', function () { var i = Math.round(g.scrollLeft / Math.max(1, g.clientWidth)); Array.prototype.forEach.call(t.children, function (x, j) { x.classList.toggle('on', j === i); }); }, { passive: true });
     var diam = 0; g.addEventListener('touchstart', function () { diam = Date.now(); }, { passive: true });
     putar = setInterval(function () { if (!document.body.contains(g)) { clearInterval(putar); return; } if (document.hidden || Date.now() - diam < 8000 || L.length < 2) return; var i = Math.round(g.scrollLeft / Math.max(1, g.clientWidth)); ke((i + 1) % L.length); }, 5000);
-    g.onclick = function (ev) { var b = ev.target.closest('[data-bnr]'); if (!b) return; var x = L[+b.getAttribute('data-bnr')]; if (!x) return; if (x.gambar) detail(x); else tuju(x.tujuan || {}); };
+    g.onclick = function (ev) { var b = ev.target.closest('[data-bnr]'); if (!b) return; var x = L[+b.getAttribute('data-bnr')]; if (!x) return; if (x.klik) x.klik(ev); else if (x.gambar) detail(x); else tuju(x.tujuan || {}); };
     var k = document.querySelector('[data-bnr-kelola]'); if (k) k.onclick = kelola;
   }
   function tuju(t) {
