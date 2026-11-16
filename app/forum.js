@@ -215,9 +215,9 @@
   /* ---------- menulis ---------- */
   function penulis() {
     return '<div class="fmTulis" id="fmTulis"><div class="fmBalasBar" id="fmBalasBar" hidden></div><div class="fmSaran" id="fmSaran" hidden></div>'
-      + '<div class="fmBaris" id="fmBaris"><button type="button" class="fmIk" data-f="foto" aria-label="Kirim foto">📷</button><textarea id="fmTeks" rows="1" maxlength="2000" placeholder="Tulis pesan..."></textarea><button type="button" class="fmKirim" id="fmKirim" data-f="kirim" aria-label="Rekam pesan suara">🎤</button></div>'
+      + '<div class="fmBaris" id="fmBaris"><button type="button" class="fmIk" data-f="foto" aria-label="Foto dari kamera">📷</button><button type="button" class="fmIk" data-f="galeri" aria-label="Foto dari galeri">🖼️</button><textarea id="fmTeks" rows="1" maxlength="2000" placeholder="Tulis pesan..."></textarea><button type="button" class="fmKirim" id="fmKirim" data-f="kirim" aria-label="Rekam pesan suara">🎤</button></div>'
       + '<div class="fmRekam" id="fmRekam" hidden><button type="button" class="fmIk" data-f="batalRekam" aria-label="Batal">🗑️</button><span class="fmMerah"></span><em id="fmDetik">0:00</em><span class="gel live" id="fmGelLive"></span><button type="button" class="fmKirim kirim" data-f="kirimRekam" aria-label="Kirim pesan suara">➤</button></div>'
-      + '<input type="file" id="fmFile" accept="image/*" hidden></div>';
+      + '<input type="file" id="fmFile" accept="image/*" hidden><input type="file" id="fmKamera" accept="image/*" capture="environment" hidden></div>';
   }
   function aturTombol() { var t = document.getElementById('fmTeks'), b = document.getElementById('fmKirim'); if (!t || !b) return; var ada = t.value.trim().length > 0; b.textContent = ada ? '➤' : '🎤'; b.classList.toggle('kirim', ada); b.setAttribute('aria-label', ada ? 'Kirim pesan' : 'Rekam pesan suara'); t.style.height = 'auto'; t.style.height = Math.min(120, t.scrollHeight) + 'px'; }
   function dasarPesan(jenis) { return { uid: INFO.uid, nama: INFO.nama, peran: INFO.peran, jenis: jenis, teks: '', media: null, balas: balasKe ? { id: balasKe.id, nama: balasKe.nama, cuplik: cuplik(balasKe).slice(0, 150) } : null, sebut: [], reaksi: {}, hapus: false, waktu: FV.serverTimestamp() }; }
@@ -268,7 +268,7 @@
       img.onerror = function () { gagal(new Error('Gambar tidak bisa dibaca')); }; img.src = url;
     });
   }
-  function pilihFile(ev) { if (ev.target.id !== 'fmFile' || !ev.target.files[0]) return; var f = ev.target.files[0]; ev.target.value = ''; kecilkanFoto(f).then(function (h) { kirimMedia('foto', h.blob, { w: h.w, h: h.h }); }, galatKirim); }
+  function pilihFile(ev) { if ((ev.target.id !== 'fmFile' && ev.target.id !== 'fmKamera') || !ev.target.files[0]) return; var f = ev.target.files[0]; ev.target.value = ''; kecilkanFoto(f).then(function (h) { kirimMedia('foto', h.blob, { w: h.w, h: h.h }); }, galatKirim); }
 
   /* ---------- pesan suara (rekam -> kirim, maks 60 dtk) ---------- */
   function pilihMime() { var L = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/aac']; for (var i = 0; i < L.length; i++) { try { if (window.MediaRecorder && MediaRecorder.isTypeSupported(L[i])) return L[i]; } catch (e) { /* */ } } return ''; }
@@ -358,7 +358,7 @@
     if (b) {
       var f = b.getAttribute('data-f');
       if (f === 'tutup') tutup(); else if (f === 'daftar') { berhenti(); aktif = ''; gambarDaftar(); } else if (f === 'ulang') { INFO = null; buka(); }
-      else if (f === 'lama') muatLama(); else if (f === 'foto') document.getElementById('fmFile').click();
+      else if (f === 'lama') muatLama(); else if (f === 'foto') document.getElementById('fmKamera').click(); else if (f === 'galeri') document.getElementById('fmFile').click();
       else if (f === 'kirim') { if (document.getElementById('fmTeks').value.trim()) kirimTeks(); else mulaiRekam(); }
       else if (f === 'batalRekam') { hentiRekam(false); CTX.roti('Rekaman dibatalkan.'); } else if (f === 'kirimRekam') hentiRekam(true);
       else if (f === 'batalBalas') { balasKe = null; document.getElementById('fmBalasBar').hidden = true; }

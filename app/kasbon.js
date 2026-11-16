@@ -439,7 +439,7 @@
         + '<label class="lb">Mulai potong</label><div class="kbPil">' + (OPSI.mulaiPilihan || []).map(function (m) { return '<button type="button" class="' + (F.mulai === m ? 'on' : '') + '" data-k="mulai:' + esc(m) + '">' + esc(bulan(m)) + '</button>'; }).join('') + '</div>'
         + '<div id="kbRencana">' + rencanaHtml() + '</div>'
         + '<label class="lb">Foto nota HP <i class="wajib">wajib</i></label><div class="notaFoto">'
-        + (F.foto ? '<span><img src="' + F.foto + '" alt="Foto nota"><button type="button" data-k="hapusFoto" aria-label="Hapus foto">✕</button></span>' : '<label class="notaTambah">' + IK('absen') + '<small>Kamera / galeri</small><input type="file" accept="image/*" data-foto="1" hidden></label>') + '</div>';
+        + (F.foto ? '<span><img src="' + F.foto + '" alt="Foto nota"><button type="button" data-k="hapusFoto" aria-label="Hapus foto">✕</button></span>' : '<label class="notaTambah notaKamera">' + IK('absen') + '<small>📷 Kamera</small><input type="file" accept="image/*" capture="environment" data-foto="1" hidden></label><label class="notaTambah notaGaleri">' + IK('kotak') + '<small>🖼️ Galeri</small><input type="file" accept="image/*" data-foto="1" hidden></label>') + '</div>';
     }
     h += '<div id="kbInfo">' + infoHtml() + '</div>';
     h += '<label class="lb">Tanda tangan ' + esc(F.untuk === KRY ? 'kamu' : 'driver') + ' <i class="wajib">wajib</i></label><div class="kbTtd">'

@@ -200,7 +200,7 @@
     h += '<label class="lb" for="izAlasan">Alasan <i class="wajib">wajib</i></label><textarea class="isian bnrTA" id="izAlasan" data-f="alasan" rows="3" maxlength="300" placeholder="mis. keluarga sakit / acara keluarga / pulang kampung">' + esc(F.alasan) + '</textarea>';
     h += '<label class="lb">Lampiran ' + (wajib ? '<i class="wajib">wajib</i>' : '<small style="font-weight:600">(opsional)</small>') + '</label><div class="izLamp">'
       + (F.foto ? (F.fotoPdf ? '<span class="pdf">PDF</span>' : '<img src="' + F.foto + '" alt="Lampiran">') : '')
-      + '<div class="pil"><label>📷 ' + (F.foto ? 'Ganti foto' : 'Foto (kamera / galeri)') + '<input type="file" accept="image/*" data-lamp="foto" hidden></label><label>📄 File PDF<input type="file" accept="application/pdf" data-lamp="pdf" hidden></label>'
+      + '<div class="pil"><label>📷 ' + (F.foto ? 'Foto ulang (kamera)' : 'Kamera') + '<input type="file" accept="image/*" capture="environment" data-lamp="foto" hidden></label><label>🖼️ ' + (F.foto ? 'Ganti dari galeri' : 'Foto dari galeri') + '<input type="file" accept="image/*" data-lamp="foto" hidden></label><label>📄 File PDF<input type="file" accept="application/pdf" data-lamp="pdf" hidden></label>'
       + (F.foto ? '<button type="button" class="tKecil" data-i="hapusLamp" style="margin:0;min-height:38px">Hapus lampiran' + (F.fotoNama ? ' (' + esc(F.fotoNama) + ')' : '') + '</button>' : '') + '</div></div>'
       + (wajib ? '<div class="izKet">Semua jenis wajib lampiran: surat dokter (sakit), undangan / surat keterangan, atau foto pendukung.</div>' : '');
     if (F.jenis === 'CUTI') h += cutiBoleh() ? cutiHtml(OPSI.cuti) : '<div class="izBareng">' + esc(cutiCatatan()) + ' Pilih Izin / OFF kalau perlu libur.</div>';

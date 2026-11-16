@@ -163,7 +163,7 @@
     EDIT = b || null; FOTO = b && b.gambar || '';
     var t = (b && b.tujuan) || { jenis: 'tidak', nilai: '' };
     lapis('<div class="bnrPratinjau" id="bnrPra">' + (FOTO ? '<img src="' + esc(FOTO) + '" alt="">' : '<span>Belum ada gambar (rasio 2:1, mis. 1200×600)</span>') + '</div>'
-      + '<label class="tKecil bnrPilih">' + IK('kotak') + ' Pilih gambar dari galeri<input type="file" accept="image/*" id="bnrFile" hidden></label><div class="kecil" id="bnrInfo" style="margin:6px 2px 0">Gambar dikompres di HP ini sampai ≤300 KB.</div>'
+      + '<label class="tKecil bnrPilih">' + IK('absen') + ' 📷 Kamera<input type="file" accept="image/*" capture="environment" id="bnrKamera" hidden></label><label class="tKecil bnrPilih">' + IK('kotak') + ' 🖼️ Galeri<input type="file" accept="image/*" id="bnrFile" hidden></label><div class="kecil" id="bnrInfo" style="margin:6px 2px 0">Gambar dikompres di HP ini sampai ≤300 KB.</div>'
       + '<label class="lb" for="bnrJudul">Judul</label><input class="isian" id="bnrJudul" maxlength="80" value="' + esc(b && b.judul || '') + '">'
       + '<label class="lb" for="bnrSub">Keterangan (boleh kosong)</label><input class="isian" id="bnrSub" maxlength="140" value="' + esc(b && b.sub || '') + '">'
       + '<label class="lb" for="bnrIsi">Isi / catatan lengkap (tampil di halaman detail)</label><textarea class="isian bnrTA" id="bnrIsi" maxlength="3000" rows="5" placeholder="Mis.\n- Bahas unit storing KM 40\n- Wajib APD lengkap">' + esc(b && b.isi || '') + '</textarea>'
@@ -189,7 +189,7 @@
     });
   }
   function pilihFoto(ev) {
-    if (ev.target.id !== 'bnrFile' || !ev.target.files[0]) return;
+    if ((ev.target.id !== 'bnrFile' && ev.target.id !== 'bnrKamera') || !ev.target.files[0]) return;
     var info = document.getElementById('bnrInfo'); info.textContent = 'Mengompres...';
     kompres(ev.target.files[0]).then(function (d) { FOTO = d; document.getElementById('bnrPra').innerHTML = '<img src="' + d + '" alt="">'; info.textContent = 'Siap: ' + Math.round(d.length * 0.75 / 1024) + ' KB (1200×600).'; }, function (e) { info.textContent = 'Gagal: ' + e.message; R.bunyi('gagal'); });
   }

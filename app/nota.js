@@ -335,7 +335,8 @@
     var L = ambilTempat(tempat) || [], maks = (OPSI && OPSI.maksFoto) || 3;
     return '<label class="lb">' + judul + (wajib ? ' <i class="wajib">wajib</i>' : '') + ' <span class="kecil">(' + L.length + '/' + maks + ')</span></label><div class="notaFoto">'
       + L.map(function (d, i) { return '<span><img src="' + d + '" alt=""><button type="button" data-n="hapusFoto:' + tempat + ':' + i + '" aria-label="Hapus foto">✕</button></span>'; }).join('')
-      + (L.length < maks ? '<label class="notaTambah">' + IK('absen') + '<small>Kamera / galeri</small><input type="file" accept="image/*" data-foto="' + tempat + '" hidden></label>' : '') + '</div>';
+      + (L.length < maks ? '<label class="notaTambah notaKamera">' + IK('absen') + '<small>📷 Kamera</small><input type="file" accept="image/*" capture="environment" data-foto="' + tempat + '" hidden></label>'
+        + '<label class="notaTambah notaGaleri">' + IK('kotak') + '<small>🖼️ Galeri</small><input type="file" accept="image/*" multiple data-foto="' + tempat + '" hidden></label>' : '') + '</div>';
   }
   function bagianVideo(tempat) {
     var L = ambilTempat(tempat) || [];
@@ -453,8 +454,12 @@
     var p = document.getElementById('ntPesan');
     var j = e.getAttribute('data-foto');
     if (j && e.files && e.files[0]) {
-      var berkas = e.files[0]; e.value = ''; simpanIsian(); if (p) p.textContent = 'Mengompres foto...';
-      kompres(berkas).then(function (d) { taruhTempat(j, (ambilTempat(j) || []).concat([d]).slice(0, (OPSI && OPSI.maksFoto) || 3)); gambarForm(); R.getar(); }, function (x) { if (p) p.textContent = 'Foto gagal: ' + x.message; R.bunyi('gagal'); });
+      /* kamera = 1 foto; galeri boleh pilih beberapa sekaligus (dipotong sampai sisa kuota, dikompres satu per satu) */
+      var mksF = (OPSI && OPSI.maksFoto) || 3, sisaF = Math.max(0, mksF - (ambilTempat(j) || []).length);
+      var daftarF = Array.prototype.slice.call(e.files, 0, sisaF || 1); e.value = ''; simpanIsian(); if (p) p.textContent = 'Mengompres foto' + (daftarF.length > 1 ? ' (' + daftarF.length + ')' : '') + '...';
+      daftarF.reduce(function (rantai, berkas) {
+        return rantai.then(function () { return kompres(berkas).then(function (d) { taruhTempat(j, (ambilTempat(j) || []).concat([d]).slice(0, mksF)); }); });
+      }, Promise.resolve()).then(function () { gambarForm(); R.getar(); }, function (x) { gambarForm(); var p2 = document.getElementById('ntPesan'); if (p2) p2.textContent = 'Foto gagal: ' + x.message; R.bunyi('gagal'); });
       return;
     }
     var v = e.getAttribute('data-video');
