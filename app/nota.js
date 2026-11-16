@@ -52,7 +52,7 @@
     var R = riwayatRek(F.toko), lain = F.rekBank === 'LAINNYA';
     return '<div class="ntGrup"><label class="lb">' + judul + '</label>'
       + (R.length ? '<select class="isian ntPilihRek" data-rekpil="1"><option value="">Pakai rekening sebelumnya (' + R.length + ')</option>' + R.map(function (r, i) { return '<option value="' + i + '">' + esc(r.teks) + '</option>'; }).join('') + '</select>' : '')
-      + '<div class="ntRek"><select class="isian" id="ntBank" data-f="rekBank"><option value="">Bank</option>' + bankList().concat(['LAINNYA']).map(function (b) { return '<option value="' + b + '"' + (F.rekBank === b ? ' selected' : '') + '>' + (b === 'LAINNYA' ? 'Lainnya…' : b) + '</option>'; }).join('') + '</select>'
+      + '<div class="ntRek">' + tombolPilih('ntBank', 'bank', F.rekBank === 'LAINNYA' ? 'Lainnya' : F.rekBank, 'Bank')
       + '<input class="isian" id="ntNoRek" data-f="rekNo" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Nomor rekening" value="' + esc(F.rekNo) + '"></div>'
       + (lain ? '<input class="isian kapital" id="ntBankLain" data-f="rekBankLain" placeholder="Nama bank" value="' + esc(F.rekBankLain) + '">' : '')
       + '<input class="isian kapital" id="ntAtasNama" data-f="rekNama" placeholder="Atas nama" value="' + esc(F.rekNama) + '">'
@@ -63,17 +63,71 @@
   var KATEGORI0 = { JASA: ['PERBAIKAN', 'STORING', 'BAN', 'KELISTRIKAN', 'SERVIS RUTIN', 'LAS / BODI'], KAS: ['POOL', 'LIGHT VEHICLE', 'ATK', 'KONSUMSI', 'SPAREPART', 'LAIN-LAIN'] };
   function pilihanBengkel(mode2) { /* mode2: 'langsung' (tanpa af) | 'semua' */ var lihat = {}; return daftarBengkel().filter(function (b) { if (mode2 === 'langsung' && b.af) return false; if (BUKAN_BENGKEL.test(b.nama) || lihat[b.nama]) return false; lihat[b.nama] = 1; return true; }).map(function (b) { return b.nama; }); }
   function tokoHtml(judul, mode2, ph) {
-    var D = pilihanBengkel(mode2), ada = D.indexOf(hurufBesar(F.toko)) >= 0, baru = !D.length || F.tokoBaru || (F.toko && !ada);
+    var D = mode2 === 'af' ? afList() : pilihanBengkel(mode2), ada = D.indexOf(hurufBesar(F.toko)) >= 0, baru = mode2 !== 'af' && (!D.length || F.tokoBaru || (F.toko && !ada));
     if (baru) return '<label class="lb" for="ntToko">' + judul + '</label><input class="isian kapital" id="ntToko" data-f="toko" autocomplete="off" placeholder="' + esc(ph) + '" value="' + esc(F.toko) + '">'
       + (D.length ? '<button type="button" class="tKecil" data-n="tokoDaftar" style="margin-top:6px;min-height:38px">Pilih dari daftar (' + D.length + ')</button>' : '');
-    return '<label class="lb" for="ntToko">' + judul + '</label><select class="isian" id="ntToko" data-tokopil="1"><option value="">Pilih bengkel / toko (' + D.length + ')</option>'
-      + D.map(function (n) { return '<option value="' + esc(n) + '"' + (hurufBesar(F.toko) === n ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') + '<option value="__BARU__">➕ Bengkel baru…</option></select>';
+    return '<label class="lb" for="ntToko">' + judul + '</label>' + tombolPilih('ntToko', 'toko:' + mode2, F.toko, mode2 === 'af' ? 'Pilih bengkel terafiliasi' : 'Pilih bengkel / toko (' + D.length + ')');
   }
-  function kategoriHtml(kas) {
-    var D = daftarKategori(); if (!D.length) D = KATEGORI0[kas ? 'KAS' : 'JASA'].slice(); var k = hurufBesar(F.kategori); if (k && D.indexOf(k) < 0) D.push(k);
-    return '<label class="lb" for="ntKat">Kategori <span class="kecil">(opsional)</span></label><select class="isian" id="ntKat" data-f="kategori"><option value="">Tanpa kategori</option>'
-      + D.map(function (n) { return '<option value="' + esc(n) + '"' + (k === n ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') + '</select>';
+  function daftarKat() { var D = daftarKategori(); if (!D.length) D = KATEGORI0[F.jenisNota === 'KAS' ? 'KAS' : 'JASA'].slice(); var k = hurufBesar(F.kategori); if (k && D.indexOf(k) < 0) D.push(k); return D; }
+  function kategoriHtml() { return '<label class="lb" for="ntKat">Kategori <span class="kecil">(opsional)</span></label>' + tombolPilih('ntKat', 'kat', F.kategori, 'Pilih kategori'); }
+  function afList() { var af = ((OPSI && OPSI.bengkelAf) || []).map(hurufBesar); daftarBengkel().forEach(function (x) { if (x.af && af.indexOf(x.nama) < 0) af.push(x.nama); }); return af; }
+  function daftarLambung() { var A = (OPSI && (OPSI.lambung || OPSI.unit || OPSI.armada)) || [], lihat = {}; return A.map(function (x) { return hurufBesar(typeof x === 'string' ? x : (x.lambung || x.nama)); }).filter(function (x) { if (!x || lihat[x]) return false; lihat[x] = 1; return true; }); }
+  /* v3.24 (Reza 10.51): PEMILIH SENDIRI (lembar penuh + kotak cari) untuk Bengkel / Lambung / Bank / Kategori; "➕ Tambah baru…" untuk bengkel & lambung */
+  function tombolPilih(id, kunci, nilai, ph) { return '<button type="button" class="isian ntPilih" id="' + id + '" data-pilih="' + esc(kunci) + '"><span class="' + (nilai ? 'v' : 'ph') + '">' + esc(nilai || ph) + '</span><i>▾</i></button>'; }
+  function lambungHtml(key, id, nilai, judul) {
+    var D = daftarLambung(), v = hurufBesar(nilai), baru = !D.length || (F.lbBaru && F.lbBaru[key]) || (v && D.indexOf(v) < 0);
+    if (baru) return '<label class="lb" for="' + id + '">' + judul + '</label><input class="isian kapital" id="' + id + '" data-f="' + key + '" placeholder="Ketik lambung baru, mis. WHL 1012" autocomplete="off" value="' + esc(nilai) + '">'
+      + (D.length ? '<button type="button" class="tKecil" data-n="lbDaftar:' + esc(key) + '" style="margin-top:6px;min-height:38px">Pilih dari daftar (' + D.length + ')</button>' : '');
+    return '<label class="lb" for="' + id + '">' + judul + '</label>' + tombolPilih(id, 'lb:' + key, v, 'Pilih lambung (' + D.length + ')');
   }
+  var lembarPil = null;
+  function tutupPemilih() { if (!lembarPil) return false; var l = lembarPil; lembarPil = null; if (l._vv) window.visualViewport.removeEventListener('resize', l._vv); l.remove(); return true; }
+  /** o = {judul, daftar[], nilai, baru:'label tambah' | '', pilih(v), tambah()} */
+  function pemilih(o) {
+    tutupPemilih(); gayaNota();
+    var d = document.createElement('div'); d.className = 'ntLembar'; lembarPil = d;
+    d.innerHTML = '<div class="ntLKp"><b>' + esc(o.judul) + '</b><button type="button" data-l="tutup">Tutup</button></div>'
+      + '<div class="ntLCari"><input type="search" placeholder="Cari…" autocomplete="off" autocapitalize="characters" enterkeyhint="done"></div><div class="ntLDaftar"></div>';
+    var cari = d.querySelector('input'), daf = d.querySelector('.ntLDaftar');
+    var gambar = function () {
+      var q = String(cari.value || '').toLowerCase().split(/\s+/).filter(Boolean);
+      var D = o.daftar.filter(function (x) { var t = String(x).toLowerCase(); return q.every(function (w) { return t.indexOf(w) >= 0; }); });
+      daf.innerHTML = D.map(function (x) { return '<button type="button" class="ntLB' + (x === o.nilai ? ' on' : '') + '" data-v="' + esc(x) + '">' + esc(x === 'LAINNYA' && o.lainLabel ? o.lainLabel : x) + (x === o.nilai ? ' <i>✓</i>' : '') + '</button>'; }).join('')
+        + (!D.length ? '<div class="ntLKosong">Tidak ada yang cocok' + (o.baru ? '. Pakai tombol di bawah untuk menambah.' : '.') + '</div>' : '')
+        + (o.baru ? '<button type="button" class="ntLB baru" data-baru="1">' + esc(o.baru) + '</button>' : '')
+        + (o.ket ? '<div class="ntLKet">' + esc(o.ket) + '</div>' : '');
+    };
+    gambar();
+    cari.addEventListener('input', gambar);
+    d.addEventListener('click', function (ev) {
+      var b = ev.target.closest('button'); if (!b) return;
+      if (b.getAttribute('data-l') === 'tutup') { tutupPemilih(); return; }
+      if (b.getAttribute('data-baru')) { var q2 = hurufBesar(cari.value); tutupPemilih(); if (o.tambah) o.tambah(q2); return; }
+      var v = b.getAttribute('data-v'); if (v != null) { tutupPemilih(); o.pilih(v); if (R.getar) R.getar(); }
+    });
+    document.body.appendChild(d);
+    if (window.visualViewport) { d._vv = function () { d.style.height = window.visualViewport.height + 'px'; d.style.top = window.visualViewport.offsetTop + 'px'; }; window.visualViewport.addEventListener('resize', d._vv); d._vv(); } /* keyboard iPhone tidak menutup daftar */
+    setTimeout(function () { if (o.daftar.length > 8) cari.focus(); }, 80);
+  }
+  function bukaPilih(kunci) {
+    simpanIsian();
+    if (kunci.indexOf('toko:') === 0) {
+      var m2 = kunci.slice(5);
+      pemilih({ judul: m2 === 'af' ? 'Bengkel terafiliasi' : 'Bengkel / toko', daftar: m2 === 'af' ? afList() : pilihanBengkel(m2), nilai: hurufBesar(F.toko), baru: m2 === 'af' ? '' : '➕ Tambah bengkel baru…',
+        pilih: function (v) { F.tokoBaru = false; F.toko = v; var rw = riwayatRek(v); if (rw.length && !F.rekNo && !F.rekening) isiRek(rw[0]); gambarForm(); },
+        tambah: function (q) { F.tokoBaru = true; F.toko = q || ''; gambarForm(); setTimeout(function () { var t = document.getElementById('ntToko'); if (t) t.focus(); }, 60); } });
+      return;
+    }
+    if (kunci === 'kat') { pemilih({ judul: 'Kategori ' + (F.jenisNota === 'KAS' ? 'Kas' : 'Jasa'), daftar: [''].concat(daftarKat()).filter(function (x, i) { return i > 0; }), nilai: hurufBesar(F.kategori), baru: '', pilih: function (v) { F.kategori = v; gambarForm(); } }); return; }
+    if (kunci === 'bank') { pemilih({ judul: 'Bank', daftar: bankList().concat(['LAINNYA']), lainLabel: 'Lainnya… (ketik nama bank)', nilai: F.rekBank, baru: '', pilih: function (v) { F.rekBank = v; gambarForm(); if (v === 'LAINNYA') setTimeout(function () { var t = document.getElementById('ntBankLain'); if (t) t.focus(); }, 60); } }); return; }
+    if (kunci.indexOf('lb:') === 0) {
+      var key = kunci.slice(3);
+      pemilih({ judul: 'Lambung unit', daftar: daftarLambung(), nilai: hurufBesar(ambilNilai(key)), baru: '➕ Tambah lambung baru…',
+        pilih: function (v) { if (F.lbBaru) delete F.lbBaru[key]; setNilai(key, v); if (!/^u\d+:/.test(key)) { var u = unitDari(v); if (u) { var kU = key.replace('lambung', 'unit'), man = key.indexOf(':') > 0 ? F.baris[+key.split(':')[0].slice(1)].unitManual : F.unitManual; if (!man) setNilai(kU, u); } } gambarForm(); },
+        tambah: function (q) { F.lbBaru = F.lbBaru || {}; F.lbBaru[key] = true; setNilai(key, q || ''); gambarForm(); } });
+    }
+  }
+  function ambilNilai(key) { if (/^u\d+:/.test(key)) { var pu = key.split(':'); return (F.unitR[+pu[0].slice(1)] || {})[pu[1]]; } if (key.indexOf('b') === 0 && key.indexOf(':') > 0) { var pb = key.split(':'); return (F.baris[+pb[0].slice(1)] || {})[pb[1]]; } return F[key]; }
 
   function gayaNota() {
     if (document.getElementById('ntGaya322')) return; var st = document.createElement('style'); st.id = 'ntGaya322';
@@ -81,7 +135,14 @@
       + '.notaForm input[type=date].isian{-webkit-appearance:none;appearance:none;min-height:52px;line-height:1.2;text-align:left}'
       + '.notaForm input[type=date]::-webkit-date-and-time-value{text-align:left}'
       + '.notaForm .lb{margin-top:14px;margin-bottom:6px}.notaForm .ntGrup .isian + .isian,.notaForm .ntGrup .ntRek + .isian,.notaForm .ntGrup .isian + .ntRek{margin-top:8px}'
-      + '.notaForm .ntRek{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.4fr);gap:8px}.notaForm .ntRek .isian{margin:0;height:100%;min-height:52px}.notaForm .ntRek{align-items:stretch}.notaForm .ntPilihRek{font-size:14px;margin-bottom:8px}';
+      + '.notaForm .ntRek{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.4fr);gap:8px}.notaForm .ntRek .isian{margin:0;height:100%;min-height:52px}.notaForm .ntRek{align-items:stretch}.notaForm .ntPilihRek{font-size:14px;margin-bottom:8px}'
+      + 'button.isian.ntPilih{display:flex!important}.ntPilih{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;min-height:52px;cursor:pointer;width:100%;max-width:100%;box-sizing:border-box}.ntPilih .ph{color:var(--redup);font-weight:600}.ntPilih .v,.ntPilih .ph{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ntPilih i{font-style:normal;color:var(--redup);flex:none}'
+      + '.ntLembar{position:fixed;left:0;right:0;top:0;height:100dvh;z-index:10002;background:var(--latar,#f4f7fb);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}'
+      + '.ntLKp{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#0f1a2e;color:#fff}.ntLKp b{flex:1;font-size:16px}.ntLKp button{min-height:44px;min-width:80px;border-radius:12px;border:0;background:#fff;color:#0b1a3a;font-weight:800}'
+      + '.ntLCari{padding:10px 12px;background:var(--panel,#fff);border-bottom:1px solid var(--garis)}.ntLCari input{width:100%;box-sizing:border-box;min-height:48px;border-radius:12px;border:1.5px solid var(--garis);padding:0 14px;font-size:16px;font-weight:700;background:var(--lembut2,#fff);color:var(--teks);text-transform:uppercase}'
+      + '.ntLDaftar{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px 10px calc(16px + env(safe-area-inset-bottom))}'
+      + '.ntLB{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;min-height:50px;padding:0 12px;margin:0 0 6px;border-radius:12px;border:1px solid var(--garis);background:var(--panel,#fff);color:var(--teks);font-size:15px;font-weight:700}.ntLB.on{border-color:var(--utama);color:var(--utama)}.ntLB i{font-style:normal}'
+      + '.ntLB.baru{border-style:dashed;color:var(--utama);justify-content:center}.ntLKosong{padding:16px;text-align:center;color:var(--redup);font-size:13.5px}.ntLKet{padding:6px 4px 10px;color:var(--redup);font-size:12.5px;text-align:center}';
     document.head.appendChild(st);
   }
   function maksUnit() { return (OPSI && Number(OPSI.maksUnit)) || 10; }
@@ -102,6 +163,7 @@
   function antre() { return Simpan.ambil(kunciAntre()).then(function (v) { try { var a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }); }
   function taruhAntre(a) { return Simpan.taruh(kunciAntre(), a.length ? JSON.stringify(a) : null); }
   function unitDari(lambung) {
+    var LI = OPSI && Array.isArray(OPSI.lambungInfo) ? OPSI.lambungInfo : [], kL = String(lambung || '').toUpperCase().replace(/\s+/g, ' ').trim(), hit = LI.filter(function (x) { return String(x.lambung || '').toUpperCase() === kL; })[0]; if (hit && hit.tipe) return String(hit.tipe).toUpperCase(); /* REVISI 10.51: lambungInfo */
     var n = Number(String(lambung || '').replace(/^\D+/, '').replace(/\D.*$/, '')); if (!n || !OPSI) return '';
     var t = (OPSI.tipeUnit || []).filter(function (x) { return n >= x[0] && n <= x[1]; })[0]; return t ? t[2] : '';
   }
@@ -286,16 +348,17 @@
     return '<div class="segmen notaJenis"' + (adaLangsung() ? ' style="grid-template-columns:repeat(3,1fr)"' : '') + '>' + (adaLangsung() ? pilih('masukKe', LANGSUNG, '💸 Langsung') : '') + pilih('masukKe', BENGKEL, IK('monitor') + (adaLangsung() ? 'Terafiliasi' : 'Bengkel terafiliasi')) + pilih('masukKe', AJU, IK('dokumen') + 'Pengajuan &gt; 3 jt') + '</div>'
       + (F.masukKe === LANGSUNG ? '' : '<div class="kecil" style="margin:-4px 2px 6px">' + (b ? 'Bengkel tetap, dibayar hari Selasa / Jumat.' : 'Nota di atas Rp 3 juta: wajib keperluan, berita acara (BA), dan foto nota.') + '</div>'
       + '<label class="lb">Jenis nota</label><div class="segmen kecilSeg">' + pilih('jenisNota', 'JASA', 'Jasa') + pilih('jenisNota', 'KAS', 'Kas') + '</div>'
-      + (b ? '<label class="lb" for="ntToko">Bengkel <i class="wajib">wajib</i></label><select class="isian" id="ntToko" data-f="toko"><option value="">Pilih bengkel terafiliasi</option>' + af.map(function (x) { return '<option' + (F.toko === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>'
+      + (b ? tokoHtml('Bengkel <i class="wajib">wajib</i>', 'af', '')
         + rekeningHtml('Rekening <span class="kecil">(opsional)</span>')
         + '<label class="lb">Hari bayar <i class="wajib">wajib</i></label><div class="segmen kecilSeg">' + pilih('hariBayar', 'SELASA', 'Selasa') + pilih('hariBayar', 'JUMAT', 'Jumat') + '</div>'
         : tokoHtml('Vendor <i class="wajib">wajib</i>', 'semua', 'Ketik nama vendor / toko baru')
         + '<label class="lb" for="ntKep">Keperluan / alasan <i class="wajib">wajib</i></label><textarea class="isian bnrTA" id="ntKep" data-f="keperluan" rows="3" placeholder="Kenapa perlu pengajuan ini">' + esc(F.keperluan) + '</textarea>'));
   }
   function lbUnit(idL, idU, fL, fU, vL, vU) {
-    return '<div class="baris"><div style="flex:1.2;min-width:0"><label class="lb" for="' + idL + '">Lambung</label><input class="isian kapital" id="' + idL + '" data-f="' + fL + '" list="ntLbDaftar" placeholder="mis. WHL 1012" autocomplete="off" value="' + esc(vL) + '"></div>'
+    return '<div class="baris"><div style="flex:1.2;min-width:0">' + lambungHtml(fL, idL, vL, 'Lambung') + '</div>'
       + '<div style="flex:1;min-width:0"><label class="lb" for="' + idU + '">Unit</label><input class="isian kapital" id="' + idU + '" data-f="' + fU + '" placeholder="otomatis" value="' + esc(vU) + '"></div></div>';
   }
+
   function formLangsung(dl) {
     var lab = (OPSI && OPSI.labelMasuk && OPSI.labelMasuk[LANGSUNG]) || 'Pengajuan langsung (bayar langsung / bengkel luar)', sub = F.unitR.reduce(function (s, u) { return s + Number(u.total || 0); }, 0), mx = maksUnit(), kas = F.jenisNota === 'KAS';
     var h = '<div class="kartu notaForm">' + bersama(false, [])
@@ -304,11 +367,11 @@
       + '<label class="lb" for="ntTgl">Tanggal nota</label><input class="isian" type="date" id="ntTgl" data-f="tglNota" value="' + esc(F.tglNota) + '">'
       + tokoHtml('Bengkel / toko <i class="wajib">wajib</i>', 'langsung', 'Ketik nama bengkel / toko baru')
       + rekeningHtml('Rekening <span class="kecil">(opsional, untuk admin transfer)</span>')
-      + kategoriHtml(kas)
+      + kategoriHtml()
       + '</div>' + dl
       + F.unitR.map(function (u, i) {
         return '<div class="kartu notaForm notaUnitK"><div class="notaAtas"><b>Unit ' + (i + 1) + '</b>' + (F.unitR.length > 1 ? '<button type="button" class="tKecil notaHapusB" data-n="hapusUnit:' + i + '">Hapus</button>' : '') + '</div>'
-          + '<label class="lb" for="ntUL' + i + '">Lambung' + (kas ? ' <span class="kecil">(boleh kosong untuk nota kas)</span>' : ' <i class="wajib">wajib</i>') + '</label><input class="isian kapital" id="ntUL' + i + '" data-f="u' + i + ':lambung" list="ntLbDaftar" placeholder="mis. WHL 038" autocomplete="off" value="' + esc(u.lambung) + '">'
+          + lambungHtml('u' + i + ':lambung', 'ntUL' + i, u.lambung, 'Lambung' + (kas ? ' <span class="kecil">(boleh kosong untuk nota kas)</span>' : ' <i class="wajib">wajib</i>'))
           + '<label class="lb" for="ntUU' + i + '">Uraian <i class="wajib">wajib</i></label><textarea class="isian bnrTA kapital" id="ntUU' + i + '" data-f="u' + i + ':uraian" rows="2" placeholder="Pekerjaan, pisah koma. mis. TAMBAL BAN DALAM, BONGKAR PASANG">' + esc(u.uraian) + '</textarea>'
           + '<label class="lb" for="ntUT' + i + '">Total <i class="wajib">wajib</i></label><input class="isian notaRp" id="ntUT' + i + '" data-f="u' + i + ':total" inputmode="numeric" placeholder="Rp 0" value="' + (u.total ? rp(u.total) : '') + '"></div>';
       }).join('')
@@ -521,7 +584,9 @@
   setInterval(kirimAntrean, 60000);
 
   function klik(ev) {
+    var pp = ev.target.closest('[data-pilih]'); if (pp && lapisEl && lapisEl.contains(pp)) { bukaPilih(pp.getAttribute('data-pilih')); return; }
     var b = ev.target.closest('[data-n]'); if (!b) return; var n = b.getAttribute('data-n');
+    if (n.indexOf('lbDaftar:') === 0) { simpanIsian(); var kl = n.slice(9); if (F.lbBaru) delete F.lbBaru[kl]; setNilai(kl, ''); gambarForm(); return; }
     if (n === 'kembali') { if (tab === 'baru' && F) { simpanIsian(); daftar(); } else tutup(); return; }
     if (n === 'ulangBuka') { buka(CTX, tab, mode); return; }
     if (n.indexOf('tab:') === 0) { var t = n.slice(4); if (t === 'baru') formBaru(); else daftar(); return; }
@@ -554,6 +619,7 @@
     }
   }
   /** untuk tombol Back HP */
-  function kembali() { if (!lapisEl) return false; if (tab === 'baru' && F) { simpanIsian(); daftar(); } else tutup(); return true; }
+  function kembali() { if (tutupPemilih()) return true; if (!lapisEl) return false; if (tab === 'baru' && F) { simpanIsian(); daftar(); } else tutup(); return true; }
+  window.WHL_PEMILIH = { buka: pemilih, tutup: tutupPemilih, gaya: gayaNota };
   window.WHL_NOTA = { pasang: function (c) { CTX = c; }, boleh: boleh, buka: buka, kirimAntrean: kirimAntrean, kembali: kembali, _uji: { form: function (isi, m) { formBaru(isi, m); }, isi: function () { return F; } } };
 })();

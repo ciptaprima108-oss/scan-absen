@@ -86,6 +86,14 @@
     if (CTX && CTX.bukaWeb) { CTX.bukaWeb(u); return; }
     try { window.open(u, '_blank', 'noopener'); } catch (e) { /* */ }
   }
+  function labelDriver(d) { return d.driver + ' · ' + (d.lambung ? d.lambung : 'SERAP'); }
+  function setDriver(nama) { simpanIsian(); F.driver = nama; rapikan(); pesanForm = ''; gambarForm(); simpanDraf(); }
+  function bukaPilihDriver() {
+    var D = (OPSI && OPSI.drivers) || [], lab = D.map(labelDriver), dp = driverPilih();
+    if (!window.WHL_PEMILIH) return;
+    window.WHL_PEMILIH.buka({ judul: 'Pilih driver (' + D.length + ')', daftar: lab, nilai: dp ? labelDriver(dp) : '', baru: '', ket: 'Driver belum ada? Minta admin tambah kartu driver di Input DO.',
+      pilih: function (v) { var i = lab.indexOf(v); if (i >= 0) setDriver(D[i].driver); } });
+  }
   function driverPilih() { return F && F.driver && OPSI ? (OPSI.drivers || []).filter(function (d) { return d.driver === F.driver; })[0] || null : null; }
   /** potongan ajuan ini di gaji bulan berjalan: kasbon = nominal; cicilan HP = cicilan ke-1 kalau mulai bulan ini */
   function potonganIni() { if (!F || !OPSI) return 0; if (F.jenis === KASBON) return F.nominal || 0; var r = F.harga > 0 && F.tenor > 0 ? rencana(F.harga, F.tenor) : []; return r.length && F.mulai === OPSI.periode ? r[0] : 0; }
@@ -406,8 +414,9 @@
     if (bd && di) h += '<label class="lb">Ajuan untuk</label><div class="segmen">' + pilih('untuk', DRV, IK('truk') + 'Driver') + pilih('untuk', KRY, IK('profil') + 'Saya sendiri') + '</div>';
     if (F.untuk === DRV) {
       var D = (OPSI.drivers || []);
-      h += '<label class="lb" for="kbDriver">Driver <i class="wajib">wajib</i></label><select class="isian" id="kbDriver" data-f="driver"><option value="">Pilih driver (' + D.length + ')</option>'
-        + D.map(function (d) { return '<option value="' + esc(d.driver) + '"' + (F.driver === d.driver ? ' selected' : '') + '>' + esc(d.driver) + (d.lambung ? ' · ' + esc(d.lambung) : '') + '</option>'; }).join('') + '</select>';
+      if (window.WHL_PEMILIH && window.WHL_PEMILIH.gaya) window.WHL_PEMILIH.gaya();
+      var dp = driverPilih(); /* v3.24 (Reza 10.55): pemilih yang bisa dicari (sama dengan Nota bengkel); driver tanpa lambung = SERAP */
+      h += '<label class="lb" for="kbDriver">Driver <i class="wajib">wajib</i></label><button type="button" class="isian ntPilih" id="kbDriver" data-k="pilihDriver"><span class="' + (dp ? 'v' : 'ph') + '">' + esc(dp ? labelDriver(dp) : 'Pilih driver (' + D.length + ')') + '</span><i>▾</i></button>';
       h += '<label class="lb">Jenis</label><div class="segmen">' + pilih('jenis', KASBON, IK('dokumen') + 'Kasbon') + pilih('jenis', HP, '📱 Cicilan HP') + '</div>';
     } else {
       var di = OPSI.diri || {};
@@ -586,6 +595,7 @@
     if (n === 'hapusFotoDrv') { simpanIsian(); F.fotoDriver = ''; gambarForm(); simpanDraf(); return; }
     if (n.indexOf('bukti:') === 0) { var ib = n.slice(6), xb = (LIST || []).concat(PIMP).filter(function (z) { return z.id === ib; })[0]; if (xb && xb.buktiUrl) bukaTautan(xb.buktiUrl); return; }
     if (n === 'ttd') { bukaTtd(); return; }
+    if (n === 'pilihDriver') { simpanIsian(); bukaPilihDriver(); return; }
     if (n === 'kirim') { if (!mengirim) kirim(); return; }
     if (n === 'kirimSekarang') { kirimAntrean().then(function () { daftar('daftar'); }); return; }
     if (n.indexOf('ubahAntre:') === 0) {
@@ -612,9 +622,9 @@
     }
   }
   /** untuk tombol Back HP (MainActivity -> WHL_KEMBALI menekan .ksnKp .kb lapis paling atas) */
-  function kembali() { if (tutupBatal()) return true; if (ttdEl) { tutupTtd(); return true; } if (!lapisEl) return false; if (tab === 'baru' && F) { simpanIsian(); simpanDraf(); daftar('daftar'); } else tutup(); return true; }
+  function kembali() { if (window.WHL_PEMILIH && window.WHL_PEMILIH.tutup()) return true; if (tutupBatal()) return true; if (ttdEl) { tutupTtd(); return true; } if (!lapisEl) return false; if (tab === 'baru' && F) { simpanIsian(); simpanDraf(); daftar('daftar'); } else tutup(); return true; }
   function lupakan() { OPSI = null; OPSI_T = 0; LIST = null; PIMP = []; BOLEHACC = false; F = null; if (lapisEl) tutup(); }
   window.WHL_KASBON = { pasang: function (c) { CTX = c; }, boleh: boleh, buka: buka, kirimAntrean: kirimAntrean, kembali: kembali, lupakan: lupakan,
     batalModal: batalModal, bisaBatal: bisaBatal, tutupBatal: tutupBatal,
-    _uji: { rencana: rencana, isi: function () { return F; } } };
+    _uji: { rencana: rencana, isi: function () { return F; }, setDriver: setDriver } };
 })();

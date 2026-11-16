@@ -179,9 +179,29 @@
     if (tab !== 'staf') h += '<div class="gjiCari">' + IK('cari') + '<input id="gjiCari" class="isian" type="search" autocomplete="off" placeholder="Cari nama driver / lambung" value="' + esc(cari) + '"></div>';
     else h += '<button type="button" class="tKecil" data-g="rekapStaf" style="width:100%;margin:0 0 10px">' + IK('dokumen') + ' Rekap PDF untuk HRD</button>';
     h += '<div id="gjiDaftar">' + daftarHtml() + '</div>';
+    if (tab !== 'staf') h += catatanStafHtml();
     h += '<div class="gjiKaki">Angka perkiraan dari server (rumus sama dengan Gaji di Input DO). Sisa gaji tidak dibuat minus: potongan yang tidak muat dibawa ke bulan depan sebagai <b>sisa kasbon terbawa</b>. '
       + 'Dihitung ' + esc(String(H.diambil || '-')) + ' WIB' + (H.dariCache ? ' (simpanan ≤10 menit, tekan ⟳ untuk hitung ulang)' : '') + '.</div>';
     return h;
+  }
+  /* v3.24 (DASHBOARD V511): catatanStaf [{nama, rit, gajiKotor, potongan, voucher[], trip[]}] = catatan atas nama staf (mis. pengawas) yang
+     dikeluarkan dari daftar driver -> kotak peringatan merah kecil, khusus admin / pimpinan. Server lama (tanpa field) = tidak tampil. */
+  function bolehLihatCatatan() { var S = sesi(); return !!(S && S.user && (S.user.admin || ['admin', 'pimpinan', 'penuh'].indexOf(S.user.peran) >= 0)); }
+  function teksVoucher(v) {
+    if (v == null) return ''; if (typeof v !== 'object') return String(v);
+    var no = v.no || v.nomor || v.kode || v.voucher || v.id || '', nil = v.nilai != null ? v.nilai : v.total != null ? v.total : v.jumlah != null ? v.jumlah : v.rp;
+    return [no, nil != null && nil !== '' ? rp(nil) : '', v.tgl || v.tanggal || ''].filter(Boolean).join(' · ');
+  }
+  function catatanStafHtml() {
+    var C = H && Array.isArray(H.catatanStaf) ? H.catatanStaf : []; if (!C.length || !bolehLihatCatatan()) return '';
+    return '<div class="gjiCatStaf" style="margin:12px 0 4px;border:1px solid #f3b4b4;background:#fdecec;color:#9b1c1c;border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.5">'
+      + '<b style="display:block;font-size:13px;margin-bottom:4px">⚠ Catatan atas nama staf (' + C.length + ')</b><div style="opacity:.85;margin-bottom:4px">Tidak dihitung sebagai gaji driver. Cek apakah DO / voucher ini salah nama.</div>'
+      + C.map(function (c) {
+        var V = (Array.isArray(c.voucher) ? c.voucher : []).map(teksVoucher).filter(Boolean), Tr = Array.isArray(c.trip) ? c.trip.length : 0;
+        return '<div style="border-top:1px dashed #f3b4b4;padding-top:5px;margin-top:5px"><b>' + esc(c.nama || '-') + '</b>'
+          + ' · ' + num(c.rit || Tr || 0) + ' rit' + (c.gajiKotor ? ' · kotor ' + esc(rp(c.gajiKotor)) : '') + (c.potongan ? ' · potongan ' + esc(rp(c.potongan)) : '')
+          + (V.length ? '<br>Voucher: ' + V.map(esc).join(', ') : '') + '</div>';
+      }).join('') + '</div>';
   }
   function cocok(o) { var q = norm(cari); if (!q) return true; return norm(o.driver).indexOf(q) >= 0 || norm(o.lambung).indexOf(q) >= 0 || (o.lambungList || []).some(function (l) { return norm(l).indexOf(q) >= 0; }) || (o.driverList || []).some(function (n) { return norm(n).indexOf(q) >= 0; }); }
   function daftarHtml() {

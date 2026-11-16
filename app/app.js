@@ -259,6 +259,7 @@
   function tanyaKeluar() { if (Date.now() - tekanKeluar < 2000) return 'keluar'; tekanKeluar = Date.now(); roti('Tekan sekali lagi untuk keluar'); return 'ok'; }
   window.WHL_KEMBALI = function () {
     try {
+      if (window.WHL_PEMILIH && window.WHL_PEMILIH.tutup()) return 'ok'; /* v3.24 pemilih cari */
       if (window.WHL_BERKAS && window.WHL_BERKAS.tutup()) return 'ok'; /* v3.20: lembar pratinjau PDF */
       if (window.WHL_KASBON && window.WHL_KASBON.tutupBatal && window.WHL_KASBON.tutupBatal()) return 'ok'; /* v3.19: modal Batalkan kasbon */
       if (document.querySelector('.izLihat') && window.WHL_IZIN) { window.WHL_IZIN.kembali(); return 'ok'; } /* v3.19: lampiran izin layar penuh */
