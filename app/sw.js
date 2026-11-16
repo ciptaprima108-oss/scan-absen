@@ -1,9 +1,12 @@
 /* Service worker WHL (app web). Dibuat alat/buat-pwa.mjs — jangan diedit tangan.
  * Menyimpan CANGKANG app saja (HTML/CSS/JS/ikon di folder ini). TIDAK PERNAH menyentuh panggilan ke server lain:
  * jawaban API (script.google.com), pengenal wajah (CDN), dan semua POST lewat langsung tanpa disimpan.
- * Cara ambil: jaringan dulu (maks 4 dtk) supaya versi baru langsung terpakai; kalau gagal / tidak ada sinyal -> salinan di HP.
+ * v3.20 (audit bug #8) cara ambil:
+ *  - index.html / navigasi / versi.json: jaringan dulu (maks 3,5 dtk) supaya versi baru langsung terpakai; gagal -> salinan di HP.
+ *  - berkas ber-?v=<versi app ini> dan berkas cangkang lain (ikon, gambar, suara, pustaka): salinan HP dulu (instan), tanpa menunggu jaringan.
+ *  - berkas ber-?v= versi LAIN (index baru, service worker lama): jaringan dulu supaya tidak tercampur versi.
  */
-const VERSI = 'fad722c90e', CACHE = 'whl-cangkang-' + VERSI;
+const VERSI = 'b21e4aeea4', CACHE = 'whl-cangkang-' + VERSI, APPV = '3.20';
 /* WEB PUSH (iPhone iOS 16.4+ dari Layar Utama, Chrome Android): Firebase Cloud Messaging. Pesan ber-"notification" ditampilkan otomatis
  * oleh pustaka Firebase; ketuk -> fcm_options.link (app web, ?buka=forum:ruang / tiket:lambung). */
 try {
@@ -17,12 +20,14 @@ self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((k) =>
 self.addEventListener('fetch', (e) => {
   const q = e.request, u = new URL(q.url);
   if (q.method !== 'GET' || u.origin !== self.location.origin || !u.pathname.startsWith(new URL('./', self.location).pathname)) return; // bukan cangkang app: jangan ikut campur
+  const v = u.searchParams.get('v'), nama = u.pathname.split('/').pop(), jaringanDulu = q.mode === 'navigate' || nama === '' || nama.endsWith('.html') || nama === 'versi.json' || (v && v !== APPV);
   e.respondWith((async () => {
     const c = await caches.open(CACHE);
+    if (!jaringanDulu) { const ada = await c.match(q) || await c.match(q, { ignoreSearch: true }); if (ada) return ada; }
     try {
-      const batas = new Promise((_, tolak) => setTimeout(() => tolak(new Error('lama')), 4000));
+      const batas = new Promise((_, tolak) => setTimeout(() => tolak(new Error('lama')), jaringanDulu ? 3500 : 8000));
       const r = await Promise.race([fetch(q, { cache: 'no-store' }), batas]);
-      if (r && r.ok) c.put(q, r.clone());
+      if (r && r.ok && (!v || v === APPV || jaringanDulu === false)) c.put(q, r.clone());
       return r;
     } catch (x) {
       const ada = await c.match(q, { ignoreSearch: true }) || (q.mode === 'navigate' ? await c.match('./index.html') : null);

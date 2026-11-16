@@ -252,6 +252,7 @@
 
   /* ---------- PDF (base64 dari server) ---------- */
   function bukaPdf(nama, b64) {
+    if (window.WHL_BERKAS) { window.WHL_BERKAS.buka(nama, b64, 'application/pdf').catch(function (e) { roti(e.message); }); return; } /* v3.20: di dalam app (iOS tidak lagi ke aplikasi luar) */
     var a = window.AndroidDownloader;
     if (a && typeof a.simpanFile === 'function') { a.simpanFile(nama, b64, 'application/pdf'); return; }
     try {

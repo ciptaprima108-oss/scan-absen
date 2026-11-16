@@ -152,6 +152,7 @@
 
   /* ---------- berkas: PDF dari server, Excel dibuat di HP ---------- */
   function simpanBerkas(nama, b64, mime) {
+    if (window.WHL_BERKAS) { window.WHL_BERKAS.buka(nama, b64, mime).catch(function (e) { roti(e.message); }); return; } /* v3.20: PDF / Excel / CSV di dalam app */
     var a = window.AndroidDownloader;
     if (a && typeof a.simpanFile === 'function') { a.simpanFile(nama, b64, mime); return; }
     try {

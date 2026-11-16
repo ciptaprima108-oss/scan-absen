@@ -353,7 +353,7 @@
       if (h && h.perluPilihPotong) { roti(h.pesan || 'Pilih dulu: Potong gaji atau Tidak dipotong.'); lapis(); return; }
       if (!h || !h.ok) { roti((h && h.pesan) || 'Keputusan belum tersimpan.'); lapis(); return; }
       if (R.bunyi) R.bunyi('sukses'); if (R.getar) R.getar('sukses');
-      roti(h.pesan || (kep === 'ACC' ? 'Izin disetujui' + (h.catRoster ? ' · roster ' + h.catRoster : '') + '.' : 'Izin ditolak.'));
+      roti((h.pesan && !(kep === 'TOLAK' && /disetujui/i.test(h.pesan)) ? h.pesan : '') || (kep === 'ACC' ? 'Izin disetujui' + (h.catRoster ? ' · roster ' + h.catRoster : '') + '.' : 'Izin ditolak.'));
       ANTRE = (ANTRE || []).filter(function (a) { return a.id !== id; }); if (OPSI) OPSI.menungguAcc = ANTRE.length; lapis(); muatAntre(); perbarui();
     }, function (e) { sibuk = false; roti(((e && e.message) || 'Gagal') + '. Coba lagi.'); lapis(); });
   }
@@ -367,6 +367,7 @@
       var src = String(h.src);
       if (h.pdf || /^data:application\/pdf/.test(src)) {
         var b64 = src.replace(/^data:[^,]*,/, ''), nama = 'Lampiran ' + id + '.pdf';
+        if (window.WHL_BERKAS) { window.WHL_BERKAS.buka(nama, b64, 'application/pdf').catch(function (e) { roti(e.message); }); return; }
         if (window.WHL_GAJI && window.WHL_GAJI.bukaPdf) { window.WHL_GAJI.bukaPdf(nama, b64); return; }
         var a = window.AndroidDownloader; if (a && typeof a.simpanFile === 'function') { a.simpanFile(nama, b64, 'application/pdf'); return; }
         try { var bin = atob(b64), u8 = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); window.open(URL.createObjectURL(new Blob([u8], { type: 'application/pdf' })), '_blank'); } catch (e) { roti('PDF tidak bisa dibuka.'); }
@@ -429,7 +430,7 @@
   function bukaNotif(ctx, id) {
     CTX = ctx || CTX;
     var jalan = function () { if (!aktif()) { webIzin(); return; } muat().then(function () { buka(CTX, OPSI && OPSI.bolehAcc ? 'acc' : 'saya', id); }); };
-    if (!aktif()) { API.Pusat.cekUlang().then(jalan, jalan); return; } jalan();
+    if (!aktif()) { API.Pusat.cekUlang(true).then(jalan, jalan); return; } jalan();
   }
 
   function klik(ev) {
