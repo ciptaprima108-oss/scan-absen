@@ -1,14 +1,13 @@
 {
- "versi": "3.20",
- "versionCode": 321,
+ "versi": "3.21",
+ "versionCode": 322,
  "wajib": false,
  "catatan": [
-  "Buka app lebih cepat: panggilan ke server tidak dobel lagi + 1 panggilan gabungan Beranda",
-  "iPhone: PDF / Excel kasbon, slip, rekap, lampiran izin dibuka di dalam app",
-  "App web: berkas tersimpan dibuka langsung dari HP (tidak menunggu sinyal)"
+  "Nota bengkel: jenis baru Pengajuan langsung (bayar langsung / bengkel luar), beberapa unit dalam 1 nota, kode nota langsung muncul",
+  "Kasbon Rp 1.000.000 ke atas butuh ACC pimpinan"
  ],
- "apk": "WHL-App-v3.20.apk",
- "ukuran": 8333439,
- "sha256": "f2e9c0830fcca10bc335823a5fbca3a7eceeef3aeb018445be9ff47929e2f3df",
- "dibuat": "2026-11-16 01:25"
+ "apk": "WHL-App-v3.21.apk",
+ "ukuran": 8336111,
+ "sha256": "03d87d0f08a09373fdccd858265149199782eba482d2f2dcd907f73d4efe7601",
+ "dibuat": "2026-11-16 02:51"
 }
