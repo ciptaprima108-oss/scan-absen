@@ -1,13 +1,12 @@
 {
- "versi": "3.21",
- "versionCode": 322,
+ "versi": "3.22",
+ "versionCode": 323,
  "wajib": false,
  "catatan": [
-  "Nota bengkel: jenis baru Pengajuan langsung (bayar langsung / bengkel luar), beberapa unit dalam 1 nota, kode nota langsung muncul",
-  "Kasbon Rp 1.000.000 ke atas butuh ACC pimpinan"
+  "Nota bengkel: form lebih rapi, bengkel & kategori bisa dipilih dari daftar, rekening Bank / Nomor / Atas nama + rekening sebelumnya otomatis"
  ],
- "apk": "WHL-App-v3.21.apk",
- "ukuran": 8336111,
- "sha256": "03d87d0f08a09373fdccd858265149199782eba482d2f2dcd907f73d4efe7601",
- "dibuat": "2026-11-16 02:51"
+ "apk": "WHL-App-v3.22.apk",
+ "ukuran": 8338516,
+ "sha256": "36c674e3aa038f3597cfd33d8a84d6e471041de65b7573a45a4f937b9952400a",
+ "dibuat": "2026-11-16 03:35"
 }
