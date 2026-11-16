@@ -1,13 +1,12 @@
 {
- "versi": "3.24",
- "versionCode": 325,
+ "versi": "3.25",
+ "versionCode": 326,
  "wajib": false,
  "catatan": [
-  "Nota bengkel & kasbon: pilihan bengkel, lambung, bank, kategori, driver bisa dicari (ketik untuk menyaring), ada Tambah baru",
-  "Gaji: peringatan catatan atas nama staf (admin/pimpinan)"
+  "Nota bengkel: bisa diberikan per orang (contoh Pak Hardi)"
  ],
- "apk": "WHL-App-v3.24.apk",
- "ukuran": 8342560,
- "sha256": "07dd75f37599d6b34713c53c54dfefc26047a424882755a57fe98e335763ab4f",
- "dibuat": "2026-11-16 04:20"
+ "apk": "WHL-App-v3.25.apk",
+ "ukuran": 8342592,
+ "sha256": "ce4d3ab7084e0c357400e9c1e8ac52cf0c510c76dcecb9db844def5734b04e58",
+ "dibuat": "2026-11-16 05:53"
 }
