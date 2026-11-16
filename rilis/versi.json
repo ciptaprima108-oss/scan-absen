@@ -1,12 +1,13 @@
 {
- "versi": "3.25",
- "versionCode": 326,
+ "versi": "3.26",
+ "versionCode": 327,
  "wajib": false,
  "catatan": [
-  "Nota bengkel: bisa diberikan per orang (contoh Pak Hardi)"
+  "Foto nota, bukti pengerjaan, WA/BA: tombol Kamera langsung + Galeri (bisa pilih beberapa)",
+  "Kamera juga di foto nota HP (cicilan), lampiran izin, Forum, dan banner"
  ],
- "apk": "WHL-App-v3.25.apk",
- "ukuran": 8342592,
- "sha256": "ce4d3ab7084e0c357400e9c1e8ac52cf0c510c76dcecb9db844def5734b04e58",
- "dibuat": "2026-11-16 05:53"
+ "apk": "WHL-App-v3.26.apk",
+ "ukuran": 8343043,
+ "sha256": "16133b7f9aaae8bd0befee1a2fd7fc54a3efa64e4ca8756635de0700f22f64d8",
+ "dibuat": "2026-11-16 07:04"
 }
