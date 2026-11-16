@@ -222,10 +222,28 @@
     if (baru && x.status === 'DISETUJUI' && x.jenis === HP) w = ['hijau', 'Disetujui'];
     return w;
   }
+  /* percepat-app-16nov A4/A5: diambil di BELAKANG oleh app.js (kasbonOpsi = hitung gaji, dingin 20-40 dtk) supaya buka menu / form tidak menunggu */
+  function pramuat(ctx) {
+    CTX = ctx || CTX; if (!boleh()) return;
+    muatOpsi(false).then(null, function () { /* diam */ });
+    API.Pusat.kasbonSaya(sesi()).then(function (h) { if (h && h.ok) { LIST = Array.isArray(h.list) ? h.list : []; PIMP = Array.isArray(h.pimpinan) ? h.pimpinan : []; BOLEHACC = !!h.bolehAcc; cekAlur(LIST.concat(PIMP)); Simpan.taruh('whlKasbonSaya_' + akun(), JSON.stringify(LIST)); } }, function () { /* diam */ });
+  }
+  var daftarUrut = 0;
+  function pitaSegar() { var el = lapisEl && lapisEl.querySelector('.ksnIsi'); if (el && !el.querySelector('.kbSegar')) el.insertAdjacentHTML('afterbegin', '<div class="pitaData kbSegar" style="display:flex;gap:8px;align-items:center"><span class="putar"></span><span>Menyegarkan dari server…</span></div>'); }
   function daftar(keTab) {
     tab = keTab || (tab === 'acc' ? 'acc' : 'daftar');
+    var urutD = ++daftarUrut, beres = false;
     lapis(memuatHtml('Memuat ajuan...'));
+    /* percepat-app-16nov A4: daftar terakhir (memori / HP) tampil langsung, lalu diganti hasil server */
+    Promise.all([antre(), LIST ? Promise.resolve() : Simpan.ambil('whlKasbonSaya_' + akun()).then(function (v) { try { var c = JSON.parse(v || 'null'); if (Array.isArray(c) && !LIST) LIST = c; } catch (x) { /* */ } })]).then(function (r0) {
+      if (beres || urutD !== daftarUrut || !lapisEl || tab === 'baru') return;
+      var tb = tab; if (tabOtomatis) tb = BOLEHACC && PIMP.length ? 'acc' : (tab === 'acc' ? 'daftar' : tab); /* tabOtomatis tetap: hasil server yang memutuskan */
+      if (tb === 'acc' ? !PIMP.length : !LIST) return;
+      tab = tb; ANTRE_TAMPIL = r0[0]; GALAT_DAFTAR = '';
+      if (tab === 'acc') gambarAcc(); else gambarDaftar(r0[0], ''); pitaSegar();
+    });
     Promise.all([antre(), API.Pusat.kasbonSaya(sesi()).then(function (h) {
+      beres = true;
       if (h && h.login === false) return 'Sesi habis, keluar lalu masuk lagi.';
       if (h && h.ok) { LIST = Array.isArray(h.list) ? h.list : []; PIMP = Array.isArray(h.pimpinan) ? h.pimpinan : []; BOLEHACC = !!h.bolehAcc; cekAlur(LIST.concat(PIMP)); Simpan.taruh('whlKasbonSaya_' + akun(), JSON.stringify(LIST)); return ''; }
       return (h && h.pesan) || 'Daftar belum bisa dimuat.';
@@ -624,7 +642,7 @@
   /** untuk tombol Back HP (MainActivity -> WHL_KEMBALI menekan .ksnKp .kb lapis paling atas) */
   function kembali() { if (window.WHL_PEMILIH && window.WHL_PEMILIH.tutup()) return true; if (tutupBatal()) return true; if (ttdEl) { tutupTtd(); return true; } if (!lapisEl) return false; if (tab === 'baru' && F) { simpanIsian(); simpanDraf(); daftar('daftar'); } else tutup(); return true; }
   function lupakan() { OPSI = null; OPSI_T = 0; LIST = null; PIMP = []; BOLEHACC = false; F = null; if (lapisEl) tutup(); }
-  window.WHL_KASBON = { pasang: function (c) { CTX = c; }, boleh: boleh, buka: buka, kirimAntrean: kirimAntrean, kembali: kembali, lupakan: lupakan,
+  window.WHL_KASBON = { pasang: function (c) { CTX = c; }, boleh: boleh, buka: buka, kirimAntrean: kirimAntrean, kembali: kembali, lupakan: lupakan, pramuat: pramuat, /* percepat-app-16nov A5 */
     batalModal: batalModal, bisaBatal: bisaBatal, tutupBatal: tutupBatal,
     _uji: { rencana: rencana, isi: function () { return F; }, setDriver: setDriver } };
 })();

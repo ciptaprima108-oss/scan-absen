@@ -391,3 +391,6 @@ html[data-tema="gelap"] .notaKode { background:#123a26; color:#86efac; } html[da
 .notaProg i { position:absolute; left:0; top:0; bottom:0; width:0; background:linear-gradient(90deg, var(--utama), #22c55e); transition:width .3s; }
 .notaProg em { position:relative; display:block; font-style:normal; font-size:10.5px; font-weight:800; line-height:16px; text-align:center; color:var(--teks); }
 .notaVidT { font-size:13px; font-weight:800; }
+
+/* v3.29 tahap2: tab Forum Staf / Forum Umum di atas ruang */
+.fmDua { margin:10px 16px 0; flex:none; }

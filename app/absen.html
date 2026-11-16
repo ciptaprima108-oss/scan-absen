@@ -408,11 +408,18 @@
     var p = S.pos; if (!p || !S.titik) return;
     S.jalan = true; S.batal = false; $("tAbsen").disabled = true; $("hasil").classList.add("sembunyi");
     var T = null, sidik = [], foto = "", hidup = { mode: "pindai" };
-    siapkanModel().then(function () { return rpc("abmMulai", [S.token]); }).then(function (t) {
+    /* percepat-app-16nov A6: kamera menyala BERSAMAAN dengan minta tantangan (abmMulai, berlaku 3 menit) & muat model. Gagal di salah satu = kamera dimatikan (hentiKamera di catch). */
+    var kamJ = navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false }).then(function (st) {
+      if (!S.jalan || S.batal) { try { st.getTracks().forEach(function (tr) { tr.stop(); }); } catch (e) { /* */ } throw new Error("diam"); }
+      S.stream = st; return st;
+    });
+    var mulaiJ = rpc("abmMulai", [S.token]);
+    kamJ.catch(function () { }); mulaiJ.catch(function () { });
+    siapkanModel().then(function () { return mulaiJ; }).then(function (t) {
       if (t.login === false) { keLogin("Sesi habis, masuk lagi."); throw new Error("diam"); }
       if (!t.ok) throw new Error(t.pesan);
       T = t;
-      return navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+      return kamJ;
     }).then(function (st) {
       S.stream = st; var v = $("video"); v.srcObject = st; var pl = v.play(); if (pl && pl.catch) pl.catch(function () { });
       $("siap").classList.add("sembunyi"); $("kamPanel").classList.remove("sembunyi"); instruksi("Menyalakan kamera...", "Izinkan kamera kalau diminta", "");

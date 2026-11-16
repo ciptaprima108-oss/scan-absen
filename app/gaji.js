@@ -149,6 +149,17 @@
     });
   }
 
+  /** percepat-app-16nov A5: hitung gaji periode berjalan di BELAKANG (server dingin 20-40 dtk). Hasil cuma di memori (aturan gaji.js: angka tidak disimpan di HP). */
+  function pramuat(ctx) {
+    CTX = ctx || CTX; if (!boleh()) return;
+    if (SIMPAN.KINI && Date.now() - SIMPAN.KINI.t < 10 * 60000) return;
+    API.Pusat.gajiDriver(sesi(), '', false).then(function (h) {
+      if (!h || !h.ok || SIMPAN.KINI && Date.now() - SIMPAN.KINI.t < 10 * 60000) return;
+      SIMPAN[h.periode] = SIMPAN.KINI = { t: Date.now(), h: h };
+      if (lapisEl && !H && memuat === false) { H = h; periode = h.periode; lapis(); }
+    }, function () { /* diam: dibuka biasa nanti */ });
+  }
+
   /* ---------- isi ---------- */
   function isi() {
     var h = '';
@@ -301,5 +312,5 @@
   }
   function kembali() { if (!lapisEl) return false; tutup(); return true; }
   function lupakan() { SIMPAN = {}; H = null; galat = ''; periode = ''; cari = ''; tab = 'driver'; AKSES = null; if (lapisEl) tutup(); }
-  window.WHL_GAJI = { boleh: boleh, buka: buka, kembali: kembali, lupakan: lupakan, bukaPdf: bukaPdf, judul: judul, akses: function (S) { return aksesBaru() ? akses(S) : null; }, muatAkses: muatAkses };
+  window.WHL_GAJI = { boleh: boleh, buka: buka, kembali: kembali, lupakan: lupakan, bukaPdf: bukaPdf, judul: judul, pramuat: pramuat, /* percepat-app-16nov A5 */ akses: function (S) { return aksesBaru() ? akses(S) : null; }, muatAkses: muatAkses };
 })();

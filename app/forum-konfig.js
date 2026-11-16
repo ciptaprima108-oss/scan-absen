@@ -15,6 +15,7 @@ window.WHL_FORUM_KONFIG = {
   vapid: 'BOj4K3a9_d2hTkfRobqZn_0XokmcsjL7_3I-st_Yg2j8KKgOecAEkWVVjK0gOVHDOR3foBnHWGjC_o287X95mUg',
   media: 'firestore', // 'firestore' = foto/suara disimpan base64 di Firestore (gratis Spark) · 'storage' = Cloud Storage (perlu Blaze)
   ruang: [
+    { id: 'semua', nama: 'Forum Umum', ic: '👷', ket: 'Semua karyawan & driver' }, /* v3.29 tahap2: ruang baru staf + driver (server kirim ruangNama) */
     { id: 'umum', nama: 'Umum WHL', ic: '📣', ket: 'Semua karyawan' },
     { id: 'pengawas', nama: 'Pengawas', ic: '🦺', ket: 'Pengawas, HSE, pimpinan' },
     { id: 'mekanik', nama: 'Mekanik', ic: '🔧', ket: 'Mekanik & pengawas' },

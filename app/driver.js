@@ -1,0 +1,161 @@
+/* WHL App v3.29 — MENU DRIVER (tahap 2 rancangan Upgrade\app-beranda-poin-16nov §2; kontrak server Armand Upgrade\app-tahap12-16nov\KONTRAK-APP.md REVISI 1).
+ * - Kartu "Hari ini" driver di Beranda: ritase, KM (dari DO), tonase hari tambang ini + progres KM BULANAN ke 2 target bonus (angka dari server) + peringatan DO belum lapor.
+ * - Layar Profil & ID card (QR untuk ditunjukkan di pos / portal), Dokumen saya (Kimper / SIMPER / MCU / SIM), DO saya (1–14 hari, foto DO, status lapor).
+ * Semua RPC baca saja: pusatHariIniDriver / pusatProfilDriver / pusatDoSaya (args [token, ..., idKartu=null]). Fitur yang fungsinya belum ada di pusatPing disembunyikan.
+ * Tanpa gaji / kasbon / uang (satu-satunya rupiah = nilai bonus target KM, keputusan Reza 16 Nov).
+ */
+(function () {
+  'use strict';
+  var API = window.WHL_API, R = window.WHL_RASA, Simpan = API.Simpan;
+  var CTX = null, HI = null, HI_JALAN = false, lapisEl = null, jenisL = '', PROF = null, DOS = null, nHari = 7;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function IK(n) { return window.WHL_IKON ? window.WHL_IKON(n) : ''; }
+  function ang(n, des) { var v = Number(n); if (!isFinite(v)) return '–'; return v.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: des == null ? 1 : des }); }
+  function uangPendek(n) { n = Number(n) || 0; return n >= 1e6 ? 'Rp ' + (n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 }) + ' jt' : 'Rp ' + n.toLocaleString('id-ID'); }
+  var BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'], HR = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+  function tgl(t, hari) { var m = String(t || '').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return esc(t || ''); var d = new Date(+m[1], +m[2] - 1, +m[3]); return (hari ? HR[d.getDay()] + ', ' : '') + (+m[3]) + ' ' + BLN[+m[2] - 1] + (hari ? '' : ' ' + m[1]); }
+  function sesi() { return CTX && CTX.sesi(); }
+  function driver(S) { S = S || sesi(); return !!(S && S.user && S.user.peran === 'driver'); }
+  function punya(fn) { return API.Pusat.asli() && API.Pusat.punya(fn); }
+  /** server sudah siap untuk driver (dipakai juga untuk membuka blokir login driver) */
+  function siap() { return punya('pusatHariIniDriver') || punya('pusatProfilDriver') || punya('pusatDoSaya'); }
+  function akun() { var S = sesi(); return String((S && (S.idProfil || S.idKetik)) || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+  function panggil(fn, args) { return API.Pusat.panggil(fn, [sesi().tokenPusat].concat(args || []), 30000); }
+  function gaya() {
+    if (document.getElementById('drvGaya')) return; var st = document.createElement('style'); st.id = 'drvGaya';
+    st.textContent = '.drvHi .hiStrip{grid-template-columns:repeat(3,1fr)}.drvBln{margin-top:9px;padding-top:9px;border-top:1px solid var(--garis)}.drvBlnAtas{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--redup);font-weight:700}.drvBlnAtas b{color:var(--teks);font-size:12.5px}.drvBlnAtas span b{font-family:Nunito,sans-serif;font-size:16px;font-weight:900}'
+      + '.drvBar{position:relative;height:10px;border-radius:99px;background:var(--panel2);margin:12px 0 14px}.drvBar>i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#20C3B4,#1E88E5)}.drvBar>em{position:absolute;top:-4px;width:3px;height:18px;margin-left:-1.5px;border-radius:2px;background:var(--redup)}.drvBar>em.ok{background:#16a34a}.drvTk{display:flex;flex-wrap:wrap;gap:5px;margin:-8px 0 8px}.drvTk span{font-size:11px;font-weight:800;padding:3px 8px;border-radius:99px;background:var(--panel2);color:var(--redup)}.drvTk span.ok{background:rgba(22,163,74,.14);color:#15803d}'
+      + '.drvTeks{font-size:12.5px;font-weight:700}.drvTeks.ok{color:#16a34a}.drvKet{font-size:11.5px;color:var(--redup);margin-top:3px}'
+      + '.drvPeringat{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border-radius:16px;padding:11px 13px;margin-bottom:12px;background:rgba(255,197,48,.18);color:var(--tKuning);font-weight:700;font-size:13.5px}.drvPeringat.merah{background:rgba(242,72,77,.14);color:var(--tMerah)}.drvPeringat small{display:block;font-weight:600;opacity:.85}.drvPeringat .ikn{width:22px;height:22px;flex:none}'
+      + '.drvLapis .ksnIsi{padding-bottom:40px}.drvKartuId{text-align:center;padding:18px 16px}.drvFoto{width:84px;height:84px;border-radius:50%;margin:0 auto 10px;object-fit:cover;display:grid;place-items:center;background:var(--tint);color:var(--utama);font-size:28px;font-weight:900}'
+      + '.drvKartuId h2{margin:0;font-size:19px}.drvKartuId .jab{color:var(--redup);font-weight:700;font-size:13px}.drvQr{width:min(230px,70vw);margin:14px auto 6px;padding:10px;background:#fff;border-radius:16px;box-shadow:0 0 0 1px var(--garis)}.drvQr svg{display:block;width:100%;height:auto}.drvIdTeks{font-family:Nunito,sans-serif;font-weight:900;font-size:18px;letter-spacing:.04em}'
+      + '.drvData{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;text-align:left;font-size:13.5px;margin-top:12px}.drvData span{color:var(--redup)}.drvData b{text-align:right}'
+      + '.drvDok{display:flex;align-items:center;gap:10px;padding:10px 2px;border-top:1px solid var(--garis)}.drvDok:first-child{border-top:0}.drvDok .tx{flex:1;min-width:0}.drvDok .tx b{display:block;font-size:14.5px}.drvDok .tx small{color:var(--redup);font-size:12px}'
+      + '.drvSt{flex:none;font-style:normal;font-size:11.5px;font-weight:800;padding:4px 9px;border-radius:99px;background:var(--panel2);color:var(--redup)}.drvSt.hijau{background:rgba(22,163,74,.14);color:#15803d}.drvSt.kuning{background:rgba(255,197,48,.22);color:var(--tKuning)}.drvSt.merah{background:rgba(242,72,77,.14);color:var(--tMerah)}'
+      + '.drvHari{margin:16px 4px 6px;display:flex;justify-content:space-between;align-items:baseline;font-size:14px;font-weight:800}.drvHari span{font-size:12px;color:var(--redup);font-weight:700}'
+      + '.drvTrip{display:flex;gap:10px;padding:10px 2px;border-top:1px solid var(--garis)}.drvTrip:first-child{border-top:0}.drvTrip .jm{font-family:Nunito,sans-serif;font-weight:900;font-size:14px;width:44px;flex:none}.drvTrip .tx{flex:1;min-width:0}.drvTrip .tx b{display:block;font-size:14px}.drvTrip .tx small{display:block;color:var(--redup);font-size:12px}'
+      + '.drvTrip img{width:46px;height:46px;border-radius:10px;object-fit:cover;flex:none}.drvRingkas{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}';
+    document.head.appendChild(st);
+  }
+
+  /* ---------- Hari ini (Beranda) ---------- */
+  function muat(ctx, paksa) {
+    CTX = ctx || CTX; if (!driver() || !punya('pusatHariIniDriver') || HI_JALAN) return Promise.resolve();
+    if (HI && HI.d && !paksa && Date.now() - HI.t < 5 * 60000) return Promise.resolve();
+    HI_JALAN = true;
+    var awal = HI ? Promise.resolve() : Simpan.ambil('whlDrvHi_' + akun()).then(function (v) { try { var c = JSON.parse(v || 'null'); if (c && !HI) { HI = { d: c, t: 0 }; if (CTX.perbarui) CTX.perbarui(); } } catch (e) { /* */ } });
+    return awal.then(function () { return panggil('pusatHariIniDriver', [null]); }).then(function (h) {
+      HI_JALAN = false;
+      if (h && h.login === false) { if (CTX.sesiHabis) CTX.sesiHabis(); return; }
+      if (h && h.ok !== false) { HI = { d: h, t: Date.now() }; Simpan.taruh('whlDrvHi_' + akun(), JSON.stringify(h)); } else if (!HI || !HI.d) HI = { d: null, t: Date.now() };
+      if (CTX.perbarui) CTX.perbarui();
+    }, function () { HI_JALAN = false; if (HI) HI.t = Date.now(); });
+  }
+  function hariIniHtml() {
+    if (!driver() || !punya('pusatHariIniDriver')) return '';
+    if (!HI || Date.now() - HI.t > 5 * 60000) muat();
+    var d = HI && HI.d; if (!d) return HI ? '' : '<div class="kartu hiKartu drvHi"><div class="hiBar"><b>Hari ini</b><span><span class="putar"></span></span></div></div>';
+    gaya();
+    var h = '';
+    if (Number(d.doBelumLapor) > 0) h += '<button type="button" class="drvPeringat' + (Number(d.doNyangkut) > 0 ? ' merah' : '') + '" data-ke="drvDo">' + IK('alarm') + '<span>' + ang(d.doBelumLapor, 0) + ' DO belum lapor' + (Number(d.doNyangkut) > 0 ? ' · ' + ang(d.doNyangkut, 0) + ' nyangkut' : '') + '<small>Ketuk untuk lihat DO saya</small></span></button>';
+    var S = [['Ritase', ang(d.ritase, 0), 'biru', ''], ['KM (dari DO)', ang(d.km, 0), 'toska', ''], ['Tonase', ang(d.tonase, 1), 'kuning', ' t']];
+    h += '<div class="kartu hiKartu drvHi" data-ke="drvDo" role="group" aria-label="Kerja saya hari ini"><div class="hiBar"><b>Hari ini</b><span>' + (d.lambung ? esc(d.lambung) + ' · ' : '') + (d.diperbarui ? 'update ' + esc(String(d.diperbarui).replace(':', '.')) : '') + ' ›</span></div>'
+      + '<div class="hiStrip">' + S.map(function (x) { return '<div class="hs ' + x[2] + '"><small>' + x[0] + '</small><b>' + x[1] + (x[3] && x[1] !== '–' ? '<em>' + x[3] + '</em>' : '') + '</b></div>'; }).join('') + '</div>'
+      + (Number(d.tonaseBelumAda) > 0 ? '<div class="drvKet">' + ang(d.tonaseBelumAda, 0) + ' tiket hari ini belum ada tonase bongkar.</div>' : '')
+      + targetHtml(d) + '</div>';
+    return h;
+  }
+  function targetHtml(d) {
+    var T = d.target, L = T && Array.isArray(T.tingkat) ? T.tingkat.filter(function (x) { return Number(x.km) > 0; }) : [];
+    var km = Number(d.kmBulan) || 0, ket = 'Ritase bulan ini ' + ang(d.ritaseBulan, 0) + ' · tonase ' + ang(d.tonaseBulan, 1) + ' t';
+    var tanpa = Array.isArray(d.ruteTanpaJarak) && d.ruteTanpaJarak.length ? '<div class="drvKet">Jarak rute ' + esc(d.ruteTanpaJarak.join(', ')) + ' belum diisi admin (dihitung 0 km).</div>' : '';
+    if (!L.length) return '<div class="drvBln"><div class="drvBlnAtas"><b>KM bulan ini (dari DO)</b><span><b>' + ang(km, 0) + '</b> km</span></div><div class="drvKet">' + ket + '</div>' + tanpa + '</div>';
+    var maks = Math.max.apply(null, L.map(function (x) { return Number(x.km); })), B = T.berikut, isi = Math.min(100, km / maks * 100);
+    var teks = B ? ang(km, 0) + ' / ' + ang(B.km, 0) + ' km · kurang ' + ang(T.sisaKm != null ? T.sisaKm : Math.max(0, B.km - km), 0) + ' km ke bonus ' + uangPendek(B.bonus) : 'Semua target bonus bulan ini tercapai: ' + uangPendek(T.bonusTercapai || L[L.length - 1].bonus) + ' 🎉';
+    return '<div class="drvBln"><div class="drvBlnAtas"><b>KM bulan ini (dari DO)</b><span><b>' + ang(km, 0) + '</b> km</span></div>'
+      + '<div class="drvBar" role="img" aria-label="Progres KM bulan ini ' + ang(km, 0) + ' dari ' + ang(maks, 0) + ' km"><i style="width:' + isi.toFixed(1) + '%"></i>'
+      + L.map(function (x) { var ok = x.tercapai || km >= Number(x.km); return '<em class="' + (ok ? 'ok' : '') + '" style="left:' + (Number(x.km) / maks * 100).toFixed(1) + '%"></em>'; }).join('') + '</div>'
+      + '<div class="drvTk">' + L.map(function (x, i) { var ok = x.tercapai || km >= Number(x.km); return '<span class="' + (ok ? 'ok' : '') + '">' + (ok ? '✓ ' : 'Target ' + (i + 1) + ': ') + ang(x.km, 0) + ' km · ' + uangPendek(x.bonus) + '</span>'; }).join('') + '</div>'
+      + '<div class="drvTeks' + (B ? '' : ' ok') + '">' + teks + '</div><div class="drvKet">' + ket + '</div>' + tanpa + '</div>';
+  }
+
+  /* ---------- lapis ---------- */
+  function lapis(judul, sub, isi) {
+    if (lapisEl && !document.body.contains(lapisEl)) lapisEl = null;
+    if (!lapisEl) {
+      lapisEl = document.createElement('div'); lapisEl.className = 'lapis ksnLapis drvLapis'; document.body.appendChild(lapisEl);
+      requestAnimationFrame(function () { if (lapisEl) lapisEl.classList.add('tampil'); });
+      lapisEl.addEventListener('click', klik);
+    }
+    lapisEl.innerHTML = '<div class="ksnKp"><button type="button" class="kb" data-d="tutup" aria-label="Kembali">‹</button><div class="nm">' + esc(sub) + '<b>' + esc(judul) + '</b></div></div><div class="ksnIsi">' + isi + '</div>';
+  }
+  function tutup() { if (!lapisEl) return false; var d = lapisEl; lapisEl = null; jenisL = ''; d.classList.remove('tampil'); setTimeout(function () { d.remove(); }, 200); return true; }
+  function gagal(pesan) { return '<div class="kartu kosongKm">' + IK('alarm', 'besar') + '<b>Belum bisa dimuat</b><small>' + esc(pesan) + '</small><button type="button" class="tKecil" data-d="ulang" style="margin-top:10px">Coba lagi</button></div>'; }
+  function buka(ctx, jenis) {
+    CTX = ctx || CTX; gaya(); jenisL = jenis;
+    if (jenis === 'do') return bukaDo();
+    lapis(jenis === 'dok' ? 'Dokumen saya' : 'Profil & ID card', 'Driver WHL', R.kerangka ? R.kerangka('daftar') : '<span class="putar"></span>');
+    panggil('pusatProfilDriver', [null]).then(function (h) {
+      if (!lapisEl || jenisL !== jenis) return;
+      if (h && h.login === false) { tutup(); if (CTX.sesiHabis) CTX.sesiHabis(); return; }
+      if (!h || h.ok === false) { lapis('Profil & ID card', 'Driver WHL', gagal((h && h.pesan) || 'Profil belum tersedia.')); return; }
+      PROF = h; gambarProfil(jenis);
+    }, function (e) { if (lapisEl && jenisL === jenis) lapis('Profil & ID card', 'Driver WHL', gagal(e.message)); });
+  }
+  var ST_DOK = { aman: ['hijau', 'Aman'], segera: ['kuning', 'Segera habis'], habis: ['merah', 'Habis'] };
+  function gambarProfil(jenis) {
+    var p = PROF, nama = p.namaLengkap || (sesi() && sesi().namaLengkap) || '', qr = p.qr || p.idKartu || '';
+    var foto = p.foto ? '<img class="drvFoto" src="' + esc(p.foto) + '" alt="" referrerpolicy="no-referrer">' : '<span class="drvFoto">' + esc(String(nama).split(/\s+/).slice(0, 2).map(function (w) { return w[0] || ''; }).join('').toUpperCase()) + '</span>';
+    var qrSvg = ''; try { qrSvg = qr && window.WHL_QR ? window.WHL_QR.svg(qr) : ''; } catch (e) { qrSvg = ''; }
+    var kartu = '<div class="kartu drvKartuId">' + foto + '<h2>' + esc(nama) + '</h2><div class="jab">' + esc(p.jabatan || 'DRIVER') + ' · PT Whale Holder Logistic</div>'
+      + (p.kartuAktif === false ? '<div style="margin-top:8px"><span class="drvSt merah">Kartu nonaktif</span></div>' : '')
+      + (qrSvg ? '<div class="drvQr">' + qrSvg + '</div><div class="drvIdTeks">' + esc(p.idKartu || qr) + '</div><div class="kecil">Tunjukkan QR ini di pos / portal kalau kartu fisik ketinggalan.</div>' : '')
+      + '<div class="drvData"><span>ID kartu</span><b>' + esc(p.idKartu || '-') + '</b><span>NRP</span><b>' + esc(p.nrp || '-') + '</b><span>Lambung utama</span><b>' + esc(p.lambungUtama || '-') + '</b>'
+      + (p.lambungHariIni && p.lambungHariIni !== p.lambungUtama ? '<span>Lambung hari ini</span><b>' + esc(p.lambungHariIni) + '</b>' : '') + (p.grup ? '<span>Grup</span><b>' + esc(p.grup) + '</b>' : '') + '</div></div>';
+    var D = Array.isArray(p.dokumen) ? p.dokumen : [];
+    var dok = '<h2 class="bagW" id="drvDok">Dokumen saya</h2><div class="kartu">' + (D.length ? D.map(function (x) {
+      var w = ST_DOK[x.status] || ['', x.status || 'Tidak ada data'], sisa = x.sisaHari == null ? '' : x.sisaHari < 0 ? 'lewat ' + (-x.sisaHari) + ' hari' : 'sisa ' + x.sisaHari + ' hari';
+      return '<div class="drvDok"><div class="tx"><b>' + esc(x.jenis) + (x.nomor ? ' · ' + esc(x.nomor) : '') + '</b><small>' + (x.berlaku ? 'Berlaku s/d ' + tgl(x.berlaku) + (sisa ? ' · ' + sisa : '') : 'Tanggal belum ada di data') + '</small></div><em class="drvSt ' + w[0] + '">' + esc(w[1]) + '</em></div>';
+    }).join('') : '<div class="kecil">Belum ada data dokumen.</div>') + '</div>'
+      + (p.dokumenCatatan ? '<div class="kecil" style="margin:8px 4px">' + esc(p.dokumenCatatan) + '</div>' : '');
+    lapis(jenis === 'dok' ? 'Dokumen saya' : 'Profil & ID card', 'Driver WHL', jenis === 'dok' ? dok + kartu : kartu + dok);
+  }
+  var ST_DO = { 'BELUM LAPOR': 'kuning', 'SUDAH LAPOR': 'hijau', RETUR: 'merah' };
+  function bukaDo() {
+    lapis('DO saya', 'Driver WHL', R.kerangka ? R.kerangka('daftar') : '<span class="putar"></span>');
+    var n0 = nHari;
+    panggil('pusatDoSaya', [nHari, null]).then(function (h) {
+      if (!lapisEl || jenisL !== 'do' || n0 !== nHari) return;
+      if (h && h.login === false) { tutup(); if (CTX.sesiHabis) CTX.sesiHabis(); return; }
+      if (!h || h.ok === false) { lapis('DO saya', 'Driver WHL', gagal((h && h.pesan) || 'Data DO belum tersedia.')); return; }
+      DOS = h; gambarDo();
+    }, function (e) { if (lapisEl && jenisL === 'do') lapis('DO saya', 'Driver WHL', gagal(e.message)); });
+  }
+  function gambarDo() {
+    var d = DOS, K = d.ringkas || {}, P = Array.isArray(d.peringatan) ? d.peringatan : [], H = Array.isArray(d.hari) ? d.hari : [];
+    var h = '<div class="segmen" style="margin-bottom:12px">' + [7, 14].map(function (n) { return '<button type="button" data-d="hari:' + n + '" class="' + (nHari === n ? 'on' : '') + '">' + n + ' hari</button>'; }).join('') + '</div>'
+      + '<div class="drvRingkas"><span class="drvSt">' + ang(K.trip, 0) + ' trip</span>' + (K.belumLapor ? '<span class="drvSt kuning">' + ang(K.belumLapor, 0) + ' belum lapor</span>' : '<span class="drvSt hijau">Semua sudah lapor</span>') + (K.nyangkut ? '<span class="drvSt merah">' + ang(K.nyangkut, 0) + ' nyangkut</span>' : '') + '</div>';
+    if (P.length) h += P.map(function (x) { return '<div class="drvPeringat' + (x.tingkat === 'merah' ? ' merah' : '') + '">' + IK('alarm') + '<span>' + esc(x.pesan || ('DO ' + x.id)) + '<small>Lapor DO ke admin / Pos secepatnya.</small></span></div>'; }).join('');
+    h += H.map(function (x) {
+      var T = Array.isArray(x.trip) ? x.trip : [];
+      return '<div class="drvHari">' + tgl(x.hari, true) + '<span>' + ang(x.rit, 0) + ' rit' + (x.ton ? ' · ' + ang(x.ton, 1) + ' t' : '') + (x.km != null ? ' · ' + ang(x.km, 0) + ' km' : '') + '</span></div>'
+        + '<div class="kartu">' + (T.length ? T.map(function (t) {
+          var w = ST_DO[t.statusLapor] || '';
+          return '<div class="drvTrip"><span class="jm">' + esc(String(t.jam || '').replace(':', '.')) + '</span><div class="tx"><b>' + esc(t.rute || '-') + '</b><small>' + esc(t.lambung || '') + (t.sjb ? ' · SJB ' + esc(t.sjb) : '') + (t.ton != null ? ' · ' + ang(t.ton, 2) + ' t' : '') + (t.km != null ? ' · ' + ang(t.km, 0) + ' km' : ' · jarak rute belum ada') + '</small>'
+            + '<em class="drvSt ' + w + '" style="display:inline-block;margin-top:5px">' + esc(t.statusLapor || t.status || '-') + '</em></div>' + (t.foto ? '<button type="button" data-d="foto:' + esc(t.foto) + '" aria-label="Lihat foto DO" style="padding:0;background:none"><img src="' + esc(t.foto) + '" alt="" loading="lazy" referrerpolicy="no-referrer"></button>' : '') + '</div>';
+        }).join('') : '<div class="kecil">Tidak ada trip.</div>') + '</div>';
+    }).join('');
+    h += '<div class="kecil" style="margin:12px 4px;text-align:center">Data dari tiket Input DO' + (d.diperbarui ? ' · update ' + esc(String(d.diperbarui).replace(':', '.')) : '') + '.</div>';
+    lapis('DO saya', 'Driver WHL · ' + tgl(d.dari) + ' – ' + tgl(d.sampai), h);
+  }
+  function klik(ev) {
+    var b = ev.target.closest('[data-d]'); if (!b) return; var n = b.getAttribute('data-d');
+    if (n === 'tutup') { R.bunyi('tutup'); tutup(); }
+    else if (n === 'ulang') buka(CTX, jenisL);
+    else if (n.indexOf('hari:') === 0) { nHari = +n.slice(5) || 7; bukaDo(); }
+    else if (n.indexOf('foto:') === 0 && CTX.bukaWeb) CTX.bukaWeb(n.slice(5));
+  }
+  function lupakan() { HI = null; PROF = null; DOS = null; tutup(); }
+
+  window.WHL_DRIVER = { siap: siap, driver: driver, punya: punya, muat: muat, hariIniHtml: hariIniHtml, buka: buka, tutup: tutup, lupakan: lupakan };
+})();

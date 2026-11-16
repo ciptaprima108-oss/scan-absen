@@ -38,6 +38,10 @@
   }
   var segarSesi = false;
   function batas(j, ms) { return new Promise(function (ok, gagal) { var t = setTimeout(function () { gagal(new Error('Forum lama menjawab (sinyal lemah).')); }, ms); j.then(function (v) { clearTimeout(t); ok(v); }, function (e) { clearTimeout(t); gagal(e); }); }); }
+  /* v3.29 tahap2: nama ruang dari server (ruangNama: semua = Forum Umum, umum = Forum Staf); server lama tanpa ruangNama = nama lama, ruang 'semua' tidak ada */
+  var NAMA_R = null; Simpan.ambil('whlForumRuangNama').then(function (v) { try { NAMA_R = JSON.parse(v || 'null'); } catch (e) { NAMA_R = null; } });
+  function ruangInfo(id) { var x = KF.ruang.filter(function (q) { return q.id === id; })[0] || { id: id, nama: id, ic: '💬', ket: '' }; if (NAMA_R && NAMA_R[id]) { x = Object.assign({}, x, { nama: NAMA_R[id] }); if (id === 'umum') x.ket = 'Khusus staf WHL'; } return x; }
+  function driverForum() { return !!INFO && INFO.peran === 'driver'; }
   function masuk(paksa) {
     var kunci = String(CTX.sesi.idProfil || CTX.sesi.idKetik || '');
     return siapkan().then(function () { return new Promise(function (ok) { var u = auth.onAuthStateChanged(function (x) { u(); ok(x); }); }); }).then(function (user) {
@@ -47,12 +51,13 @@
            (dulu: sesi lama dikeluarkan dulu, lalu token baru gagal di 4G lemah -> forum mati, tombol admin hilang) */
         return API.Pusat.forumToken(CTX.sesi).then(function (h) {
           if (!h || !h.ok) { var e = new Error((h && h.pesan) || 'Forum belum bisa dibuka.'); e.ditolak = !!(h && h.ditolak); e.login = h && h.login; e.server = true; throw e; }
+          NAMA_R = h.ruangNama && typeof h.ruangNama === 'object' ? h.ruangNama : null; Simpan.taruh('whlForumRuangNama', NAMA_R ? JSON.stringify(NAMA_R) : null);
           return (user ? auth.signOut() : Promise.resolve()).then(function () { return batas(auth.signInWithCustomToken(h.token), 25000); }).then(function (c) { return Simpan.taruh('whlForumUntuk', kunci).then(function () { return c.user; }); });
         }).catch(function (e) { if (!e.server && user && untuk === kunci && auth.currentUser) return auth.currentUser; throw e; });
       });
     }).then(function (user) { return batas(user.getIdTokenResult(), 20000); }).then(function (r) {
       segarSesi = true; var c = r.claims; INFO = { uid: auth.currentUser.uid, nama: c.nama, peran: c.peran, admin: c.admin === true, ruang: c.ruang || [] };
-      RUANG = KF.ruang.filter(function (x) { return INFO.ruang.indexOf(x.id) >= 0; }); return INFO;
+      RUANG = KF.ruang.filter(function (x) { return INFO.ruang.indexOf(x.id) >= 0; }).map(function (x) { return ruangInfo(x.id); }); return INFO;
     });
   }
 
@@ -67,7 +72,7 @@
       s.docChanges().forEach(function (ch) {
         if (ch.type !== 'added' || ch.doc.metadata.hasPendingWrites) return; var x = ch.doc.data({ serverTimestamps: 'estimate' });
         if (x.uid === INFO.uid || x.hapus || !x.waktu || x.waktu.toMillis() < mulaiMs) return;
-        var disebut = (x.sebut || []).indexOf(INFO.uid) >= 0 || (x.sebut || []).indexOf('*') >= 0, ruangNm = (KF.ruang.filter(function (q) { return q.id === r; })[0] || {}).nama || r;
+        var disebut = (x.sebut || []).indexOf(INFO.uid) >= 0 || (x.sebut || []).indexOf('*') >= 0, ruangNm = ruangInfo(r).nama;
         if (aktif === r && document.visibilityState === 'visible') return;
         if (Date.now() - nadaTerakhir > 4000) { nadaTerakhir = Date.now(); R.bunyi(disebut ? 'pengumumanWhl' : 'pesanWhl'); R.getar(disebut ? 'awas' : undefined); }
         if (CTX.roti) CTX.roti((disebut ? '@ Kamu disebut · ' : '💬 ') + ruangNm + ': ' + pendek(x.nama) + ' — ' + cuplik(x).slice(0, 60));
@@ -104,10 +109,11 @@
   /* ---------- daftar ruang ---------- */
   function buka(ctx) {
     CTX = ctx || CTX; aktif = '';
-    if (INFO) { gambarDaftar(); return; }
+    if (INFO) { if (driverForum() && INFO.ruang.indexOf('semua') >= 0) bukaRuang('semua'); else gambarDaftar(); return; } /* v3.29: driver langsung Forum Umum */
     lapis(kepala('Forum WHL', 'Menyambung...', 'tutup', chipUji()) + '<div class="ksnIsi">' + R.kerangka('daftar') + '</div>');
     mulai(CTX).then(function (h) {
-      if (h.ok) gambarDaftar();
+      if (h.ok && driverForum() && INFO.ruang.indexOf('semua') >= 0) bukaRuang('semua');
+      else if (h.ok) gambarDaftar();
       else if (h.disiapkan) lapis(kepala('Forum WHL', 'Segera hadir', 'tutup') + '<div class="ksnIsi"><div class="kartu ksnTutup"><span>💬</span><b>Forum sedang disiapkan</b><small>Ruang obrolan, foto, dan pesan suara antar staf WHL sedang dipasang di server. Kalau sudah siap, menu ini langsung bisa dipakai tanpa memperbarui app.</small></div>'
         + '<div class="ksnInfo">Yang akan ada: ruang Umum + ruang per divisi, kirim foto & pesan suara, balas, reaksi, sebut @nama, pengumuman yang disematkan.</div></div>');
       else lapis(kepala('Forum WHL', 'Belum bisa dibuka', 'tutup', chipUji()) + '<div class="ksnIsi">' + R.kosong(h.ditolak ? 'Forum belum dibuka untuk peranmu' : 'Forum belum tersambung', h.pesan || gagalMasuk || '') + (h.ditolak ? '' : '<button type="button" class="tKecil" data-f="ulang" style="width:100%">Coba lagi</button>') + '</div>');
@@ -129,8 +135,8 @@
   /* ---------- ruang obrolan ---------- */
   function bukaRuang(r) {
     berhenti(); aktif = r; LIVE = []; LAMA = []; habis = false; BACA = {}; SEMATAN = null; balasKe = null; BARU[r] = 0;
-    var x = KF.ruang.filter(function (q) { return q.id === r; })[0];
-    lapis(kepala(x.nama, x.ket, 'daftar', chipUji(), ikRuang(x)) + '<div class="fmSem" id="fmSem" hidden></div><div class="fmList" id="fmList"><div class="kosong"><span class="putar"></span> Memuat pesan...</div></div>' + penulis());
+    var x = ruangInfo(r), dua = !driverForum() && INFO.ruang.indexOf('semua') >= 0 && INFO.ruang.indexOf('umum') >= 0 && (r === 'semua' || r === 'umum');
+    lapis(kepala(x.nama, x.ket, driverForum() ? 'tutup' : 'daftar', chipUji(), ikRuang(x)) + (dua ? '<div class="segmen fmDua" role="tablist"><button type="button" role="tab" data-ruang="umum" class="' + (r === 'umum' ? 'on' : '') + '">' + esc(ruangInfo('umum').nama) + '</button><button type="button" role="tab" data-ruang="semua" class="' + (r === 'semua' ? 'on' : '') + '">' + esc(ruangInfo('semua').nama) + (BARU.semua && r !== 'semua' ? ' · ' + BARU.semua : '') + '</button></div>' : '') + '<div class="fmSem" id="fmSem" hidden></div><div class="fmList" id="fmList"><div class="kosong"><span class="putar"></span> Memuat pesan...</div></div>' + penulis());
     var ref = db.collection('ruang').doc(r);
     unsub.push(ref.collection('pesan').orderBy('waktu', 'desc').limit(30).onSnapshot(function (s) {
       var bawah = dekatBawah(); LIVE = []; s.forEach(function (d) { LIVE.push(ubah(d)); });
@@ -192,7 +198,7 @@
       var reaksi = {}; Object.keys(x.reaksi || {}).forEach(function (u) { var e = x.reaksi[u]; reaksi[e] = (reaksi[e] || 0) + 1; });
       var dibaca = saya ? Object.keys(BACA).filter(function (u) { return u !== INFO.uid && BACA[u] >= x.ms; }).length : 0;
       h += '<div class="fmB' + (saya ? ' saya' : '') + (sambung ? ' sambung' : '') + (x.hapus ? ' hapus' : '') + '" data-pesan="' + x.id + '">'
-        + (!saya && !sambung ? '<b class="fmNama" style="color:' + warnaNama(x.uid) + '">' + esc(pendek(x.nama)) + ' <small>' + esc(PERAN_NM[x.peran] || x.peran || '') + '</small></b>' : '')
+        + (!saya && !sambung ? '<b class="fmNama" style="color:' + warnaNama(x.uid) + '">' + esc(pendek(x.nama)) + ' <small>' + esc(aktif === 'semua' ? (x.peran === 'driver' ? 'Driver' : 'Staf') : (PERAN_NM[x.peran] || x.peran || '')) + '</small></b>' : '')
         + (x.hapus ? '<div class="fmTeks"><i>🚫 Pesan dihapus</i></div>' : (x.balas ? '<div class="fmKutip"><b>' + esc(pendek(x.balas.nama)) + '</b>' + esc(x.balas.cuplik) + '</div>' : '')
           + (x.jenis === 'foto' ? '<div class="fmFoto" data-foto="' + x.id + '" style="aspect-ratio:' + ((x.media && x.media.w) || 4) + '/' + ((x.media && x.media.h) || 3) + '">' + (MEDIA[x.media.ref] ? '<img src="' + MEDIA[x.media.ref] + '" alt="Foto">' : '<span class="putar"></span>') + '</div>' : '')
           + (x.jenis === 'suara' ? '<div class="fmSuara"><button type="button" class="fmPutar" data-putar="' + x.id + '" aria-label="Putar pesan suara">▶</button>' + gelHtml(x.media && x.media.gel, x.id) + '<em>' + durTeks(x.media && x.media.dur) + '</em></div>' : '')
@@ -379,7 +385,7 @@
 
   /* notif-push-13nov: notifikasi forum diketuk -> buka forum langsung di ruang itu */
   /* v2.16: ikon garis WHL untuk ruang (emoji kalau ikon.js tidak ada) */
-  function ikRuang(x) { var m = { umum: 'pengumuman', pengawas: 'insiden', mekanik: 'monitor', fuelman: 'solar', admin: 'dokumen', kantor: 'rumahWeb' }; return window.WHL_ILUS ? window.WHL_ILUS(m[x.id] || 'forum') : window.WHL_IKON ? window.WHL_IKON(m[x.id] || 'forum') : x.ic; } /* v3.8 ikon 3D */
+  function ikRuang(x) { var m = { semua: 'forum', umum: 'pengumuman', pengawas: 'insiden', mekanik: 'monitor', fuelman: 'solar', admin: 'dokumen', kantor: 'rumahWeb' }; return window.WHL_ILUS ? window.WHL_ILUS(m[x.id] || 'forum') : window.WHL_IKON ? window.WHL_IKON(m[x.id] || 'forum') : x.ic; } /* v3.8 ikon 3D */
   function bukaKe(ctx, r) {
     buka(ctx); var n = 0, i = setInterval(function () { if (INFO || ++n > 60) { clearInterval(i); if (INFO && INFO.ruang.indexOf(r) >= 0) bukaRuang(r); } }, 250);
   }
