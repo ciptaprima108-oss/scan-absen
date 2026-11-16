@@ -94,7 +94,7 @@
   function perluPimpinan() {
     var A = aturan(), a = [], s = F.untuk === DRV && angkaGaji(driverPilih()) ? sisaSesudah() : null;
     if (F.jenis === HP) a.push('semua cicilan HP di-ACC pimpinan');
-    if (F.jenis === KASBON && F.nominal > A.batasKasbon) a.push('kasbon lebih dari ' + rp(A.batasKasbon));
+    if (F.jenis === KASBON && F.nominal >= A.batasKasbon) a.push('kasbon ' + rp(A.batasKasbon) + ' ke atas'); /* v3.21: server Input DO V294 / DASHBOARD V508 = >= 1 jt */
     if (s != null && s < A.batasSisa) a.push('perkiraan sisa gaji sesudah ajuan ' + rp(Math.max(0, s)) + ' (di bawah ' + rp(A.batasSisa) + ')');
     return a;
   }
@@ -307,8 +307,8 @@
     h += '<h2 class="bagW">Ajuan saya <span>' + L.length + '</span></h2>';
     h += L.length ? '<div class="kartu notaDaftar">' + L.map(function (x) { return kartuAjuan(x, false); }).join('') + '</div>'
       : (R.kosong ? R.kosong('Belum ada ajuan', 'Kasbon & cicilan HP yang kamu ajukan tampil di sini beserta statusnya.') : '');
-    h += ALUR_BARU ? '<div class="kecil" style="margin:12px 4px 20px;line-height:1.55">Alur: cicilan HP, kasbon di atas Rp 1 juta, atau perkiraan sisa gaji driver sesudah ajuan di bawah Rp 1 juta → <b>Menunggu ACC pimpinan</b> (Pak Fanza / Pak Reza) dulu. Sesudah itu <b>Menunggu transfer admin</b>: admin mentransfer dan mengunggah bukti di Input DO → <b>Ditransfer</b>, mulai dipotong dari gaji.</div>'
-      : '<div class="kecil" style="margin:12px 4px 20px;line-height:1.55">Alur: <b>Menunggu admin</b> (ACC/Tolak di Input DO) → kasbon biasa langsung <b>Disetujui</b>. Cicilan HP, kasbon di atas Rp 1 juta, atau perkiraan sisa gaji driver sesudah ajuan di bawah Rp 1 juta → <b>Menunggu Pak Fanza</b> → Disetujui / Ditolak.</div>';
+    h += ALUR_BARU ? '<div class="kecil" style="margin:12px 4px 20px;line-height:1.55">Alur: cicilan HP, kasbon Rp 1.000.000 ke atas, atau perkiraan sisa gaji driver sesudah ajuan di bawah Rp 1 juta → <b>Menunggu ACC pimpinan</b> (Pak Fanza / Pak Reza) dulu. Sesudah itu <b>Menunggu transfer admin</b>: admin mentransfer dan mengunggah bukti di Input DO → <b>Ditransfer</b>, mulai dipotong dari gaji.</div>'
+      : '<div class="kecil" style="margin:12px 4px 20px;line-height:1.55">Alur: <b>Menunggu admin</b> (ACC/Tolak di Input DO) → kasbon biasa langsung <b>Disetujui</b>. Cicilan HP, kasbon Rp 1.000.000 ke atas, atau perkiraan sisa gaji driver sesudah ajuan di bawah Rp 1 juta → <b>Menunggu Pak Fanza</b> → Disetujui / Ditolak.</div>';
     lapis(h);
   }
   function gambarAcc() {
