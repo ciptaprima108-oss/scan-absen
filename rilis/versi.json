@@ -1,16 +1,14 @@
 {
- "versi": "3.31",
- "versionCode": 332,
+ "versi": "3.32",
+ "versionCode": 333,
  "wajib": false,
  "catatan": [
-  "Ikon digabung: Hazard, Gaji & Kasbon, Poin WHL (isi dibagi tab)",
-  "Kondisi jalan per tempat (BSR, KM 107, PORT, POOL, MIP) + ringkasan 1 kalimat",
-  "Ekspor Excel & PDF: Katalog unit, Rekap hazard, Peringkat",
-  "Katalog: foto 4 sisi (depan, belakang, kiri, kanan)",
-  "Peringkat ritase setara 107-PORT (1 desimal)"
+  "Pak Fanza (full time): kotak Absen/Lembur di Beranda disembunyikan, menu Kehadiran tetap ada",
+  "Kartu Beranda paling bawah tidak lagi tertutup kotak absen",
+  "Kehadiran: Roster saya (kalender) + Roster staf (tabel semua staf) + Excel"
  ],
- "apk": "WHL-App-v3.31.apk",
- "ukuran": 8487491,
- "sha256": "481e20a04d8958ec43b06237fb2cb7d98afd7e3bfb8fc99b6a7cb8b0a24ca636",
- "dibuat": "2026-11-17 01:51"
+ "apk": "WHL-App-v3.32.apk",
+ "ukuran": 8494331,
+ "sha256": "8b490960efc0381f5acfd8c3404679bd203daa98bba41cc7ca9de74c62fb28f3",
+ "dibuat": "2026-11-17 03:14"
 }
