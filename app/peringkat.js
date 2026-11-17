@@ -8,7 +8,8 @@
   var API = window.WHL_API, R = window.WHL_RASA;
   var CTX = null, lapisEl = null, MODE = 'berjalan', PAPAN = 'ritase', DATA = {}, MATI = false;
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function ang(n) { var v = Number(n); return isFinite(v) ? v.toLocaleString('id-ID') : '–'; }
+  var DES = 0; /* v3.31: desimal papan dari server (ritase setara 107-PORT = 1) */
+  function ang(n, des) { var v = Number(n); if (!isFinite(v)) return '–'; var d = des == null ? 0 : des; return d ? v.toLocaleString('id-ID', { minimumFractionDigits: d, maximumFractionDigits: d }) : v.toLocaleString('id-ID', { maximumFractionDigits: 1 }); }
   function ILUS(n) { return window.WHL_ILUS ? window.WHL_ILUS(n) : ''; }
   function sesi() { return CTX && CTX.sesi ? CTX.sesi() : null; }
   function roti(t) { if (CTX && CTX.roti) CTX.roti(t); }
@@ -31,6 +32,7 @@
       + '.prkBrs .prkAva{width:34px;height:34px;font-size:12px;box-shadow:none;flex:none}.prkBrs .tx{flex:1;min-width:0}.prkBrs .tx b{display:block;font-size:14px}.prkBrs .tx small{display:block;color:var(--redup);font-size:11.5px}.prkBrs .nil{font-family:Nunito,sans-serif;font-weight:900;font-size:16px;flex:none}'
       + '.prkBrs.saya{background:var(--tint);border-top-color:transparent}.prkBrs.saya .tx b{color:var(--utama)}.prkHadiah{display:flex;gap:10px;align-items:center}.prkHadiah .ilus{width:40px;height:40px;flex:none}'
       + 'html[data-tema="gelap"] .prkPoin{color:#4ade80}'
+      + '.prkKet{margin:-2px 0 6px;line-height:1.4}.prkBrs .nil small.prkSat{display:block;font-family:inherit;font-size:10.5px;font-weight:700;color:var(--redup);text-align:right}.prkEks{display:flex;gap:8px;justify-content:center;margin:0 6px 14px}.prkEks button{min-height:40px;padding:0 16px;border-radius:12px;font-weight:800;font-size:13px;background:var(--panel2);color:var(--teks)}'
       + '.prkKosong{text-align:center;padding:20px 12px}.prkKosong .ilus{width:68px;height:68px}.prkKosong b{display:block;margin-top:6px}.prkKosong small{display:block;color:var(--redup);margin-top:4px;line-height:1.45}';
     document.head.appendChild(st);
   }
@@ -66,20 +68,22 @@
     var sub = (d.label || '') + (d.berjalan ? ' · tutup Senin 06.00' : d.final === false ? ' · belum final' : ' · final');
     var h = seg + '<div class="prkSeg" role="tablist">' + Pp.map(function (x) { return '<button type="button" role="tab" data-k="papan:' + esc(x.id) + '" class="' + (x.id === PAPAN ? 'on' : '') + '">' + (IKON_PAPAN[x.id] || '🏅') + ' ' + esc(SINGKAT[x.id] || x.judul) + '</button>'; }).join('') + '</div>';
     if (!p) { lapis('Peringkat', sub, h + kosong('Belum ada papan', '')); return; }
-    var L = Array.isArray(p.daftar) ? p.daftar : [], sat = p.satuan || '', nol = p.id === 'nolinsiden';
+    var L = Array.isArray(p.daftar) ? p.daftar : [], sat = p.satuanPendek || p.satuan || (p.id === 'ritase' ? 'rit' : ''), nol = p.id === 'nolinsiden'; /* v3.31: satuan pendek di podium */
+    DES = p.desimal != null && isFinite(Number(p.desimal)) ? Math.max(0, Math.min(2, Number(p.desimal))) : 0;
     if (!d.berjalan && d.final === false) h += '<div class="kartu kecil" style="line-height:1.5">Hasil final minggu lalu dihitung otomatis <b>Senin 06.00</b>. Sementara lihat tab <b>Minggu ini</b>.</div>';
     if (p.gagal && !L.length) { lapis('Peringkat', sub, h + kosong('Papan ' + (SINGKAT[p.id] || p.judul) + ' belum bisa dihitung', 'Data sumber sedang tidak terbaca. Coba lagi nanti.')); return; }
     if (!L.length) { lapis('Peringkat', sub, h + kosong('Belum ada nama di papan ini', d.berjalan ? 'Minggu baru dimulai. Ayo jadi yang pertama!' : '') + hadiah(d)); return; }
-    h += '<div class="kartu"><div class="kecil" style="margin-bottom:4px;font-weight:800;color:var(--teks)">' + esc(nol ? 'Daftar kehormatan · tanpa insiden' : p.judul) + '</div>' + podium(L.slice(0, 3), sat, nol) + '</div>';
+    h += '<div class="kartu"><div class="kecil" style="margin-bottom:4px;font-weight:800;color:var(--teks)">' + esc(nol ? 'Daftar kehormatan · tanpa insiden' : p.judul) + '</div>' + (p.keterangan ? '<div class="kecil prkKet">' + esc(p.keterangan) + '</div>' : '') + podium(L.slice(0, 3), sat, nol) + '</div>';
     var sisa = L.slice(3), saya = p.saya, adaSaya = L.some(function (x) { return x.saya; });
     if (sisa.length) h += '<div class="kartu">' + sisa.map(function (x) { return baris(x, sat, nol); }).join('') + '</div>';
     if (saya && !adaSaya) h += '<div class="kartu">' + baris({ urut: saya.urut, nama: (sesi() && (sesi().namaLengkap || sesi().user.nama)) || 'Kamu', nilai: saya.nilai, saya: true }, sat, nol) + '</div>';
     else if (!saya && sesi() && sesi().user.peran === 'driver') h += '<div class="kecil" style="margin:4px 6px 12px">Kamu belum masuk papan ini ' + (d.berjalan ? 'minggu ini' : 'minggu lalu') + '.</div>';
-    h += hadiah(d) + '<div class="kecil" style="margin:12px 6px;text-align:center;line-height:1.5">Periode ' + esc(d.periode || 'Senin 06.00 – Senin 06.00') + '. Ritase dihitung dari tiket Input DO saja. Pelapor hazard = laporan yang sudah divalidasi HSE/pengawas.</div>';
+    h += hadiah(d) + '<div class="kecil" style="margin:12px 6px;text-align:center;line-height:1.5">Periode ' + esc(d.periode || 'Senin 06.00 – Senin 06.00') + '. ' + esc(ketRitase(Pp)) + ' Pelapor hazard = laporan yang sudah divalidasi HSE/pengawas.</div>' + eksporHtml();
     lapis('Peringkat', sub, h);
   }
   function nm(x) { return esc(x.saya ? 'Kamu · ' + pendek(x.nama) : pendek(x.nama)) + ((x.ultah || (window.WHL_ULTAH && window.WHL_ULTAH.lencana && window.WHL_ULTAH.lencana(x.uid, x.nama))) ? ' 🎂' : ''); } /* integrator v3.30: lencana juga dari daftar ultah Beranda */
-  function nilaiTeks(x, sat, nol) { return ang(x.nilai) + ' ' + esc(nol ? 'hari kerja' : sat); }
+  function nilaiTeks(x, sat, nol) { return ang(x.nilai, nol ? 0 : DES) + ' ' + esc(nol ? 'hari kerja' : sat); }
+  function ketRitase(Pp) { var r = (Pp || []).filter(function (x) { return x.id === 'ritase'; })[0]; return r && r.keterangan ? String(r.keterangan).replace(/\.?\s*$/, '.') : 'Ritase dari tiket Input DO.'; }
   function podium(T, sat, nol) {
     var urut = [T[1], T[0], T[2]], tinggi = [62, 86, 48], latar = ['linear-gradient(180deg,#9fb6d6,#6c86ad)', 'linear-gradient(180deg,#ffd36a,#e99a00)', 'linear-gradient(180deg,#ffb27a,#d9480f)'], no = [2, 1, 3];
     return '<div class="prkPodium">' + urut.map(function (x, i) {
@@ -89,11 +93,30 @@
     }).join('') + '</div>';
   }
   function baris(x, sat, nol) {
-    return '<div class="prkBrs' + (x.saya ? ' saya' : '') + '"><span class="rk">' + ang(x.urut) + '</span><span class="prkAva" style="background:' + warna(x.nama) + '">' + esc(inisial(x.nama)) + '</span><div class="tx"><b>' + nm(x) + '</b>' + (Number(x.poin) > 0 ? '<small>+' + ang(x.poin) + ' poin Senin pagi</small>' : '') + '</div><span class="nil">' + ang(x.nilai) + '</span></div>';
+    return '<div class="prkBrs' + (x.saya ? ' saya' : '') + '"><span class="rk">' + ang(x.urut) + '</span><span class="prkAva" style="background:' + warna(x.nama) + '">' + esc(inisial(x.nama)) + '</span><div class="tx"><b>' + nm(x) + '</b>' + (Number(x.poin) > 0 ? '<small>+' + ang(x.poin) + ' poin Senin pagi</small>' : '') + '</div><span class="nil">' + ang(x.nilai, nol ? 0 : DES) + (sat && !nol ? '<small class="prkSat">' + esc(sat) + '</small>' : '') + '</span></div>';
   }
   function hadiah(d) {
     var H = d.hadiah || { top: [30, 20, 10], nolInsiden: 10 }, t = H.top || [30, 20, 10];
     return '<div class="kartu prkHadiah">' + ILUS('poin') + '<div class="kecil" style="flex:1;line-height:1.45"><b style="color:var(--teks)">Hadiah poin Senin pagi:</b> #1 +' + t[0] + ' · #2 +' + t[1] + ' · #3 +' + t[2] + ' tiap papan. Semua di daftar Nol insiden +' + (H.nolInsiden || 10) + '.</div></div>';
+  }
+  /* ---------- v3.31 ekspor: Excel dibuat di HP dari data papan yang sudah dimuat; PDF dari server (kalau server punya fungsinya) ---------- */
+  var FN_PDF = 'pusatPeringkatPdf';
+  function bolehPdf() { return API.Pusat.asli() && API.Pusat.punya(FN_PDF); }
+  function eksporHtml() { return window.WHL_EKSPOR ? '<div class="prkEks"><button type="button" data-k="excel">📊 Excel</button>' + (bolehPdf() ? '<button type="button" data-k="pdf">📄 PDF</button>' : '') + '</div>' : ''; }
+  function excel() {
+    var S0 = sesi(); if (S0 && window.WHL_EKSPOR && API.Pusat.asli() && API.Pusat.punya('pusatPeringkatRekap')) { window.WHL_EKSPOR.excelServer(API.Pusat.panggil('pusatPeringkatRekap', [S0.tokenPusat, MODE === 'berjalan' ? 'berjalan' : ''], 120000), 'Peringkat WHL', roti, 'Peringkat'); return; } /* kontrak katalog-lengkap-17nov\pdf */
+    var c = DATA[MODE], d = c && c.d; if (!d || !Array.isArray(d.papan) || !window.WHL_EKSPOR) return;
+    var sh = d.papan.map(function (p) {
+      var nol = p.id === 'nolinsiden', sat = nol ? 'hari kerja' : (p.satuanPendek || p.satuan || ''), des = nol ? 0 : (p.desimal != null ? Number(p.desimal) || 0 : 0);
+      var rows = (p.daftar || []).map(function (x) { var v = Number(x.nilai); return [Number(x.urut) || '', x.nama || '', isFinite(v) ? (des ? Math.round(v * Math.pow(10, des)) / Math.pow(10, des) : v) : '', sat, Number(x.poin) || 0]; });
+      return [SINGKAT[p.id] || p.judul || p.id, [['Urut', 'Nama', 'Nilai', 'Satuan', 'Poin Senin']].concat(rows, p.keterangan ? [[], ['Keterangan', p.keterangan]] : [])];
+    });
+    sh.unshift(['Ringkas', [['Peringkat WHL', d.label || ''], ['Periode', d.periode || 'Senin 06.00 – Senin 06.00'], ['Status', d.berjalan ? 'Minggu berjalan (belum final)' : d.final === false ? 'Belum final' : 'Final'], ['Dibuat', new Date().toLocaleString('id-ID')]]]);
+    window.WHL_EKSPOR.excel('Peringkat WHL - ' + (d.label || (MODE === 'berjalan' ? 'Minggu ini' : 'Minggu lalu')), sh, roti);
+  }
+  function pdf() {
+    var S = sesi(); if (!S || !window.WHL_EKSPOR) return;
+    window.WHL_EKSPOR.pdf(API.Pusat.panggil(FN_PDF, [S.tokenPusat, MODE === 'berjalan' ? 'berjalan' : ''], 120000), 'Peringkat WHL', roti);
   }
   function kosong(j, k) { return '<div class="kartu prkKosong">' + ILUS('peringkat') + '<b>' + esc(j) + '</b><small>' + esc(k || '') + '</small></div>'; }
   function klik(ev) {
@@ -102,6 +125,8 @@
     if (n === 'ulang') { muat(true); gambar(); return; }
     if (n.indexOf('mode:') === 0) { MODE = n.slice(5); gambar(); muat(); return; }
     if (n.indexOf('papan:') === 0) { PAPAN = n.slice(6); if (R && R.getar) R.getar(); gambar(); }
+    if (n === 'excel') { excel(); return; }
+    if (n === 'pdf') { pdf(); return; }
   }
   function lupakan() { DATA = {}; MATI = false; MODE = 'berjalan'; PAPAN = 'ritase'; tutup(); }
   window.WHL_PERINGKAT = { buka: buka, tutup: tutup, lupakan: lupakan, mati: function () { return MATI; }, _uji: { pendek: pendek, data: function () { return DATA; } } };

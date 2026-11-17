@@ -206,7 +206,7 @@
     if (SAYA.galat) return h + '<div class="kartu"><div class="kecil">' + esc(SAYA.galat) + '</div><button type="button" class="tKecil hzKecilT" data-h="ulangSaya">Coba lagi</button></div>';
     var L = Array.isArray(SAYA.daftar) ? SAYA.daftar : [];
     if (!L.length) return h + (ANTRE.length ? '' : '<div class="kartu"><div class="kecil" style="text-align:center;padding:6px">Belum ada laporan. Lihat bahaya di jalan? Foto & laporkan.</div></div>');
-    return h + (SAYA.maksPoinHari ? '<div class="kecil" style="margin:0 4px 8px">Laporan berpoin hari ini: ' + (SAYA.poinHariIni || 0) + ' / ' + SAYA.maksPoinHari + '</div>' : '')
+    return h + eksporHtml('saya') + (SAYA.maksPoinHari ?'<div class="kecil" style="margin:0 4px 8px">Laporan berpoin hari ini: ' + (SAYA.poinHariIni || 0) + ' / ' + SAYA.maksPoinHari + '</div>' : '')
       + '<div class="kartu">' + L.map(function (x) {
         return '<div class="hzBrs"><span class="hzIk">' + ik(x.jenis) + '</span><div class="tx"><b>' + esc(x.jenis) + '</b><small>' + waktu(x.waktu) + (x.keterangan ? ' · ' + esc(String(x.keterangan).slice(0, 70)) : x.adaSuara ? ' · pesan suara' : '') + '</small>'
           + alurHtml(x)
@@ -377,8 +377,32 @@
     var L = tabV === 'tunggu' ? M : S;
     if (!L.length) h += '<div class="kartu"><div class="kecil" style="text-align:center;padding:8px">' + (tabV === 'tunggu' ? 'Semua laporan sudah dicek. 👍' : 'Belum ada yang diputus 48 jam terakhir.') + '</div></div>';
     else h += L.map(function (x) { return x.id === bukaId ? kartuVal(x) : barisVal(x); }).join('');
-    return h + '<button type="button" class="tKecil hzBatal" data-h="segarVal">↻ Segarkan</button>';
+    return h + '<button type="button" class="tKecil hzBatal" data-h="segarVal">↻ Segarkan</button>' + eksporHtml('val'); /* v3.31 rekap Excel/PDF */
   }
+  /* ---------- v3.31 EKSPOR rekap laporan hazard: Excel dibuat di HP dari daftar yang sudah dimuat; PDF dari server kalau ada ---------- */
+  /* kontrak Upgrade\katalog-lengkap-17nov\pdf\KONTRAK-APP.md: pusatHazardRekap / pusatHazardRekapPdf (token, {dari?, sampai?, status?, jenis?}); kosong = 7 hari terakhir */
+  var FN_PDF = 'pusatHazardRekapPdf', FN_REKAP = 'pusatHazardRekap';
+  function srvPunya(fn) { var X = API.Pusat; return !!(X.dikenal && X.dikenal() && X.punya(fn)); }
+  function bolehPdf() { return srvPunya(FN_PDF); }
+  function eksporHtml(dari) {
+    if (!window.WHL_EKSPOR) return '';
+    return '<div class="hzEks" style="display:flex;gap:8px;margin:10px 0 4px"><button type="button" class="tKecil" style="flex:1" data-h="excel:' + dari + '">📊 Excel</button>' + (dari === 'val' && bolehPdf() ? '<button type="button" class="tKecil" style="flex:1" data-h="pdf">📄 PDF</button>' : '') + '</div>';
+  }
+  var ST_TEKS = { DIKIRIM: 'Dikirim', DICEK: 'Dicek HSE', VALID: 'Valid', DITOLAK: 'Ditolak', DIGABUNG: 'Digabung' };
+  function barisX(x) {
+    var peta = x.lat != null && x.lng != null ? { url: 'https:' + '/' + '/maps.google.com/?q=' + x.lat + ',' + x.lng, teks: 'Peta' } : '';
+    return [x.id || '', String(x.waktu || '').replace('T', ' ').slice(0, 16), x.jenis || '', x.nama || '', peranTeks(x.peran || ''), x.sumber || '', x.keterangan || (x.adaSuara ? '(pesan suara)' : ''), ST_TEKS[x.status] || x.status || '', x.dicekOleh || '', String(x.waktuCek || '').replace('T', ' ').slice(0, 16), x.alasan || '', Number(x.poin) || 0, x.lat != null ? Number(x.lat) : '', x.lng != null ? Number(x.lng) : '', peta, (x.pelaporGabung || []).length || ''];
+  }
+  var KEPALA_X = ['ID', 'Waktu', 'Jenis', 'Pelapor', 'Peran', 'Sumber', 'Keterangan', 'Status', 'Dicek oleh', 'Waktu cek', 'Alasan tolak', 'Poin', 'Lat', 'Lng', 'Lokasi', 'Pelapor digabung'];
+  function excel(dari) {
+    if (!window.WHL_EKSPOR) return; var t = window.WHL_EKSPOR.tgl();
+    if (dari === 'saya') { var L = (SAYA && SAYA.daftar) || []; window.WHL_EKSPOR.excel('Laporan Hazard Saya - ' + t, [['Laporan saya', [KEPALA_X].concat(L.map(barisX))]], roti); return; }
+    if (srvPunya(FN_REKAP)) { window.WHL_EKSPOR.excelServer(panggil(FN_REKAP, [{}], 120000), 'Rekap Hazard WHL - ' + t, roti, 'Rekap hazard'); return; } /* 7 hari terakhir, semua status */
+    var V = VAL || {};
+    window.WHL_EKSPOR.excel('Rekap Hazard WHL - ' + t, [['Nunggu dicek', [KEPALA_X].concat((V.menunggu || []).map(barisX))], ['Sudah diputus', [KEPALA_X].concat((V.terbaru || []).map(barisX))],
+      ['Ringkas', [['Rekap hazard WHL', ''], ['Nunggu dicek', (V.menunggu || []).length], ['Sudah diputus (48 jam)', (V.terbaru || []).length], ['Dibuat', new Date().toLocaleString('id-ID')]]]], roti);
+  }
+  function pdf() { if (window.WHL_EKSPOR) window.WHL_EKSPOR.pdf(panggil(FN_PDF, [{}], 120000), 'Rekap Hazard WHL', roti); }
   function tebakJenis(t) {
     t = String(t || '').toLowerCase();
     return /licin|becek|lumpur/.test(t) ? 'Jalan licin' : /lubang|rusak/.test(t) ? 'Jalan berlubang' : /longsor|tebing/.test(t) ? 'Longsor / tebing' : /genang|banjir|air/.test(t) ? 'Genangan / banjir' : /debu/.test(t) ? 'Debu tebal' : /rambu/.test(t) ? 'Rambu rusak / hilang' : /mogok|storing|rusak di jalan/.test(t) ? 'Unit mogok di jalan' : /tumpah|ceceran/.test(t) ? 'Material tumpah' : /lampu|gelap|penerangan/.test(t) ? 'Penerangan kurang' : 'Lainnya';
@@ -463,6 +487,8 @@
     if (n === 'tutupLihat') { tutupLihat(); return; }
     if (n === 'lihat' || n === 'lihatFoto') { lihat(n === 'lihatFoto' ? F.foto : b.getAttribute('src')); return; }
     if (n === 'ulang') { if (layar === 'val') bukaVal(); else bukaLapor(); return; }
+    if (n.indexOf('excel:') === 0) { excel(n.slice(6)); return; } /* v3.31 */
+    if (n === 'pdf') { pdf(); return; }
     if (n === 'keVal') { R.getar(); bukaVal(); if (lapisEl) lapisEl.setAttribute('data-dari', 'lapor'); return; }
     if (n === 'gps') { mulaiGps(); return; }
     if (n === 'jenis') { F.jenis = b.getAttribute('data-j'); R.getar(); Array.prototype.forEach.call(lapisEl.querySelectorAll('.hzChip[data-h="jenis"]'), function (c) { var on = c === b; c.classList.toggle('on', on); c.setAttribute('aria-checked', on); }); var g = lapisEl.querySelector('#hzGalat'); if (g) g.innerHTML = ''; return; }

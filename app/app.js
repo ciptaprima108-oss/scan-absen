@@ -741,6 +741,8 @@
       try { var a = JSON.parse(v || 'null'); IKON_PILIH = Array.isArray(a) && a.length ? a : null; } catch (e) { IKON_PILIH = null; }
       /* v3.15: id lama "absen" (v3.14) -> "kehadiran", posisinya tetap; disimpan ulang sekali */
       if (IKON_PILIH && IKON_PILIH.indexOf('absen') >= 0) { var b = []; IKON_PILIH.forEach(function (id) { id = id === 'absen' ? 'kehadiran' : id; if (b.indexOf(id) < 0) b.push(id); }); IKON_PILIH = b; Simpan.taruh(kunciIkon(), JSON.stringify(b)); }
+      /* v3.31 hub: id lama gaji/kasbon/dokkas/hazard/hazardCek/poin/peringkat/poinAcc/poinRekap -> hubGaji/hubHazard/hubPoin; disimpan ulang sekali */
+      var mg = IKON_PILIH && window.WHL_HUB && window.WHL_HUB.migrasi(IKON_PILIH); if (mg) { IKON_PILIH = mg; Simpan.taruh(kunciIkon(), JSON.stringify(mg)); }
     });
   }
   function lemburTanda() { var L = window.WHL_LEMBUR ? window.WHL_LEMBUR.ringkas() : null, I = window.WHL_IZIN ? window.WHL_IZIN.ringkas() : null; return (L && L.bolehAcc ? L.menunggu : 0) + (I && I.bolehAcc ? I.menungguAcc : 0); } /* v3.19: + izin menunggu ACC */
@@ -768,14 +770,14 @@
     if (hitungProyeksi() && !adalahDriver()) tambah(['proyeksi', 'Proyeksi', 'proyeksi', 0, 'proyeksi']);
     if (KSN && KSN.ada && KSN.k3) tambah(['insiden', 'Penilaian K3', 'k3', 0, 'k3']);
     if (window.WHL_BANNER && window.WHL_BANNER.admin()) tambah(['kreatif', 'Kelola banner', 'kelolaBanner', 0, 'kelolaBanner']);
-    return L;
+    return window.WHL_HUB ? window.WHL_HUB.gabung(L) : L; /* v3.31 hub: Hazard / Gaji & Kasbon / Poin WHL jadi 1 ikon */
   }
   /** bawaan: urutan lama (7 ikon pertama) tanpa tambahan "Lainnya"; pimpinan/penuh: Ajuan kasbon ikut tampil (Reza 15 Nov) */
   function driverPunya(fn) { return !!window.WHL_DRIVER && window.WHL_DRIVER.punya(fn); }
   function bawaanLayanan(K) {
     var ekstra = ['kotak', 'proyeksi', 'k3', 'kelolaBanner'], U = K.filter(function (x) { return ekstra.indexOf(x[4]) < 0; });
     if (['pimpinan', 'penuh'].indexOf(SESI.user.peran) >= 0) {
-      var kb = U.filter(function (x) { return x[4] === 'kasbon'; })[0];
+      var kb = U.filter(function (x) { return x[4] === 'kasbon' || x[4] === 'hubGaji'; })[0]; /* v3.31: kasbon ada di ikon Gaji & Kasbon */
       if (kb && U.indexOf(kb) >= IKON_BAWAAN) { U = U.filter(function (x) { return x !== kb; }); U.splice(IKON_BAWAAN - 1, 0, kb); }
     }
     return U.slice(0, IKON_BAWAAN);
@@ -886,7 +888,7 @@
     if (window.WHL_BANNER && window.WHL_BANNER.admin()) A.push(['kreatif', 'Kelola banner', 'kelolaBanner', 0, 'kelolaBanner']);
     var W = appsSaya().map(function (a) { return [a.ik || IKON_DIV[a.d] || 'web', a.n.replace(/ WHL$/, '').replace(/^Live Monitor /, ''), 'web:' + alamat(a), 0, 'app:' + a.n]; });
     if (!adalahDriver()) W.push(['rumahWeb', 'Pusat WHL web', 'web:' + K.DASH + '?mode=pusat']);
-    bukaLembar('<div class="lembarLy"><div class="atrBaris"><button type="button" class="atrTombol" data-ke="aturBeranda">✏️ Atur ikon Beranda</button></div><h3>Layanan WHL</h3><div class="layanan">' + A.map(petakLy).join('') + '</div>'
+    bukaLembar('<div class="lembarLy"><div class="atrBaris"><button type="button" class="atrTombol" data-ke="aturBeranda">✏️ Atur ikon Beranda</button></div><h3>Layanan WHL</h3><div class="layanan">' + (window.WHL_HUB ? window.WHL_HUB.gabung(A) : A).map(petakLy).join('') + '</div>'
       + '<h3>Aplikasi WHL</h3><div class="kecil" style="margin:-4px 0 10px">Halaman web, dibuka di dalam app. Tombol Kembali membawa kamu ke sini lagi.</div><div class="layanan">' + W.map(petakLy).join('') + '</div></div>');
   }
 

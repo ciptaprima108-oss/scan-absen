@@ -25,7 +25,8 @@
   function getar() { if (R.getar) R.getar(); }
   function panggil(fn, args, ms) { var S = sesi(); return API.Pusat.panggil(fn, [S && S.tokenPusat].concat(args || []), ms || 45000); }
   function serverPunya() { var X = API.Pusat; return !(X.dikenal && X.dikenal()) || X.punya('pusatKatalogDaftar'); }
-  function boleh(S) { S = S || sesi(); return !!(S && S.user && PERAN.indexOf(S.user.peran) >= 0) && serverPunya(); }
+  function boleh(S) { S = S || sesi(); if (!S || !S.user) return false; var X = API.Pusat; if (X.dikenal && X.dikenal() && X.punya('pusatKatalogRiwayat')) return S.user.peran !== 'driver'; /* v3.31 edit-semua (V526): semua staf selain driver */ return PERAN.indexOf(S.user.peran) >= 0 && serverPunya(); }
+  function adminK() { return !U || U.bolehAdmin == null ? true : U.bolehAdmin === true; } /* server lama tanpa bolehAdmin: hapus ikut bisaHapus seperti dulu */
   var NB = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
   function tglID(t) { return /^\d{4}-\d{2}-\d{2}/.test(t || '') ? (+t.slice(8, 10)) + ' ' + NB[+t.slice(5, 7) - 1] + ' ' + t.slice(0, 4) : (t || ''); }
   function cid() { return 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -148,7 +149,7 @@
     return '<button type="button" class="ktlKartu" data-l="unit:' + esc(u.l) + '"><div class="fo">'
       + (u.mini ? '<img src="' + esc(u.mini) + '" alt="Foto ' + esc(u.l) + '" loading="lazy">' : '<span class="kos">' + TRUK + 'Belum ada foto</span>')
       + '<span class="ar ' + (u.a === 'TRONTON' ? 'tron' : 'trin') + '">' + namaArmada(u.a).toUpperCase() + '</span>'
-      + '<span class="td ktlD-' + w + '" title="Dokumen"></span>' + (u.st !== 'AKTIF' ? '<span class="kl">' + esc(u.st) + '</span>' : '') + '</div>'
+      + '<span class="td ktlD-' + w + '" title="Dokumen"></span>' + (u.nSisi != null ? '<span class="ns' + (Number(u.nSisi) >= 4 ? ' ok' : '') + '">' + Number(u.nSisi) + '/4 sisi</span>' : '') + (u.st !== 'AKTIF' ? '<span class="kl">' + esc(u.st) + '</span>' : '') + '</div>'
       + '<div class="bw"><div class="lb">' + esc(u.l) + '</div><div class="mk">' + esc([u.merk || 'Merk belum diisi', u.nopol].filter(Boolean).join(' · ')) + '</div>'
       + '<div class="dr">' + (u.driver && u.driver.length ? '👤 ' + esc(u.driver.join(', ')) : '<span style="opacity:.7">Driver tetap belum ada</span>') + '</div>'
       + '<div class="bar" title="Kelengkapan data ' + persen + '%"><i style="width:' + persen + '%"></i></div></div></button>';
@@ -171,6 +172,7 @@
       + merk.map(function (m) { return '<button type="button" class="ktlChip' + (F.merk === m ? ' on' : '') + '" data-l="merk:' + esc(m) + '">' + esc(m) + ' · ' + Rg.merk[m] + '</button>'; }).join('')
       + (F.dok ? '<button type="button" class="ktlChip on" data-l="dok:">' + (F.dok === 'habis' ? 'Dokumen habis' : 'Segera habis') + ' ✕</button>' : '')
       + '<button type="button" class="ktlChip' + (F.keluar ? ' on' : '') + '" data-l="keluar">' + (F.keluar ? '✓ ' : '') + 'Unit keluar</button></div>';
+    h += eksporHtml(); /* v3.31 Excel (dibuat di HP) + PDF (server) */
     return h + '<div id="ktlGrid">' + htmlGrid() + '</div>' + (D.galat && D.galat.length ? '<div class="ktlJml" style="margin-top:12px">⚠️ Sebagian data otomatis belum terbaca: ' + esc(D.galat.join(' · ')) + '</div>' : '');
   }
   function ketik(ev) { if (ev.target && ev.target.id === 'ktlCari') { F.cari = ev.target.value; var g = lapisEl.querySelector('#ktlGrid'); if (g) g.innerHTML = htmlGrid(); } }
@@ -186,11 +188,11 @@
   }
 
   /* ---------- DETAIL ---------- */
-  function bukaUnit(l) { layar = 'detail'; U = null; uGalat = ''; hapusSiap = ''; muatUnit(l); }
+  function bukaUnit(l) { RW.semua = null; RW.yakin = ''; RW.buka = false; layar = 'detail'; U = null; uGalat = ''; hapusSiap = ''; muatUnit(l); }
   function muatUnit(l) {
     uMuat = true; lapis();
     panggil('pusatKatalogDetail', [l], 45000).then(function (h) {
-      uMuat = false; if (!h || !h.ok) uGalat = (h && h.pesan) || 'Data unit belum bisa dimuat.'; else { U = h; uGalat = ''; }
+      uMuat = false; if (!h || !h.ok) uGalat = (h && h.pesan) || 'Data unit belum bisa dimuat.'; else { U = h; uGalat = ''; setTimeout(sampulOtomatis, 1500); }
       if (lapisEl && layar === 'detail') lapis();
     }).catch(function (e) { uMuat = false; uGalat = (e && e.message) || 'Sinyal putus.'; if (lapisEl) lapis(); });
   }
@@ -209,6 +211,7 @@
         + '<span class="lbl">' + esc(f.label) + '</span>' + (f.sampul ? '<span class="sp1">Sampul</span>' : '') + '</button>';
     }).join('') + (ub ? '<button type="button" class="gf tambah" data-l="unggah:UNIT"><b>＋</b>Tambah foto</button>' : '')
       + (!fotoUnit.length && !ub ? '<div class="gf"><span class="mu">' + TRUK + '&nbsp;Belum ada foto unit</span></div>' : '') + '</div>';
+    h += sisiHtml(fotoUnit, ub); /* v3.31 foto 4 sisi */
     h += '<div class="ktlJudul"><div style="flex:1;min-width:0"><h1>' + esc(u.l) + '</h1><div class="sub">' + esc([u.merk, u.tipe, u.tahun].filter(Boolean).join(' · ') || 'Merk / tipe belum diisi') + '</div>'
       + '<div class="chs"><span class="ktlTag ' + (u.a === 'TRONTON' ? 'tron' : 'trin') + '">' + namaArmada(u.a) + '</span>' + (u.st !== 'AKTIF' ? '<span class="ktlTag kel">' + esc(u.st) + '</span>' : '<span class="ktlTag">Aktif</span>')
       + (u.nopol ? '<span class="ktlTag">' + esc(u.nopol) + '</span>' : '') + (u.lama ? '<span class="ktlTag">Dulu ' + esc(u.lama) + '</span>' : '') + '</div></div></div>';
@@ -218,12 +221,14 @@
     }).join('') + '</div>';
     h += '<div class="ktlH2">Data unit' + (ub ? '<button type="button" data-l="isi">✏️ Ubah</button>' : '') + '</div><div class="kartu">'
       + U.data.filter(function (x) { return ['stnk', 'pajak', 'kir'].indexOf(x.k) < 0; }).map(function (x) {
-        return '<div class="ktlRow"><span>' + esc(x.label) + '</span>' + (x.v ? '<b>' + esc(x.v) + (x.koreksi ? '<small class="kor">dikoreksi admin · asli: ' + esc(x.asli) + '</small>' : x.src ? '<small>' + esc(x.src === 'Admin' ? 'diisi admin' : 'otomatis · ' + x.src) + '</small>' : '') + '</b>' : '<b class="kosong">belum diisi' + (x.bisaIsi ? '<button type="button" class="isi" data-l="isi">Isi</button>' : '') + '</b>') + '</div>';
+        return '<div class="ktlRow"><span>' + esc(x.label) + '</span>' + (x.v ? '<b>' + esc(x.v) + (x.koreksi ? '<small class="kor">dikoreksi admin · asli: ' + esc(x.asli) + '</small>' : x.src ? '<small>' + esc(x.src === 'Admin' ? 'diisi admin' : 'otomatis · ' + x.src) + '</small>' : '') + diubahHtml(x.k) + '</b>' : '<b class="kosong">belum diisi' + (x.bisaIsi ? '<button type="button" class="isi" data-l="isi">Isi</button>' : '') + '</b>') + '</div>';
       }).join('') + '</div>';
+    h += riwayatHtml(); /* v3.31 edit-semua (V526) */
     h += '<div class="ktlH2">Driver tetap</div><div class="kartu">' + (U.driver && U.driver.length ? U.driver.map(function (d) { return '<div class="ktlRow"><span>👤 ' + esc(d.n) + '</span><b>' + esc(d.id || '') + '</b></div>'; }).join('') : '<div class="ktlRow"><span>Belum ada kartu driver dengan lambung utama ini</span></div>') + '</div>';
     h += '<div class="ktlH2">GPS & P2H</div><div class="kartu">'
       + '<div class="ktlRow"><span>IMEI GPS</span>' + (U.gps ? '<b>' + esc(U.gps.imei) + '<small>' + esc(U.gps.nama + (U.gps.akun ? ' · akun ' + U.gps.akun : '')) + '</small></b>' : '<b class="kosong">belum terpasang / belum di-mapping</b>') + '</div>'
       + '<div class="ktlRow"><span>P2H kelengkapan terakhir</span>' + (U.p2h ? '<b>' + esc(U.p2h.tgl || '-') + '<small>' + esc(U.p2h.oleh ? 'oleh ' + U.p2h.oleh : '') + '</small></b>' : '<b class="kosong">belum ada</b>') + '</div></div>';
+    if (bolehPdf() && window.WHL_EKSPOR) h += '<div class="ktlEks" style="margin-top:12px"><button type="button" data-l="pdfUnit">📄 PDF unit ini (foto 4 sisi + data)</button></div>'; /* v3.31 */
     if (ub) h += '<div class="ktlAksi"><button type="button" class="tUtama" data-l="unggah:UNIT">📷 Tambah foto</button><button type="button" class="ktlBtn2" data-l="isi">✏️ Ubah / lengkapi</button></div>';
     return h;
   }
@@ -334,7 +339,7 @@
       + '<div class="tg">' + (src ? (pdf ? '<iframe src="' + src + '" title="Dokumen"></iframe>' : '<img src="' + src + '" alt="' + esc(f.label) + '">') : '<span style="color:#94a3b8"><span class="putar"></span> Memuat…</span>') + '</div>'
       + '<div class="ket">' + esc([f.waktu, f.oleh ? 'oleh ' + f.oleh : '', f.ket].filter(Boolean).join(' · ')) + '</div>'
       + (U.bolehUbah && (bisaSampul || f.bisaHapus) ? '<div class="bwh">' + (bisaSampul ? '<button type="button" data-l="sampul:' + esc(f.id) + '">⭐ Jadikan sampul</button>' : '')
-        + (f.bisaHapus ? '<button type="button" class="' + (hapusSiap === f.id ? 'mrh' : '') + '" data-l="hapus:' + esc(f.id) + '">' + (hapusSiap === f.id ? 'Ketuk lagi untuk hapus' : '🗑 Hapus') + '</button>' : '') + '</div>' : '') + '</div>';
+        + (f.bisaHapus && adminK() ? '<button type="button" class="' + (hapusSiap === f.id ? 'mrh' : '') + '" data-l="hapus:' + esc(f.id) + '">' + (hapusSiap === f.id ? 'Ketuk lagi untuk hapus' : '🗑 Hapus') + '</button>' : '') + '</div>' : '') + '</div>';
   }
   function bukaLihat(id) {
     lihat = id; hapusSiap = ''; lapis();
@@ -356,6 +361,98 @@
     panggil('pusatKatalogHapusFoto', [l, id], 45000).then(function (h) { roti((h && h.pesan) || 'Belum terhapus.'); if (h && h.ok) { lihat = null; D = null; muatUnit(l); muat(false); } }).catch(function () { roti('Sinyal putus. Coba lagi.'); });
   }
 
+  /* ---------- v3.31: FOTO 4 SISI (Depan/Belakang/Kiri/Kanan, slot per sisi; unggah lewat pusatKatalogUnggah jenis = sisi) ---------- */
+  var SISI = [['DEPAN', 'Depan'], ['BELAKANG', 'Belakang'], ['KIRI', 'Kiri'], ['KANAN', 'Kanan']];
+  function gayaV331() {
+    if (document.getElementById('ktlGaya331')) return; var st = document.createElement('style'); st.id = 'ktlGaya331';
+    st.textContent = '.ktlSisi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:2px 0 12px}.ktlSisi .ss{position:relative;aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:var(--panel2);border:1px dashed var(--garis);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--redup);font:inherit;font-size:11.5px;font-weight:800;padding:0}'
+      + '.ktlSisi .ss.ada{border-style:solid}.ktlSisi .ss img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.ktlSisi .ss b{font-size:20px;line-height:1;color:var(--utama)}.ktlSisi .ss .nm{position:absolute;left:0;right:0;bottom:0;padding:3px 0;background:rgba(0,0,0,.55);color:#fff;font-size:10.5px}'
+      + '.ktlSisi .ss .gt{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:12px;display:grid;place-items:center}'
+      + '.ktlSisi .ss .isi{position:absolute;inset:0;padding:0;background:none;border:0;display:grid;place-items:center;color:var(--redup);font:inherit}.ktlSisi .ss .gt{border:0;padding:0;font:inherit;z-index:2}.ktlSisi .ss .gt.hp{right:auto;left:4px}.ktlSisi .ss .gt.yakin{width:auto;padding:0 6px;border-radius:99px;background:#e5484d;font-size:10px;font-weight:800}'
+      + '.ktlKartu .fo .ns{position:absolute;right:6px;bottom:6px;font-size:10px;font-weight:900;padding:2px 6px;border-radius:99px;background:rgba(0,0,0,.55);color:#fff}.ktlKartu .fo .ns.ok{background:#16a34a}'
+      + '.ktlEks{display:flex;gap:8px;margin:2px 0 10px}.ktlEks button{flex:1;min-height:40px;border-radius:12px;font-weight:800;font-size:13px;background:var(--panel2);color:var(--teks)}';
+    document.head.appendChild(st);
+  }
+  var SISI_MUAT = {}, SAMPUL_SUDAH = {};
+  function muatSisi(fid) { if (!U || SISI_MUAT[fid]) return; SISI_MUAT[fid] = 1; var l = U.unit.l; panggil('pusatKatalogFoto', [l, fid], 45000).then(function (h) { if (h && h.ok) { FOTO[fid] = 'data:' + h.mime + ';base64,' + h.b64; if (lapisEl && U && U.unit.l === l && !lembar && layar === 'detail') lapis(); } }).catch(function () { SISI_MUAT[fid] = 0; }); }
+  /** sampul otomatis (kontrak §Sampul otomatis): admin/pimpinan, sekali per unit, diam-diam */
+  function sampulOtomatis() {
+    if (!U || !U.bolehUbah || !U.sampulSaran || SAMPUL_SUDAH[U.unit.l]) return; var l = U.unit.l, id = U.sampulSaran; SAMPUL_SUDAH[l] = 1;
+    var f = (U.foto || []).filter(function (x) { return x.id === id; })[0] || ((U.sisi || []).map(function (s) { return s.foto; }).filter(function (x) { return x && x.id === id; })[0]); if (!f || !f.fileId) return;
+    (FOTO[f.fileId] ? Promise.resolve({ ok: true, src: FOTO[f.fileId] }) : panggil('pusatKatalogFoto', [l, f.fileId], 45000)).then(function (h) { if (!h || !h.ok) return; var src = h.src || ('data:' + h.mime + ';base64,' + h.b64); return kecilkan(src, 240, 0.6).then(function (mini) { return panggil('pusatKatalogSampul', [{ lambung: l, fotoId: id, mini: mini }], 45000).then(function (r) { if (r && r.ok && D) { D.unit.forEach(function (u) { if (u.l === l) { u.mini = mini0(r) || mini; u.perluSampul = false; } }); } }); }); }).catch(function () { /* abaikan */ });
+  }
+  function mini0(r) { return r && r.mini ? r.mini : ''; }
+  function sisiHtml(fotoUnit, ub) {
+    gayaV331();
+    /* server katalog-lengkap-17nov (V525): U.sisi [{k, label, foto:{id, fileId, sumber, bisaHapus}|null}]; server lama: foto terbaru per jenis dari U.foto */
+    var SV = U && Array.isArray(U.sisi) && U.sisi.length ? U.sisi : null;
+    var ada = 0, h = SISI.map(function (s) {
+      var f = null, sv = SV && SV.filter(function (x) { return x.k === s[0]; })[0];
+      if (SV) { if (sv && sv.foto) f = { id: sv.foto.id, fileId: sv.foto.fileId, sumber: sv.foto.sumber, bisaHapus: !!sv.foto.bisaHapus }; }
+      else f = fotoUnit.filter(function (x) { return x.jenis === s[0]; }).slice(-1)[0];
+      if (f) { ada++; var src = FOTO[f.fileId]; if (!src && f.fileId && SV) muatSisi(f.fileId);
+        return '<div class="ss ada"><button type="button" class="isi" data-l="lihat:' + esc(f.id) + '" data-fid="' + esc(f.fileId || '') + '">' + (src ? '<img src="' + src + '" alt="' + esc(s[1]) + '">' : '<span>Memuat…</span>') + '</button><span class="nm">' + esc((sv && sv.label) || s[1]) + (f.sumber === 'commissioning' ? ' · Commissioning' : '') + '</span>'
+          + (ub ? '<button type="button" class="gt" data-l="unggah:' + s[0] + '" aria-label="Ganti foto ' + s[1] + '">📷</button>' : '')
+          + (ub && f.bisaHapus && adminK() && f.sumber !== 'commissioning' ? '<button type="button" class="gt hp' + (hapusSiap === f.id ? ' yakin' : '') + '" data-l="hapus:' + esc(f.id) + '" aria-label="Hapus foto ' + s[1] + '">' + (hapusSiap === f.id ? 'Yakin?' : '🗑') + '</button>' : '') + '</div>'; }
+      var lb = esc((sv && sv.label) || s[1]);
+      return ub ? '<button type="button" class="ss" data-l="unggah:' + s[0] + '"><b>📷</b>' + lb + '</button>' : '<div class="ss"><span>' + lb + '</span><small>belum ada</small></div>';
+    }).join('');
+    return '<div class="ktlH2">Foto 4 sisi <small style="font-weight:700;color:var(--redup)">' + ada + '/4</small></div><div class="ktlSisi">' + h + '</div>';
+  }
+  /* ---------- v3.31: EKSPOR daftar unit (yang sedang tersaring) ---------- */
+  /* kontrak Upgrade\katalog-lengkap-17nov\pdf\KONTRAK-APP.md: pusatKatalogPdf(token, {lambung?|armada?, status?, foto?}), pusatKatalogRekap(token, {armada?, status?}) */
+  var FN_PDF = 'pusatKatalogPdf', FN_REKAP = 'pusatKatalogRekap';
+  function srvPunya(fn) { var X = API.Pusat; return !!(X.punya && X.dikenal && X.dikenal() && X.punya(fn)); }
+  function bolehPdf() { return srvPunya(FN_PDF); }
+  function eksporHtml() {
+    if (!window.WHL_EKSPOR || !D) return ''; gayaV331();
+    return '<div class="ktlEks"><button type="button" data-l="excel">📊 Excel</button>' + (bolehPdf() ? '<button type="button" data-l="pdf">📄 PDF ringkas</button><button type="button" data-l="pdf4">📄 PDF + foto</button>' : '') + '</div>';
+  }
+  function saringSrv() { var s = {}; if (F.armada !== 'SEMUA') s.armada = F.armada; if (!F.keluar) s.status = 'AKTIF'; return s; }
+  function dokTeks(s) { return s === 'habis' ? 'Ada yang habis' : s === 'segera' ? 'Segera habis' : s === 'kosong' ? 'Belum diisi' : 'Aman'; }
+  function excel() {
+    if (!window.WHL_EKSPOR) return;
+    if (srvPunya(FN_REKAP)) { window.WHL_EKSPOR.excelServer(panggil(FN_REKAP, [saringSrv()], 120000), 'Katalog Unit WHL - ' + window.WHL_EKSPOR.tgl(), roti, 'Katalog unit'); return; } /* lengkap: rangka, mesin, warna, STNK/pajak/KIR, foto 4 sisi */
+    if (!D) return;
+    var L = D.unit.filter(cocok);
+    var rows = L.map(function (u) { return [u.l, namaArmada(u.a), u.st || '', u.nopol || '', u.merk || '', u.tipe || '', u.tahun || '', (u.driver || []).join(', '), dokTeks(u.dokBuruk), Math.round(100 * (u.lengkap || 0) / (u.dari || 10)), u.lama || '']; });
+    var saring = [F.armada !== 'SEMUA' ? namaArmada(F.armada) : 'Semua armada', F.merk || '', F.dok === 'habis' ? 'dokumen habis' : F.dok === 'segera' ? 'segera habis' : '', F.keluar ? 'termasuk unit keluar' : 'unit aktif', F.cari ? 'cari "' + F.cari + '"' : ''].filter(Boolean).join(' · ');
+    window.WHL_EKSPOR.excel('Katalog Unit WHL - ' + window.WHL_EKSPOR.tgl(), [
+      ['Unit', [['Lambung', 'Armada', 'Status', 'Nopol', 'Merk', 'Tipe', 'Tahun', 'Driver tetap', 'Dokumen', 'Kelengkapan data (%)', 'Lambung lama']].concat(rows)],
+      ['Ringkas', [['Katalog unit WHL', ''], ['Saringan', saring], ['Jumlah unit', L.length], ['Dibuat', new Date().toLocaleString('id-ID')]]]
+    ], roti);
+  }
+  function pdf(jenis) {
+    if (!window.WHL_EKSPOR) return;
+    var s = jenis === 'unit' && U ? { lambung: U.unit.l } : saringSrv(); if (jenis === '4sisi') s.foto = '4sisi'; else if (jenis !== 'unit') s.foto = 'sampul';
+    window.WHL_EKSPOR.pdf(panggil(FN_PDF, [s], 120000), 'Katalog Unit WHL' + (s.lambung ? ' - ' + s.lambung : ''), roti);
+  }
+
+  /* ---------- v3.31 EDIT SEMUA (kontrak Upgrade\katalog-lengkap-17nov\edit-semua\KONTRAK-APP.md, V526): diubah per kolom, riwayat, Kembalikan (admin) ---------- */
+  var RW = { buka: false, semua: null, yakin: '' };
+  function tglJam(w) { var m = String(w || '').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/); return m ? (+m[3]) + ' ' + NB[+m[2] - 1] + ' ' + m[4] + '.' + m[5] : esc(w || ''); }
+  function diubahHtml(k) { var d = U && U.diubah && U.diubah[k]; if (!d) return ''; return '<small class="ktlUbah">diubah oleh ' + esc(d.oleh || '-') + (d.waktu ? ' · ' + tglJam(d.waktu) : '') + (d.sebelumnya ? ' · sebelumnya ' + esc(d.sebelumnya) : '') + '</small>'; }
+  function riwayatHtml() {
+    var L = (RW.semua && U && RW.semua.l === U.unit.l ? RW.semua.d : (U && U.riwayat)) || []; if (!U || !Array.isArray(U.riwayat)) return '';
+    var adm = U.bolehAdmin === true;
+    return '<div class="ktlH2"><button type="button" data-l="riwayat" style="background:none;padding:0;font:inherit;color:inherit">Riwayat perubahan ' + (RW.buka ? '▴' : '▾') + '</button><small style="font-weight:700;color:var(--redup)">' + L.length + '</small></div>'
+      + (!RW.buka ? '' : '<div class="kartu">' + (L.length ? L.map(function (r) {
+        var bisa = adm && r.bisaKembali;
+        return '<div class="ktlRow" style="align-items:flex-start"><span>' + esc(r.label || r.kolom || r.aksi || '') + '<small style="display:block">' + tglJam(r.waktu) + ' · ' + esc(r.oleh || '-') + '</small></span><b>' + esc(r.baru != null && r.baru !== '' ? r.baru : r.aksi || '') + (r.lamaTampil || r.lama ? '<small>sebelumnya ' + esc(r.lamaTampil || r.lama) + '</small>' : '')
+          + (bisa ? '<button type="button" class="isi' + (RW.yakin === String(r.id) ? ' mrh' : '') + '" data-l="kembali:' + esc(r.id) + '">' + (RW.yakin === String(r.id) ? 'Kembalikan ' + esc(r.label || '') + ' ke ' + esc(r.lamaTampil || r.lama || '(kosong)') + '?' : 'Kembalikan') + '</button>' : '') + '</b></div>';
+      }).join('') : '<div class="ktlRow"><span>Belum ada perubahan</span></div>') + (!RW.semua && srvPunya('pusatKatalogRiwayat') ? '<button type="button" class="ktlBtn2" style="width:100%;margin-top:8px" data-l="riwayatSemua">Lihat semua</button>' : '') + '</div>');
+  }
+  function riwayatSemua() {
+    if (!U) return; var l = U.unit.l;
+    panggil('pusatKatalogRiwayat', [l], 45000).then(function (h) { if (h && h.ok && U && U.unit.l === l) { RW.semua = { l: l, d: h.riwayat || [] }; if (h.bolehAdmin != null) U.bolehAdmin = h.bolehAdmin; lapis(); } else roti((h && h.pesan) || 'Riwayat belum bisa dimuat.'); }).catch(function () { roti('Sinyal putus. Coba lagi.'); });
+  }
+  function kembalikan(id) {
+    if (!U || kirim) return;
+    if (RW.yakin !== String(id)) { RW.yakin = String(id); lapis(); setTimeout(function () { if (RW.yakin === String(id)) { RW.yakin = ''; if (lapisEl) lapis(); } }, 5000); return; }
+    var l = U.unit.l; RW.yakin = ''; kirim = true; lapis();
+    panggil('pusatKatalogKembalikan', [l, id], 45000).then(function (h) { kirim = false; roti((h && h.pesan) || 'Belum berhasil.'); RW.semua = null; muatUnit(l); if (h && h.ok) muat(false); }).catch(function () { kirim = false; roti('Sinyal putus. Coba lagi.'); lapis(); });
+  }
+
   /* ---------- klik ---------- */
   function klik(ev) {
     var b = ev.target.closest('[data-l]'); if (!b || !lapisEl || !lapisEl.contains(b)) return;
@@ -372,11 +469,18 @@
     if (n === 'tutupLihat') { lihat = null; hapusSiap = ''; lapis(); return; }
     if (n.indexOf('sampul:') === 0) { jadikanSampul(n.slice(7)); return; }
     if (n.indexOf('hapus:') === 0) { hapusFoto(n.slice(6)); return; }
+    if (n === 'riwayat') { RW.buka = !RW.buka; lapis(); return; }
+    if (n === 'riwayatSemua') { riwayatSemua(); return; }
+    if (n.indexOf('kembali:') === 0) { kembalikan(n.slice(8)); return; }
     if (n === 'isi') { if (U && U.bolehUbah) { lembar = { jenis: 'isi' }; lapis(); } return; }
     if (n.indexOf('unggah:') === 0) { if (U && U.bolehUbah) { lembar = { jenis: 'foto', pilih: n.slice(7) }; lapis(); } return; }
     if (n.indexOf('jenis:') === 0) { simpanKet(); lembar.pilih = n.slice(6); if (lembar.mime === 'application/pdf' && JENIS_DOK.indexOf(lembar.pilih) < 0) { lembar.b64 = ''; lembar.pratinjau = ''; } lapis(); return; }
     if (n === 'tutupLembar') { if (b.classList.contains('ktlLmb') && ev.target !== b) return; if (!kirim) { lembar = null; lapis(); } return; }
     if (n === 'kirimFoto') { kirimFoto(); return; }
+    if (n === 'excel') { excel(); return; }
+    if (n === 'pdf') { pdf(); return; }
+    if (n === 'pdf4') { pdf('4sisi'); return; }
+    if (n === 'pdfUnit') { pdf('unit'); return; }
     if (n === 'simpan') { simpanIsian(); return; }
   }
   /* tombol Back HP: penampil -> lembar -> detail -> daftar -> tutup */
