@@ -354,14 +354,21 @@
     if (tab !== 'beranda' || !SESI) { el.classList.add('sembunyi'); document.documentElement.classList.remove('ml-absen'); return; }
     var T2 = daftarTindak(), h = '';
     if (T2.storing.length) { var x = T2.storing[0]; h = '<button type="button" class="mlI merah" data-ke="tab:unit">' + IK('alarm') + '</button><button type="button" class="mlT" data-ke="tab:unit"><b>' + T2.storing.length + ' unit storing sedang ditangani</b><small>' + esc(x.l) + (x.mek ? ' · ' + x.mek : ' · belum ada mekanik') + (x.umur ? ' · ' + x.umur : '') + '</small></button><button type="button" class="mlB" data-ke="tab:unit">Lihat</button>'; }
-    else if (kotakAbsen()) { el.innerHTML = kotakAbsen(); el.classList.remove('sembunyi'); el.classList.add('mlAbsen'); document.documentElement.classList.add('ml-absen'); return; }
+    else if (kotakAbsen()) { el.innerHTML = kotakAbsen(); el.classList.remove('sembunyi'); el.classList.add('mlAbsen'); document.documentElement.classList.add('ml-absen'); requestAnimationFrame(function () { try { document.documentElement.style.setProperty('--mlTinggi', Math.ceil(el.offsetHeight + 96) + 'px'); } catch (e) { /* */ } }); return; } /* v3.32: jarak bawah Beranda = tinggi kotak absen sebenarnya (kartu terakhir mis. Poin WHL saya tidak tertutup) */
     el.classList.remove('mlAbsen'); document.documentElement.classList.remove('ml-absen');
     el.innerHTML = h; el.classList.toggle('sembunyi', !h);
   }
   /* v3.15 kotak absen (Reza: "tombolnya dekatan dengan absen aja ... jadi bisa absen atau lembur"): 2 tombol sama besar berdampingan.
      Tampil melayang di Beranda; kalau tempat melayang dipakai kabar storing, kotak ini ikut di Beranda di bawah grid ikon. */
+  /* v3.32 (Reza 17 Nov): akun full time tanpa kewajiban absen (Pak Fanza WHL-01001) tidak dapat kotak Absen/Lembur di Beranda; menu Kehadiran tetap bisa dibuka.
+     Daftar = konfig.js TANPA_KOTAK_ABSEN (NRP/ID, tanda baca diabaikan) ATAU field server opsional user.tanpaKotakAbsen === true. */
+  function tanpaKotakAbsen() {
+    var u = SESI && SESI.user; if (!u) return false; if (u.tanpaKotakAbsen === true) return true; if (u.tanpaKotakAbsen === false) return false;
+    var R = function (s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }, D = ((window.WHL_KONFIG || {}).TANPA_KOTAK_ABSEN || []).map(R);
+    return [SESI.idProfil, SESI.idKetik, u.nrp, u.id, u.nik].some(function (x) { return x && D.indexOf(R(x)) >= 0; });
+  }
   function kotakAbsen() {
-    if (!SESI || SESI.user.peran === 'driver' || !ABSEN || !ABSEN.ok) return '';
+    if (!SESI || SESI.user.peran === 'driver' || !ABSEN || !ABSEN.ok || tanpaKotakAbsen()) return '';
     var h = '';
     {
       var c = ABSEN.hari || [], m = c.filter(function (y) { return y.tipe === 'Masuk'; })[0], pl = c.filter(function (y) { return /^Pulang/.test(y.tipe); })[0];
@@ -1273,6 +1280,8 @@
       h += kartuHadir('jam', 'Lembur <span class="chip kuning">Segera hadir</span>', 'Pengajuan & persetujuan lembur langsung dari app.', ['Karyawan: ajukan jam lembur + pekerjaannya.', 'Pimpinan: setujui / tolak lembur tim, dapat notifikasi.', 'Aktif otomatis begitu server lembur siap (cukup buka ulang app).'],
         '<div class="hdTombol"><button type="button" class="tKecil" data-aksi="lembur">Lembur</button></div>', ' hdSegera');
     }
+    /* 4. v3.32 Roster (roster-app-17nov): tampil kalau server punya pusatRosterSaya */
+    if (window.WHL_ROSTER && window.WHL_ROSTER.boleh(SESI)) { window.WHL_ROSTER.pasang(ctxNota()); h += window.WHL_ROSTER.kartuHtml(); }
     return h;
   }
 
