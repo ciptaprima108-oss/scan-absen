@@ -504,7 +504,7 @@
     var h = !fiturBaru() ? '' : '<div class="segmen notaMode"><button type="button" class="' + (mode === 'satu' ? 'on' : '') + '" data-n="mode:satu">1 nota</button><button type="button" class="' + (mode === 'banyak' ? 'on' : '') + '" data-n="mode:banyak">📚 Banyak nota</button></div>';
     if (mode === 'banyak') {
       var sub = F.baris.reduce(function (s, n) { return s + Number(n.total || 0); }, 0);
-      h += '<div class="kartu notaForm"><b class="notaJudulB">Isian bersama</b>' + bersama(b, af) + lampiran('wa', 'Screenshot WA', false) + (b ? '' : lampiran('ba', 'Berita acara (BA)', true)) + '</div>' + dl
+      h += '<div class="kartu notaForm"><b class="notaJudulB">Isian bersama</b>' + bersama(b, af) + (b ? '' : lampiran('ba', 'Berita acara (BA)', true)) + '</div>' + dl
         + F.baris.map(function (n, i) {
           return '<div class="kartu notaForm notaBarisK"><div class="notaAtas"><b>Nota ' + (i + 1) + '</b>' + (F.baris.length > 1 ? '<button type="button" class="tKecil notaHapusB" data-n="hapusBaris:' + i + '">Hapus</button>' : '') + '</div>'
             + '<label class="lb">Tanggal nota</label><input class="isian" type="date" data-f="b' + i + ':tglNota" value="' + esc(n.tglNota) + '">'
@@ -525,7 +525,7 @@
       + lbUnit('ntLb', 'ntUnit', 'lambung', 'unit', F.lambung, F.unit) + dl
       + '<label class="lb" for="ntUraian">Uraian</label><textarea class="isian bnrTA" id="ntUraian" data-f="uraian" rows="3" placeholder="Barang / pekerjaan">' + esc(F.uraian) + '</textarea>'
       + '<label class="lb" for="ntTotal">Total <i class="wajib">wajib</i></label><input class="isian notaRp" id="ntTotal" data-f="total" inputmode="numeric" placeholder="Rp 0" value="' + (F.total ? rp(F.total) : '') + '"><div class="kecil" id="ntTerbilang">' + (F.total > 3000000 && b ? '<b style="color:var(--tKuning)">Total di atas Rp 3 juta: biasanya lewat Pengajuan &gt; 3 jt.</b>' : '') + '</div>'
-      + lampiran('foto', 'Foto nota', !b) + lampiran('wa', 'Screenshot WA', false) + (b ? '' : lampiran('ba', 'Berita acara (BA)', true)) + (fiturBaru() ? bagianVideo('video') : '')
+      + lampiran('foto', 'Foto nota', !b) + lampiran('wa', 'Bukti pengerjaan / barang', false) + (b ? '' : lampiran('ba', 'Berita acara (BA)', true)) + (fiturBaru() ? bagianVideo('video') : '')
       + '<div class="pesan" id="ntPesan"></div><button type="button" class="tUtama" data-n="kirim"' + (mengirim ? ' disabled' : '') + '>' + (mengirim ? '<span class="putar"></span> Mengirim...' : 'Kirim ke admin') + '</button>'
       + '<div class="kecil" style="text-align:center;margin-top:8px">Admin di Input DO memberi kode nota (ACC) atau menolak dengan alasan. Kalau sinyal putus, ajuan disimpan di HP dan dikirim otomatis.</div></div>';
     lapis(h);
@@ -638,7 +638,8 @@
       if (F.idUlang) d.idUlang = F.idUlang;
       return [{ cid: cid, jenis: 'satu', waktu: Date.now(), d: d }];
     }
-    var dasar = paketBersama(b), ukDasar = dasar.wa.concat(dasar.ba).reduce(function (s, x) { return s + x.length; }, 0), kel = [], kini = [], uk = ukDasar;
+    var dasar = paketBersama(b); dasar.wa = []; /* v3.35: Banyak nota tanpa screenshot WA bersama (bukti ada di tiap nota) */
+    var ukDasar = dasar.wa.concat(dasar.ba).reduce(function (s, x) { return s + x.length; }, 0), kel = [], kini = [], uk = ukDasar;
     F.baris.forEach(function (n, i) {
       var r = { tglNota: n.tglNota, lambung: String(n.lambung).trim().toUpperCase(), unit: String(n.unit || '').trim().toUpperCase(), uraian: String(n.uraian || '').trim(), total: Number(n.total), kode: '', foto: n.foto.slice(), videoVid: vidRingkas(n.video), _baris: i + 1 };
       var ukR = r.foto.reduce(function (s, x) { return s + x.length; }, 0);
