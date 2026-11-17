@@ -394,3 +394,9 @@ html[data-tema="gelap"] .notaKode { background:#123a26; color:#86efac; } html[da
 
 /* v3.29 tahap2: tab Forum Staf / Forum Umum di atas ruang */
 .fmDua { margin:10px 16px 0; flex:none; }
+/* v3.33 layar.js (Reza 17 Nov): selama layar lapis (forum, nota, dll) terbuka, halaman di belakangnya dikunci -> cuma isi lapis yang bergulir;
+   keyboard iPhone diukur lewat visualViewport -> lapis setinggi layar yang terlihat, kolom tulis pas di atas keyboard. */
+html.kunci-gulir, html.kunci-gulir body { overflow:hidden; overscroll-behavior:none; }
+html.kunci-gulir body { position:fixed; left:0; right:0; width:100%; }
+.lapis { overscroll-behavior:contain; }
+html.vv-kb .lapis { top:var(--vvAtas, 0px) !important; bottom:auto !important; height:var(--vvTinggi, 100%) !important; }

@@ -331,7 +331,7 @@
         + ((x.status === 'DI-ACC' || x.status === 'MENUNGGU TRANSFER' || x.status === 'DIBAYAR') && x.kode ? '<div class="notaKode">' + IK('centang') + 'Kode nota <b>' + esc(x.kode) + '</b></div>' : '')
         + (x.status === 'MENUNGGU TRANSFER' ? '<div class="kecil" style="margin-top:4px">Tulis kode ini di nota fisik. Admin mentransfer lalu mengunggah bukti.</div>' : '')
         + (x.status === 'DIBAYAR' ? '<div class="kecil" style="margin-top:4px;color:var(--tHijau);font-weight:700">Lunas' + (x.noRef ? ' · ref ' + esc(x.noRef) : '') + (x.dibayarWaktu ? ' · ' + esc(x.dibayarWaktu) : '') + '</div>' : '')
-        + returHtml(G, x, tot)
+        + returHtml(G, x, tot) + (window.WHL_NOTA_EDIT ? window.WHL_NOTA_EDIT.tombol(G, x) : '') /* nota-edit-ajuan-17nov */
         + (x.status === 'DITOLAK' ? '<div class="notaTolak">' + IK('alarm') + '<span>Alasan: ' + esc(x.alasan || '-') + '</span></div><button type="button" class="tUtama notaUlang" data-n="ulang:' + esc(x.id) + '">' + (x.masukKe === LANGSUNG ? 'Ajukan lagi (kode baru)' : 'Perbaiki &amp; ajukan ulang') + '</button>' : '')
         + (x.status === 'DIBATALKAN' ? '<div class="notaTolak notaBatal">' + IK('alarm') + '<span>' + esc(x.alasan || 'Dibatalkan admin') + '</span></div>' : '')
         + '</div>';
@@ -720,6 +720,7 @@
     if (n === 'kirim') { if (!mengirim) kirim(); return; }
     if (n === 'kirimSekarang') { kirimAntrean().then(function () { daftar(); }); return; }
     if (n.indexOf('retur:') === 0) { bukaRetur(n.slice(6)); return; } /* nota-retur-16nov */
+    if (n.indexOf('edit:') === 0 && window.WHL_NOTA_EDIT) { window.WHL_NOTA_EDIT.buka(n.slice(5), { ctx: CTX, opsi: OPSI, kompres: kompres, sesudah: function () { if (lapisEl) daftar(); } }); return; } /* nota-edit-ajuan-17nov */
     if (n.indexOf('ulang:') === 0) {
       var id = n.slice(6), xu = (LIST || []).filter(function (y) { return y.id === id; })[0]; if (!xu) return;
       if (xu.masukKe === LANGSUNG) { var gr = (LIST || []).filter(function (y) { return xu.grup ? y.grup === xu.grup : y.id === xu.id; }); formBaru({ masukKe: LANGSUNG, toko: xu.toko, unitR: gr.map(function (y) { return { lambung: y.lambung || '', uraian: y.uraian || '', total: Number(y.total) || 0 }; }) }, 'satu'); return; } /* kontrak: tanpa idUlang, kode baru */
@@ -737,7 +738,7 @@
     }
   }
   /** untuk tombol Back HP */
-  function kembali() { if (tutupPemilih()) return true; if (tutupRetur()) return true; if (!lapisEl) return false; if (tab === 'baru' && F) { simpanIsian(); daftar(); } else tutup(); return true; }
+  function kembali() { if (tutupPemilih()) return true; if (tutupRetur()) return true; if (window.WHL_NOTA_EDIT && window.WHL_NOTA_EDIT.tutup()) return true; /* nota-edit-ajuan-17nov */ if (!lapisEl) return false; if (tab === 'baru' && F) { simpanIsian(); daftar(); } else tutup(); return true; }
   window.WHL_PEMILIH = { buka: pemilih, tutup: tutupPemilih, gaya: gayaNota };
   window.WHL_NOTA = { pasang: function (c) { CTX = c; }, boleh: boleh, buka: buka, kirimAntrean: kirimAntrean, kembali: kembali, pramuat: pramuat, /* percepat-app-16nov A5 */ _uji: { form: function (isi, m) { formBaru(isi, m); }, isi: function () { return F; } } };
 })();

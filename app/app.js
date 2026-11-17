@@ -34,6 +34,7 @@
     try { if (SESI && SESI.tokenAbm) localStorage.setItem(KUNCI_ABM, SESI.tokenAbm); else localStorage.removeItem(KUNCI_ABM); } catch (e) { /* */ }
     /* v3.9: akun dengan masuk biometrik -> sesi hanya hidup selama app terbuka (sessionStorage); di HP tersimpan TERENKRIPSI (biometrik.js) */
     try { if (SESI && SESI.bio) sessionStorage.setItem(KUNCI_TERBUKA, JSON.stringify(SESI)); else sessionStorage.removeItem(KUNCI_TERBUKA); } catch (e) { /* */ }
+    try { if (window.WHL_LAYAR) window.WHL_LAYAR.simpanSesi(SESI && SESI.bio ? SESI : null); } catch (e) { /* */ } /* v3.33 layar.js */
     return Simpan.taruh(KUNCI_SESI, SESI && !SESI.bio ? JSON.stringify(SESI) : null);
   }
   function keLogin(pesan) {
@@ -228,6 +229,8 @@
     var navAkt = document.querySelector('.nav button[data-tab="aktivitas"]'); if (navAkt) navAkt.classList.toggle('sembunyi', adalahDriver()); /* v3.29: driver tanpa Aktivitas (unit/absen) */
     if (adalahDriver() && window.WHL_DRIVER) window.WHL_DRIVER.muat(ctxDriver());
     var t0 = ''; try { t0 = sessionStorage.getItem('whlV2Tab') || ''; } catch (e) { /* */ }
+    var LT = !t0 && window.WHL_LAYAR ? window.WHL_LAYAR.layarTerakhir() : null; if (LT && LT.tab) t0 = LT.tab; /* v3.33 layar.js: layar terakhir (< 4 jam) walau app dimatikan HP */
+    if (LT && LT.forum) setTimeout(function () { var bf = $('navForum'); if (bf && SESI && !(window.WHL_FORUM && window.WHL_FORUM.terbuka && window.WHL_FORUM.terbuka())) bf.click(); }, 1500);
     var h = (location.hash || '').replace('#', ''); if (/^(beranda|unit|absen|apps|akun|kotak|aktivitas)$/.test(h)) t0 = h;
     keTab(/^(beranda|unit|absen|apps|akun|kotak|aktivitas)$/.test(t0) ? t0 : 'beranda');
     muatIkonPilih().then(function () { if (tab === 'beranda' && IKON_PILIH) gambar(); }); /* v3.14 ikon Beranda pilihan sendiri */
@@ -1551,6 +1554,7 @@
   Array.prototype.forEach.call(document.querySelectorAll('.versi'), function (e) { e.textContent = K.VERSI; });
   setInterval(jalanJam, 10000); jalanJam();
   document.addEventListener('visibilitychange', function () { if (!document.hidden && SESI && !sedangMuat) { muatRingkasan(false); muatAbsen(); setTimeout(pramuatMenu, 4000); } }); /* percepat-app-16nov A5 */
+  if (window.WHL_LAYAR) window.WHL_LAYAR.saatLama(function () { if (SESI && SESI.bio) keLogin('Sudah lebih dari ' + window.WHL_LAYAR.jam + ' jam tidak dibuka. Masuk lagi dengan ' + bioJudul() + '.'); }); /* v3.33 layar.js */
   R.pasangTarik(function () { return !!SESI && !$('layarApp').classList.contains('sembunyi') && !$('tirai').classList.contains('buka') && !document.querySelector('.lapis'); }, segarSemua);
 
   /* Layar sukses penuh sesudah absen (halaman absen menitip hasilnya lalu kembali ke sini). */
@@ -1568,6 +1572,7 @@
       var s = null; try { s = JSON.parse(r[0] || 'null'); } catch (e) { s = null; }
       var pesan = ''; try { pesan = sessionStorage.getItem('whlV2Pesan') || ''; sessionStorage.removeItem('whlV2Pesan'); } catch (e) { /* */ }
       if (!s || !s.user) { var t0 = null; try { t0 = JSON.parse(sessionStorage.getItem(KUNCI_TERBUKA) || 'null'); } catch (e) { t0 = null; } if (t0 && t0.user) s = t0; }
+      if ((!s || !s.user) && window.WHL_LAYAR) { var t1 = window.WHL_LAYAR.ambilSesi(); if (t1 && t1.user) s = t1; } /* v3.33 layar.js: akun biometrik, HP mematikan app di latar < 4 jam -> langsung masuk */
       if (!s || !s.user) { keLogin(pesan); return; }
       if (s.user.peran === 'driver' && !driverSiap()) { keLogin('App ini khusus staf WHL. Driver tetap memakai jalur yang biasa (tablet / Pusat WHL web).'); return; }
       if (s.mode === 'tiruan' && r[1]) { keLogin('Pusat WHL sudah tersambung ke app. Masuk sekali lagi ya.'); return; }
