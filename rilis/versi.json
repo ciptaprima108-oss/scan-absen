@@ -1,17 +1,16 @@
 {
- "versi": "3.30",
- "versionCode": 331,
+ "versi": "3.31",
+ "versionCode": 332,
  "wajib": false,
  "catatan": [
-  "Kondisi jalan + Lapor hazard (foto, GPS, suara) + Validasi hazard HSE",
-  "Banner cuaca & ulang tahun, layar spesial ulang tahun, Kirim ucapan",
-  "Kuis safety driver (2 sesi/hari, 10 tercepat dapat poin)",
-  "Poin WHL: saldo, riwayat, target KM harian dari DO, setara ritase per rute",
-  "Tukar hadiah (katalog masih masa uji), ACC & rekap tukar admin",
-  "Papan peringkat mingguan"
+  "Ikon digabung: Hazard, Gaji & Kasbon, Poin WHL (isi dibagi tab)",
+  "Kondisi jalan per tempat (BSR, KM 107, PORT, POOL, MIP) + ringkasan 1 kalimat",
+  "Ekspor Excel & PDF: Katalog unit, Rekap hazard, Peringkat",
+  "Katalog: foto 4 sisi (depan, belakang, kiri, kanan)",
+  "Peringkat ritase setara 107-PORT (1 desimal)"
  ],
- "apk": "WHL-App-v3.30.apk",
- "ukuran": 8471057,
- "sha256": "2e7497b1912abf08765d3f4f63d50c1ef73140fb166f18caffa66a8fdcb65d6f",
- "dibuat": "2026-11-16 20:14"
+ "apk": "WHL-App-v3.31.apk",
+ "ukuran": 8487491,
+ "sha256": "481e20a04d8958ec43b06237fb2cb7d98afd7e3bfb8fc99b6a7cb8b0a24ca636",
+ "dibuat": "2026-11-17 01:51"
 }
