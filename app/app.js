@@ -122,7 +122,8 @@
       sibuk(false);
       if (!c.ok) { pesanLogin(c.pesan || 'Nomor tidak dikenal. Cek lagi nomor di ID card.'); return; }
       if (c.buatPin) return alurBuatPin(id, c.nama);
-      return R.mintaPin({ judul: 'Masukkan PIN', ket: (c.nama ? 'Halo ' + c.nama + '. ' : '') + 'PIN Pusat WHL kamu (4 angka)' }, function (pin) { return cobaMasuk(id, pin); });
+      var pk = pesanKunci; pesanKunci = ''; /* v3.34 */
+      return R.mintaPin({ judul: 'Masukkan PIN', ket: (pk ? pk + ' ' : '') + (c.nama ? 'Halo ' + c.nama + '. ' : '') + 'PIN Pusat WHL kamu (4 angka)' }, function (pin) { return cobaMasuk(id, pin); });
     }).catch(function (e) { sibuk(false); pesanLogin('Koneksi gagal: ' + e.message + '. Cek internet lalu coba lagi.'); });
   }
   function alurBuatPin(id, nama) {
@@ -133,6 +134,17 @@
     });
   }
   /** -> Promise<string|null>: pesan salah (keypad bergetar), atau null kalau berhasil masuk */
+  /* v3.34 (Reza 17 Nov): akun PIN, app >= JAM_KUNCI jam tidak dibuka -> minta PIN lagi lewat alur masuk biasa (ID terisi, keypad PIN langsung muncul; Batal = layar masuk, lupa PIN tetap jalur lama).
+     Tidak dikunci kalau: akun biometrik (punya alurnya sendiri), sesi bukan Pusat asli / ID tidak diketahui, atau HP sedang tanpa internet (dicoba lagi lain kali). */
+  function tutupLapisSemua() { Array.prototype.forEach.call(document.querySelectorAll('body > .lapis'), function (l) { l.remove(); }); } /* v3.34: layar yang masih terbuka tidak menutupi layar masuk */
+  var pesanKunci = '';
+  function kunciPin() {
+    if (!SESI || SESI.bio || SESI.mode !== 'asli' || !navigator.onLine) return false;
+    var id = String(SESI.idKetik || SESI.idProfil || '').trim().toUpperCase(); if (!id) return false;
+    var jam = window.WHL_LAYAR ? window.WHL_LAYAR.jam : 4;
+    tutupLapisSemua();
+    pesanKunci = 'Sudah lebih dari ' + jam + ' jam tidak dibuka, masukkan PIN lagi.'; keLogin(pesanKunci); $('inId').value = id; setTimeout(lanjut, 250); return true;
+  }
   function cobaMasuk(id, pin) { return API.Pusat.asli() ? masukAsli(id, pin) : masukSementara(id, pin); }
   /* Pusat sudah punya API: login Pusat (peran & hak dari server), lalu sesi absen mandiri dengan PIN yang sama. */
   function masukAsli(id, pin) {
@@ -1554,7 +1566,7 @@
   Array.prototype.forEach.call(document.querySelectorAll('.versi'), function (e) { e.textContent = K.VERSI; });
   setInterval(jalanJam, 10000); jalanJam();
   document.addEventListener('visibilitychange', function () { if (!document.hidden && SESI && !sedangMuat) { muatRingkasan(false); muatAbsen(); setTimeout(pramuatMenu, 4000); } }); /* percepat-app-16nov A5 */
-  if (window.WHL_LAYAR) window.WHL_LAYAR.saatLama(function () { if (SESI && SESI.bio) keLogin('Sudah lebih dari ' + window.WHL_LAYAR.jam + ' jam tidak dibuka. Masuk lagi dengan ' + bioJudul() + '.'); }); /* v3.33 layar.js */
+  if (window.WHL_LAYAR) window.WHL_LAYAR.saatLama(function () { if (SESI && SESI.bio) { tutupLapisSemua(); keLogin('Sudah lebih dari ' + window.WHL_LAYAR.jam + ' jam tidak dibuka. Masuk lagi dengan ' + bioJudul() + '.'); } else kunciPin(); /* v3.34 akun PIN */ }); /* v3.33 layar.js */
   R.pasangTarik(function () { return !!SESI && !$('layarApp').classList.contains('sembunyi') && !$('tirai').classList.contains('buka') && !document.querySelector('.lapis'); }, segarSemua);
 
   /* Layar sukses penuh sesudah absen (halaman absen menitip hasilnya lalu kembali ke sini). */
@@ -1582,6 +1594,7 @@
       if (location.hash === '#keluar-absen') { SESI.tokenAbm = ''; SESI.abmPesan = pesan || 'Sesi absen habis.'; if (SESI.mode === 'tiruan') { keLogin(pesan || 'Sesi habis. Silakan masuk lagi.'); return; } }
       else if (SESI.tokenAbm && !tokLokal) { try { localStorage.setItem(KUNCI_ABM, SESI.tokenAbm); } catch (e) { /* */ } }
       var sukses = location.hash === '#sukses';
+      if (!sukses && window.WHL_LAYAR && window.WHL_LAYAR.lama && window.WHL_LAYAR.lama() && kunciPin()) return; /* v3.34: dibuka lagi sesudah >= 4 jam -> PIN */
       simpanSesi(); mulaiApp(); if (sukses) { keTab('absen'); tampilSuksesAbsen(); }
     });
   }

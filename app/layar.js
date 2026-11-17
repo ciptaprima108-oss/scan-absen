@@ -70,9 +70,11 @@
   window.addEventListener('pageshow', function (e) { if (e.persisted) kembali(); else pulih(); });
   setInterval(function () { if (!document.hidden) tandaiAktif(); }, 60000);
   function segar() { var t = Number(ls(K_AKTIF) || 0); return t > 0 && sekarang() - t < BATAS; }
+  function lama() { var t = Number(ls(K_AKTIF) || 0); return t > 0 && sekarang() - t >= BATAS; } /* v3.34: tanpa catatan waktu (app baru / versi lama) = tidak dianggap lama */
 
   window.WHL_LAYAR = {
     jam: JAM,
+    lama: lama, /* v3.34 true = terakhir dibuka >= JAM jam lalu (akun PIN diminta PIN) */
     segar: segar, /* true = app terakhir dibuka < JAM jam lalu */
     /* sesi akun biometrik (di HP aslinya cuma hidup selama app terbuka): disalin supaya app yang dimatikan HP di latar tidak minta biometrik lagi < JAM jam */
     simpanSesi: function (s) { ls(K_SESI, s ? JSON.stringify(s) : null); },
