@@ -1,13 +1,13 @@
 {
- "versi": "3.34",
- "versionCode": 335,
+ "versi": "3.35",
+ "versionCode": 336,
  "wajib": false,
  "catatan": [
-  "Akun PIN: app tidak dibuka 4 jam atau lebih -> masukkan PIN lagi (di bawah 4 jam langsung masuk)",
-  "Isi 3.33: edit/revisi ajuan nota, balik dari app lain langsung ke layar terakhir, forum tidak bergeser"
+  "Nota bengkel: 'Screenshot WA' diganti 'Bukti pengerjaan / barang' di tiap nota",
+  "Banyak nota: kotak screenshot WA bersama dihapus (bukti ada di tiap nota)"
  ],
- "apk": "WHL-App-v3.34.apk",
- "ukuran": 8504656,
- "sha256": "37f87481f6290988056d0fe88d12b341e3dbb34e1d16c63d0b9fedaf4fbe776a",
- "dibuat": "2026-11-17 10:04"
+ "apk": "WHL-App-v3.35.apk",
+ "ukuran": 8504703,
+ "sha256": "b4acd4ee19e82814486e964f26a9fbaf1cc8b372cbfdfabcb5216c3311f7377a",
+ "dibuat": "2026-11-17 13:39"
 }
