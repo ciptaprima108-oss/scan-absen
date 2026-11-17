@@ -1,14 +1,13 @@
 {
- "versi": "3.33",
- "versionCode": 334,
+ "versi": "3.34",
+ "versionCode": 335,
  "wajib": false,
  "catatan": [
-  "Nota bengkel: ajuan bisa diedit (Menunggu ACC/transfer) atau diajukan revisi (sudah di-ACC/lunas)",
-  "Balik dari app lain langsung ke layar terakhir, tanpa masuk ulang selama belum 4 jam",
-  "Forum & layar lain tidak lagi bergeser/tembus sesudah keyboard atau ganti app"
+  "Akun PIN: app tidak dibuka 4 jam atau lebih -> masukkan PIN lagi (di bawah 4 jam langsung masuk)",
+  "Isi 3.33: edit/revisi ajuan nota, balik dari app lain langsung ke layar terakhir, forum tidak bergeser"
  ],
- "apk": "WHL-App-v3.33.apk",
- "ukuran": 8504176,
- "sha256": "5da2daaec9cffb838185ca60074c7c7e6fbd7c13c408c955edc9bba0589617d1",
- "dibuat": "2026-11-17 07:46"
+ "apk": "WHL-App-v3.34.apk",
+ "ukuran": 8504656,
+ "sha256": "37f87481f6290988056d0fe88d12b341e3dbb34e1d16c63d0b9fedaf4fbe776a",
+ "dibuat": "2026-11-17 10:04"
 }
