@@ -1,14 +1,14 @@
 {
- "versi": "3.32",
- "versionCode": 333,
+ "versi": "3.33",
+ "versionCode": 334,
  "wajib": false,
  "catatan": [
-  "Pak Fanza (full time): kotak Absen/Lembur di Beranda disembunyikan, menu Kehadiran tetap ada",
-  "Kartu Beranda paling bawah tidak lagi tertutup kotak absen",
-  "Kehadiran: Roster saya (kalender) + Roster staf (tabel semua staf) + Excel"
+  "Nota bengkel: ajuan bisa diedit (Menunggu ACC/transfer) atau diajukan revisi (sudah di-ACC/lunas)",
+  "Balik dari app lain langsung ke layar terakhir, tanpa masuk ulang selama belum 4 jam",
+  "Forum & layar lain tidak lagi bergeser/tembus sesudah keyboard atau ganti app"
  ],
- "apk": "WHL-App-v3.32.apk",
- "ukuran": 8494331,
- "sha256": "8b490960efc0381f5acfd8c3404679bd203daa98bba41cc7ca9de74c62fb28f3",
- "dibuat": "2026-11-17 03:14"
+ "apk": "WHL-App-v3.33.apk",
+ "ukuran": 8504176,
+ "sha256": "5da2daaec9cffb838185ca60074c7c7e6fbd7c13c408c955edc9bba0589617d1",
+ "dibuat": "2026-11-17 07:46"
 }
