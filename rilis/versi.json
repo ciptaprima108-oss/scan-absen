@@ -1,13 +1,14 @@
 {
- "versi": "3.35",
- "versionCode": 336,
+ "versi": "3.36",
+ "versionCode": 337,
  "wajib": false,
  "catatan": [
-  "Nota bengkel: 'Screenshot WA' diganti 'Bukti pengerjaan / barang' di tiap nota",
-  "Banyak nota: kotak screenshot WA bersama dihapus (bukti ada di tiap nota)"
+  "Poin karyawan untuk staf: kriteria peran, tantangan, papan Peringkat Staf",
+  "Driver bisa menilai pelayanan staf (kuesioner anonim)",
+  "Pengurang poin + masa sanggah 48 jam"
  ],
- "apk": "WHL-App-v3.35.apk",
- "ukuran": 8504703,
- "sha256": "b4acd4ee19e82814486e964f26a9fbaf1cc8b372cbfdfabcb5216c3311f7377a",
- "dibuat": "2026-11-17 13:39"
+ "apk": "WHL-App-v3.36.apk",
+ "ukuran": 8523775,
+ "sha256": "b1d2a5c8be6aaa00dba9b5acf2276588529215018225ab029a78e5ff348ea9bc",
+ "dibuat": "2026-11-17 15:17"
 }
