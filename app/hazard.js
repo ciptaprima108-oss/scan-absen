@@ -4,7 +4,7 @@
  *   pusatHazardPutus(token, id, status, alasan) / pusatHazardAngkatWa(token, idKendala, jenis) / pusatHazardBerkas(token, id, 'foto'|'suara').
  * - Lapor: tombol besar -> kamera langsung (atau galeri), foto WAJIB, lokasi GPS otomatis (wajib), jenis bahaya (chip ikon),
  *   keterangan KETIK atau REKAM SUARA (MediaRecorder 24 kbps, maks 60 dtk). Kirim pakai cid (anti dobel); sinyal putus = antrean di HP, dikirim ulang otomatis.
- * - Laporan saya: Dikirim -> Dicek HSE -> Valid +10 poin / Ditolak (+alasan) / Digabung.
+ * - Laporan saya: Dikirim -> Dicek HSE -> Valid +8 poin (v3.36 kalibrasi; angka dari server OPSI.poin) / Ditolak (+alasan) / Digabung.
  * - Validasi (peran hse, adminhse, pengawas, pimpinan, penuh): Nunggu / Sudah 48 jam / Bot WA (Catatan Kendala WA kategori Jalan, bisa diangkat jadi hazard).
  * Menu tampil hanya kalau pusatPing memuat fungsinya. Tidak menulis ke sheet mana pun selain lewat RPC server di atas.
  * Pemasangan di app.js cuma 3 baris (menu Beranda/Lainnya + notif); klik menu [data-ke="hazard"|"hazardCek"] ditangani file ini sendiri.
@@ -164,7 +164,7 @@
         + '<div id="hzGalat"></div><button type="button" class="tUtama hzKirim" data-h="kirim"' + (kirimJalan ? ' disabled' : '') + '>' + (kirimJalan ? 'Mengirim…' : 'Kirim laporan') + '</button>'
         + '<button type="button" class="tKecil hzBatal" data-h="batalForm">Batal</button></div>';
     }
-    h += '<div class="kecil hzCatat">Poin +' + ((OPSI && OPSI.poin) || 10) + ' cuma kalau divalidasi HSE / pengawas (maks ' + ((OPSI && OPSI.maksPoinHari) || 2) + ' laporan berpoin per hari). Tidak melapor = tidak apa-apa.</div>'
+    h += '<div class="kecil hzCatat">Poin +' + ((OPSI && OPSI.poin) || 8) + ' cuma kalau divalidasi HSE / pengawas (maks ' + ((OPSI && OPSI.maksPoinHari) || 1) + ' laporan berpoin per hari). Tidak melapor = tidak apa-apa.</div>'
       + '<h2 class="bagW">Laporan saya</h2><div id="hzSaya">' + sayaHtml() + '</div>';
     lapis('Lapor hazard', 'Keselamatan bersama', h);
   }
@@ -415,7 +415,7 @@
       + (x.pelaporGabung && x.pelaporGabung.length ? '<span class="jlTag">+' + x.pelaporGabung.length + ' pelapor</span>' : '') + '</div>' + chipStatus(x) + '</button></div>';
   }
   function kartuVal(x) {
-    var gab = x.pelaporGabung || [], poin = (OPSI && OPSI.poin) || 10, sb = sibuk['p' + x.id];
+    var gab = x.pelaporGabung || [], poin = (OPSI && OPSI.poin) || 8, sb = sibuk['p' + x.id];
     var h = '<div class="kartu hzVk" style="margin-bottom:10px">'
       + '<div class="hzVf" data-hzfoto="' + esc(x.id) + '"' + (x.adaFoto ? '' : ' data-kosong="1"') + '>' + (x.adaFoto ? 'Memuat foto…' : 'Tanpa foto (dari WA)') + '</div>'
       + '<b class="hzVj">' + ik(x.jenis) + ' ' + esc(x.jenis) + '</b>' + tagSumber(x) + ' ' + chipStatus(x)

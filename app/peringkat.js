@@ -2,11 +2,15 @@
  * 4 papan: Ritase (tiket Input DO saja), P2H rajin, Nol insiden (daftar kehormatan), Pelapor hazard (valid). Minggu = Senin 06.00 – Senin 06.00.
  * "Minggu ini" = berjalan (cache server 30 mnt), "Minggu lalu" = final (dihitung Senin 06.00, top 3 +30/+20/+10, nol insiden +10).
  * Lencana 🎂 untuk yang berulang tahun hari ini (x.ultah dari server). Posisi saya disorot. Tanpa angka uang.
+ * v3.36 (poin karyawan): tab Driver | Staf. Staf = pusatPeringkatStaf (API-APP.md §2): Staf teladan (% capaian peran), Divisi terbaik, Hadir sempurna.
+ * Driver hanya melihat papan Driver (tanpa bilah tab). Pimpinan & penyetuju ACC tidak ikut papan staf (disaring server).
  */
 (function () {
   'use strict';
   var API = window.WHL_API, R = window.WHL_RASA;
   var CTX = null, lapisEl = null, MODE = 'berjalan', PAPAN = 'ritase', DATA = {}, MATI = false;
+  var JENIS = 'driver', DATA_S = {}, PAPAN_S = 'staf', FN_S = 'pusatPeringkatStaf'; /* v3.36 tab Staf */
+  function bolehStaf() { var S = CTX && CTX.sesi ? CTX.sesi() : null; return !!(S && S.user && S.user.peran !== 'driver' && API.Pusat.asli() && API.Pusat.punya(FN_S)); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   var DES = 0; /* v3.31: desimal papan dari server (ritase setara 107-PORT = 1) */
   function ang(n, des) { var v = Number(n); if (!isFinite(v)) return '–'; var d = des == null ? 0 : des; return d ? v.toLocaleString('id-ID', { minimumFractionDigits: d, maximumFractionDigits: d }) : v.toLocaleString('id-ID', { maximumFractionDigits: 1 }); }
@@ -33,6 +37,8 @@
       + '.prkBrs.saya{background:var(--tint);border-top-color:transparent}.prkBrs.saya .tx b{color:var(--utama)}.prkHadiah{display:flex;gap:10px;align-items:center}.prkHadiah .ilus{width:40px;height:40px;flex:none}'
       + 'html[data-tema="gelap"] .prkPoin{color:#4ade80}'
       + '.prkKet{margin:-2px 0 6px;line-height:1.4}.prkBrs .nil small.prkSat{display:block;font-family:inherit;font-size:10.5px;font-weight:700;color:var(--redup);text-align:right}.prkEks{display:flex;gap:8px;justify-content:center;margin:0 6px 14px}.prkEks button{min-height:40px;padding:0 16px;border-radius:12px;font-weight:800;font-size:13px;background:var(--panel2);color:var(--teks)}'
+      + '.prkJenis{display:flex;background:var(--panel2);border-radius:14px;padding:3px;gap:3px;margin:2px 0 10px}.prkJenis button{flex:1;min-height:42px;border-radius:11px;font-weight:800;font-size:14px;color:var(--redup);background:none}.prkJenis button.on{background:var(--panel);color:var(--teks);box-shadow:0 1px 3px rgba(0,0,0,.18)}'
+      + '.prkBrs .tx small.prkPr{color:var(--redup)}.prkPd small.prkPr{display:block;font-size:10.5px;font-weight:700;color:var(--redup);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
       + '.prkKosong{text-align:center;padding:20px 12px}.prkKosong .ilus{width:68px;height:68px}.prkKosong b{display:block;margin-top:6px}.prkKosong small{display:block;color:var(--redup);margin-top:4px;line-height:1.45}';
     document.head.appendChild(st);
   }
@@ -47,8 +53,9 @@
     lapisEl.innerHTML = '<div class="ksnKp"><button type="button" class="kb" data-k="tutup" aria-label="Kembali">‹</button><div class="nm">' + esc(sub) + '<b>' + esc(judul) + '</b></div></div><div class="ksnIsi">' + isi + '</div>';
   }
   function tutup() { if (!lapisEl) return false; var d = lapisEl; lapisEl = null; d.classList.remove('tampil'); setTimeout(function () { d.remove(); }, 200); return true; }
-  function buka(ctx) { CTX = ctx || CTX; gaya(); if (!punya()) { roti('Peringkat belum tersedia di server.'); return; } gambar(); muat(); }
+  function buka(ctx) { CTX = ctx || CTX; gaya(); if (!bolehStaf()) JENIS = 'driver'; else if (!punya()) JENIS = 'staf'; if (!punya() && !bolehStaf()) { roti('Peringkat belum tersedia di server.'); return; } gambar(); muat(); }
   function muat(paksa) {
+    if (JENIS === 'staf') { muatStaf(paksa); return; }
     var m = MODE, c = DATA[m];
     if (c && !paksa && Date.now() - c.t < 10 * 60000) { gambar(); return; }
     var S = sesi(); if (!S || !S.tokenPusat) return;
@@ -58,10 +65,12 @@
       DATA[m] = { d: h, t: Date.now() }; if (lapisEl && MODE === m) gambar();
     }, function (e) { DATA[m] = { d: { ok: false, pesan: e.message }, t: 0 }; if (lapisEl && MODE === m) gambar(); });
   }
+  function jenisHtml() { if (!(bolehStaf() && punya())) return ''; return '<div class="prkJenis" role="tablist" aria-label="Papan">' + [['driver', '🚛 Driver'], ['staf', '🧑‍💼 Staf']].map(function (x) { return '<button type="button" role="tab" aria-selected="' + (JENIS === x[0]) + '" data-k="jenis:' + x[0] + '" class="' + (JENIS === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>'; }
   function gambar() {
-    var c = DATA[MODE], d = c && c.d, seg = '<div class="segmen">' + [['berjalan', 'Minggu ini'], ['lalu', 'Minggu lalu (final)']].map(function (x) { return '<button type="button" data-k="mode:' + x[0] + '" class="' + (MODE === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>';
+    if (JENIS === 'staf') { gambarStaf(); return; }
+    var c = DATA[MODE], d = c && c.d, seg = jenisHtml() + '<div class="segmen">' + [['berjalan', 'Minggu ini'], ['lalu', 'Minggu lalu (final)']].map(function (x) { return '<button type="button" data-k="mode:' + x[0] + '" class="' + (MODE === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>';
     if (!d) { lapis('Peringkat', 'Senin 06.00 – Senin 06.00', seg + (R && R.kerangka ? R.kerangka('daftar') : '<span class="putar"></span>')); return; }
-    if (d.aktif === false) { lapis('Peringkat', 'Papan mingguan', '<div class="kartu prkKosong">' + ILUS('peringkat') + '<b>Peringkat belum dibuka</b><small>' + esc(d.pesan || 'Sedang disiapkan.') + '</small></div>'); return; }
+    if (d.aktif === false) { lapis('Peringkat', 'Papan mingguan', jenisHtml() + '<div class="kartu prkKosong">' + ILUS('peringkat') + '<b>Peringkat belum dibuka</b><small>' + esc(d.pesan || 'Sedang disiapkan.') + '</small></div>'); return; }
     if (d.ok === false) { lapis('Peringkat', 'Papan mingguan', seg + '<div class="kartu prkKosong">' + ILUS('peringkat') + '<b>Belum bisa dimuat</b><small>' + esc(d.pesan || '') + '</small><button type="button" class="tKecil" data-k="ulang" style="margin-top:10px">Coba lagi</button></div>'); return; }
     var Pp = Array.isArray(d.papan) ? d.papan : [], p = Pp.filter(function (x) { return x.id === PAPAN; })[0] || Pp[0];
     if (p) PAPAN = p.id;
@@ -124,10 +133,62 @@
     if (n === 'tutup') { if (R && R.bunyi) R.bunyi('tutup'); tutup(); return; }
     if (n === 'ulang') { muat(true); gambar(); return; }
     if (n.indexOf('mode:') === 0) { MODE = n.slice(5); gambar(); muat(); return; }
+    if (n.indexOf('jenis:') === 0) { JENIS = n.slice(6) === 'staf' && bolehStaf() ? 'staf' : 'driver'; if (R && R.getar) R.getar(); gambar(); muat(); return; }
+    if (n.indexOf('papanS:') === 0) { PAPAN_S = n.slice(7); if (R && R.getar) R.getar(); gambar(); return; }
     if (n.indexOf('papan:') === 0) { PAPAN = n.slice(6); if (R && R.getar) R.getar(); gambar(); }
     if (n === 'excel') { excel(); return; }
     if (n === 'pdf') { pdf(); return; }
   }
-  function lupakan() { DATA = {}; MATI = false; MODE = 'berjalan'; PAPAN = 'ritase'; tutup(); }
-  window.WHL_PERINGKAT = { buka: buka, tutup: tutup, lupakan: lupakan, mati: function () { return MATI; }, _uji: { pendek: pendek, data: function () { return DATA; } } };
+  /* ---------- v3.36 papan STAF (pusatPeringkatStaf) ---------- */
+  var IKON_S = { staf: '🏅', divisi: '🧩', hadir: '🗓️' }, SINGKAT_S = { staf: 'Staf teladan', divisi: 'Divisi terbaik', hadir: 'Hadir sempurna' };
+  function muatStaf(paksa) {
+    var m = MODE, c = DATA_S[m];
+    if (c && !paksa && Date.now() - c.t < 10 * 60000) { gambar(); return; }
+    var S = sesi(); if (!S || !S.tokenPusat) return;
+    API.Pusat.panggil(FN_S, [S.tokenPusat, m === 'berjalan' ? 'berjalan' : ''], 60000).then(function (h) {
+      if (h && h.login === false) { tutup(); if (CTX && CTX.sesiHabis) CTX.sesiHabis(); return; }
+      DATA_S[m] = { d: h || { ok: false }, t: Date.now() }; if (lapisEl && MODE === m && JENIS === 'staf') gambar();
+    }, function (e) { DATA_S[m] = { d: { ok: false, pesan: e.message }, t: 0 }; if (lapisEl && MODE === m && JENIS === 'staf') gambar(); });
+  }
+  function gambarStaf() {
+    var c = DATA_S[MODE], d = c && c.d, seg = jenisHtml() + '<div class="segmen">' + [['berjalan', 'Minggu ini'], ['lalu', 'Minggu lalu (final)']].map(function (x) { return '<button type="button" data-k="mode:' + x[0] + '" class="' + (MODE === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>';
+    if (!d) { lapis('Peringkat', 'Papan staf', seg + (R && R.kerangka ? R.kerangka('daftar') : '<span class="putar"></span>')); return; }
+    if (d.aktif === false) { lapis('Peringkat', 'Papan staf', seg + kosong('Papan staf belum dibuka', d.pesan || 'Sedang disiapkan.')); return; }
+    if (d.ok === false) { lapis('Peringkat', 'Papan staf', seg + '<div class="kartu prkKosong">' + ILUS('peringkat') + '<b>Belum bisa dimuat</b><small>' + esc(d.pesan || '') + '</small><button type="button" class="tKecil" data-k="ulang" style="margin-top:10px">Coba lagi</button></div>'); return; }
+    var Pp = Array.isArray(d.papan) ? d.papan : [], p = Pp.filter(function (x) { return x.id === PAPAN_S; })[0] || Pp[0]; if (p) PAPAN_S = p.id;
+    var sub = (d.label || '') + (d.berjalan ? ' · tutup Senin 06.00' : d.final === false ? ' · belum final' : ' · final') + (d.uji ? ' · MASA UJI' : '');
+    var h = seg + '<div class="prkSeg" role="tablist">' + Pp.map(function (x) { return '<button type="button" role="tab" data-k="papanS:' + esc(x.id) + '" class="' + (x.id === PAPAN_S ? 'on' : '') + '">' + (IKON_S[x.id] || '🏅') + ' ' + esc(SINGKAT_S[x.id] || x.judul) + '</button>'; }).join('') + '</div>';
+    if (d.keterangan) h += '<div class="kecil prkKet" style="margin:0 4px 10px">' + esc(d.keterangan) + '</div>';
+    if (!p) { lapis('Peringkat', sub, h + kosong('Belum ada papan', '')); return; }
+    var L = Array.isArray(p.daftar) ? p.daftar : [], hadir = p.id === 'hadir', div = p.id === 'divisi', sat = p.satuan == null ? '%' : p.satuan;
+    if (!L.length) { lapis('Peringkat', sub, h + kosong('Belum ada nama di papan ini', d.berjalan ? 'Minggu baru dimulai.' : '') + hadiahS(d)); return; }
+    if (hadir) h += '<div class="kartu"><div class="kecil" style="margin-bottom:4px;font-weight:800;color:var(--teks)">Daftar kehormatan · hadir tepat semua hari roster</div>' + L.map(function (x) { return barisS(x, '', true, false); }).join('') + '</div>';
+    else {
+      h += '<div class="kartu"><div class="kecil" style="margin-bottom:4px;font-weight:800;color:var(--teks)">' + esc(p.judul || SINGKAT_S[p.id] || '') + '</div>' + podiumS(L.slice(0, 3), sat, div) + '</div>';
+      if (L.length > 3) h += '<div class="kartu">' + L.slice(3).map(function (x) { return barisS(x, sat, false, div); }).join('') + '</div>';
+      var saya = p.saya, adaSaya = L.some(function (x) { return x.saya; });
+      if (saya && !adaSaya) h += '<div class="kartu">' + barisS({ urut: saya.urut, nama: div ? 'Divisimu' : 'Kamu', nilai: saya.nilai, saya: true }, sat, false, true) + '</div>';
+    }
+    h += hadiahS(d) + '<div class="kecil" style="margin:12px 6px;text-align:center;line-height:1.5">Periode ' + esc(d.periode || 'Senin 06.00 – Senin 06.00') + '. Pimpinan & penyetuju ACC tidak ikut papan staf.</div>';
+    lapis('Peringkat', sub, h);
+  }
+  function nmS(x, div) { return esc(div ? (x.saya ? 'Divisimu · ' : '') + (x.nama || '') : (x.saya ? 'Kamu · ' : '') + pendek(x.nama)); }
+  function subS(x, div) { return esc(div ? (x.anggota ? x.anggota + ' orang' : '') : [x.peranLabel, x.hari ? x.hari + ' hari' : ''].filter(Boolean).join(' · ')); }
+  function podiumS(T, sat, div) {
+    var urut = [T[1], T[0], T[2]], tinggi = [62, 86, 48], latar = ['linear-gradient(180deg,#9fb6d6,#6c86ad)', 'linear-gradient(180deg,#ffd36a,#e99a00)', 'linear-gradient(180deg,#ffb27a,#d9480f)'], no = [2, 1, 3];
+    return '<div class="prkPodium">' + urut.map(function (x, i) {
+      if (!x) return '<div class="prkPd"></div>';
+      return '<div class="prkPd' + (no[i] === 1 ? ' satu' : '') + (x.saya ? ' saya' : '') + '">' + (no[i] === 1 ? '<span class="prkMhk">👑</span>' : '') + '<span class="prkAva" style="background:' + warna(x.nama) + '">' + esc(inisial(x.nama)) + '</span><b>' + nmS(x, div) + '</b><small class="prkPr">' + subS(x, div) + '</small><small>' + ang(x.nilai) + esc(sat) + '</small>'
+        + (Number(x.poin) > 0 ? '<span class="prkPoin">+' + ang(x.poin) + ' poin' + (div ? '/org' : '') + '</span>' : '') + '<span class="prkBlok" style="height:' + tinggi[i] + 'px;background:' + latar[i] + '">' + no[i] + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function barisS(x, sat, hadir, div) {
+    return '<div class="prkBrs' + (x.saya ? ' saya' : '') + '"><span class="rk">' + (hadir ? '✓' : ang(x.urut)) + '</span><span class="prkAva" style="background:' + warna(x.nama) + '">' + esc(inisial(x.nama)) + '</span><div class="tx"><b>' + nmS(x, div) + '</b><small class="prkPr">' + subS(x, div) + (Number(x.poin) > 0 ? ' · +' + ang(x.poin) + ' poin' : '') + '</small></div>' + (hadir ? '' : '<span class="nil">' + ang(x.nilai) + '<small class="prkSat">' + esc(sat) + '</small></span>') + '</div>';
+  }
+  function hadiahS(d) {
+    var H = d.hadiah || {}, t = H.top || [20, 15, 10];
+    return '<div class="kartu prkHadiah">' + ILUS('poin') + '<div class="kecil" style="flex:1;line-height:1.45"><b style="color:var(--teks)">Hadiah poin Senin pagi:</b> Staf teladan #1 +' + t[0] + ' · #2 +' + t[1] + ' · #3 +' + t[2] + '. Divisi juara +' + (H.divisi || 10) + ' per anggota (hadir ≥ 4 hari).</div></div>';
+  }
+  function lupakan() { DATA = {}; DATA_S = {}; MATI = false; MODE = 'berjalan'; PAPAN = 'ritase'; PAPAN_S = 'staf'; JENIS = 'driver'; tutup(); }
+  window.WHL_PERINGKAT = { buka: buka, tutup: tutup, lupakan: lupakan, mati: function () { return MATI && !bolehStaf(); }, _uji: { pendek: pendek, data: function () { return DATA; } } };
 })();

@@ -1,7 +1,7 @@
 /* WHL App — KUIS SAFETY DRIVER (tahap 5 rancangan Upgrade\app-beranda-poin-16nov §5; tim A Andro, 17 Nov 2026).
  * Server Armand (PusatKuis.gs): pusatKuisStatus(token) · pusatKuisBuka(token, sesiId) · pusatKuisJawab(token, sesiId, pilihan 0..3 urutan TAMPIL).
  * Aturan Reza: KHUSUS DRIVER, sesi 09.00 & 16.00 WIB (buka 60 mnt), 1 soal, 30 detik sejak soal dibuka (dihitung SERVER), 1x jawab,
- * 10 benar tercepat per sesi +10 poin. Kunci & penjelasan TIDAK dikirim server sebelum sesi ditutup (anti contek) -> ditampilkan di "Sesi tadi".
+ * 10 benar tercepat per sesi +5 poin (v3.36 kalibrasi Reza 17 Nov; angka dari server r.poin / h.poin kalau ada). Kunci & penjelasan TIDAK dikirim server sebelum sesi ditutup (anti contek) -> ditampilkan di "Sesi tadi".
  * Kartu kuis di Beranda driver (dibuka / sudah dijawab / "sesi berikut 16.00 · x lagi"); staf tidak melihat apa pun.
  * Fitur tampil hanya kalau pusatPing memuat pusatKuisStatus (dan pusatKegiatanBeranda tidak bilang fitur.kuis = false).
  */
@@ -65,10 +65,10 @@
     var ik = '<span class="kgKuisIk">' + (KG() ? KG().ikon('kuis') : '') + '</span>';
     if (r.terbuka && r.sesi && !r.sudahJawab) {
       var sisa = msWib(r.sesi.tutup) - kini();
-      return '<button type="button" class="kartu kgKuisK buka" data-kg="kuis">' + ik + '<span class="tx"><b>Kuis safety ' + esc(jamT(r.sesi.jam)) + ' DIBUKA</b><small>1 soal · 30 detik · 10 benar tercepat +10 poin' + (sisa > 0 ? ' · tutup ' + esc(lagi(sisa)) : '') + '</small></span><span class="kgChip">Jawab ›</span></button>';
+      return '<button type="button" class="kartu kgKuisK buka" data-kg="kuis">' + ik + '<span class="tx"><b>Kuis safety ' + esc(jamT(r.sesi.jam)) + ' DIBUKA</b><small>1 soal · 30 detik · 10 benar tercepat +' + esc(r.poin || (r.sesi && r.sesi.poin) || 5) + ' poin' + (sisa > 0 ? ' · tutup ' + esc(lagi(sisa)) : '') + '</small></span><span class="kgChip">Jawab ›</span></button>';
     }
     if (r.terbuka && r.sesi && r.sudahJawab) return '<button type="button" class="kartu kgKuisK" data-kg="kuis">' + ik + '<span class="tx"><b>Kuis ' + esc(jamT(r.sesi.jam)) + ' sudah kamu jawab ✓</b><small>Kunci & penjelasan muncul jam ' + esc(jamT(String(r.sesi.tutup || '').slice(11, 16))) + '. ' + (r.berikut ? 'Sesi berikut ' + esc(jamT(r.berikut.jam)) + '.' : '') + '</small></span><span class="kgChip abu">Hasil ›</span></button>';
-    if (r.berikut) return '<button type="button" class="kartu kgKuisK" data-kg="kuis">' + ik + '<span class="tx"><b>Kuis sesi ' + esc(jamT(r.berikut.jam)) + ' dibuka ' + esc(lagi(msWib(r.berikut.mulai) - kini())) + '</b><small>10 benar tercepat dapat +10 poin · jadwal ' + esc((r.jadwal || ['09:00', '16:00']).map(jamT).join(' & ')) + '</small></span><span class="kgChip abu">Lihat ›</span></button>';
+    if (r.berikut) return '<button type="button" class="kartu kgKuisK" data-kg="kuis">' + ik + '<span class="tx"><b>Kuis sesi ' + esc(jamT(r.berikut.jam)) + ' dibuka ' + esc(lagi(msWib(r.berikut.mulai) - kini())) + '</b><small>10 benar tercepat dapat +' + esc(r.poin || (r.berikut && r.berikut.poin) || 5) + ' poin · jadwal ' + esc((r.jadwal || ['09:00', '16:00']).map(jamT).join(' & ')) + '</small></span><span class="kgChip abu">Lihat ›</span></button>';
     return '';
   }
 
@@ -115,7 +115,7 @@
           + hasilSayaHtml(s.saya, { tutupJam: tj });
       } else {
         out += '<div class="kgKuisKp"><div class="atas"><span>SESI ' + esc(jamT(s.jam)) + ' · ' + esc(tglPendek(s.mulai)) + '</span><span>tutup ' + esc(tj) + '</span></div>'
-          + '<h3>Siap? 1 soal safety, 30 detik.</h3><p>Waktu mulai berjalan begitu soal dibuka dan tidak bisa diulang. Sekali jawab. 10 jawaban benar tercepat dapat <b>+' + esc(h.poin || 10) + ' poin</b>.</p>'
+          + '<h3>Siap? 1 soal safety, 30 detik.</h3><p>Waktu mulai berjalan begitu soal dibuka dan tidak bisa diulang. Sekali jawab. 10 jawaban benar tercepat dapat <b>+' + esc(h.poin || 5) + ' poin</b>.</p>'
           + '<button type="button" class="kgMulai" data-kq="mulai:' + esc(s.id) + '">' + (s.saya && s.saya.sudahBuka ? 'Lanjutkan soal' : 'Buka soal sekarang') + '</button></div>';
       }
       out += '<div class="kartu"><div class="hiBar"><b>10 benar tercepat · sesi ' + esc(jamT(s.jam)) + '</b><span>' + (Number(s.slotTersisa) > 0 ? esc(s.slotTersisa) + ' jatah lagi' : 'jatah habis') + '</span></div>' + slotHtml(10, terisi, s.saya && s.saya.poin ? s.saya.urutan : 0) + '</div>';

@@ -2,7 +2,7 @@
  * 3 kelompok jadi 1 ikon masing-masing di Beranda / Lainnya / Atur ikon:
  *   Hazard        = Lapor · Laporan saya · Validasi (hanya yang boleh validasi)          id hubHazard
  *   Gaji & Kasbon = Gaji driver / Cicilan karyawan · Kasbon · Dokumen (sesuai hak)       id hubGaji
- *   Poin WHL      = Poin & katalog · Peringkat · ACC (hak ACC) · Rekap (hak rekap)       id hubPoin
+ *   Poin WHL      = Poin & katalog · Peringkat · ACC (hak ACC) · Rekap (hak rekap) · Nilai rekan (staf, v3.36) · Nilai staf (driver, v3.36)   id hubPoin
  * Cara kerja: app.js tetap membuat menu lama (id gaji/kasbon/dokkas/hazard/hazardCek/poin/peringkat/poinAcc/poinRekap) lalu memanggil
  * WHL_HUB.gabung(daftar) -> anggota diganti 1 ikon gabungan di posisi anggota pertama (lencana dijumlah). Ketuk ikon = tab pertama yang boleh.
  * Layar tiap modul tetap milik modulnya; hub.js menempelkan bilah tab di bawah kepala layar (juga kalau layar dibuka dari notifikasi /
@@ -25,7 +25,9 @@
       { k: 'poin', nm: 'Poin & katalog', dari: 'poin', ke: 'poin', kls: 'pnLapis' },
       { k: 'peringkat', nm: 'Peringkat', dari: 'peringkat', ke: 'peringkat', kls: 'prkLapis' },
       { k: 'acc', nm: 'ACC', dari: 'poinAcc', ke: 'poinAcc', kls: 'pnLapis' },
-      { k: 'rekap', nm: 'Rekap', dari: 'poinRekap', ke: 'poinRekap', kls: 'pnLapis' }] }
+      { k: 'rekap', nm: 'Rekap', dari: 'poinRekap', ke: 'poinRekap', kls: 'pnLapis' },
+      { k: 'nilai', nm: 'Nilai rekan', dari: 'nilaiRekan', ke: 'nilaiRekan', kls: 'pstLapis' }, /* v3.36 staf (poin-staf.js) */
+      { k: 'ksd', nm: 'Nilai staf', dari: 'ksd', ke: 'ksd', kls: 'ksdLapis' }] } /* v3.36 driver (kuesioner-driver.js) */
   ];
   var ADA = {}, PINDAH = 0, GULIR = null;
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -62,6 +64,8 @@
   function tutupModul(el) {
     if (el.classList.contains('hzLapis') && window.WHL_HAZARD && window.WHL_HAZARD.tutup) { window.WHL_HAZARD.tutup(); return; }
     if (el.classList.contains('prkLapis') && window.WHL_PERINGKAT && window.WHL_PERINGKAT.tutup) { window.WHL_PERINGKAT.tutup(); return; }
+    if (el.classList.contains('pstLapis') && window.WHL_POIN_STAF) { window.WHL_POIN_STAF.tutup(); return; }
+    if (el.classList.contains('ksdLapis') && window.WHL_KSD) { window.WHL_KSD.tutup(); return; }
     el.remove(); /* modul lain memeriksa document.body.contains(lapisEl) -> buat layar baru saat dibuka lagi */
   }
   function bukaTab(k, i) {
@@ -84,6 +88,8 @@
     if (el.classList.contains('kbLapis')) return { k: 'gaji', tab: 'kasbon' };
     if (el.classList.contains('dkLapis')) return { k: 'gaji', tab: 'dokkas' };
     if (el.classList.contains('prkLapis')) return { k: 'poin', tab: 'peringkat' };
+    if (el.classList.contains('pstLapis')) return { k: 'poin', tab: 'nilai' };
+    if (el.classList.contains('ksdLapis')) return { k: 'poin', tab: 'ksd' };
     if (el.classList.contains('pnLapis')) return { k: 'poin', tab: /^ACC tukar/i.test(j) ? 'acc' : /^Rekap tukar/i.test(j) ? 'rekap' : 'poin' };
     return null;
   }

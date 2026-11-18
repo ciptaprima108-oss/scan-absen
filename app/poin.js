@@ -93,7 +93,19 @@
   }
   function pesanTutup(I) { return 'Tukar poin dibuka tiap ' + I.label + (I.berikut ? ', berikutnya ' + I.berikut : '') + '.'; }
   var ST = { DIAJUKAN: ['kuning', 'Nunggu ACC'], SIAP_AMBIL: ['biru', 'Siap ambil di kantor WHL'], SELESAI: ['hijau', 'Selesai'], DITOLAK: ['merah', 'Ditolak · poin kembali'], DIBATALKAN: ['abu', 'Dibatalkan · poin kembali'] };
-  var EMO = { KUIS: '❓', P2H: '📋', ABSEN: '🕖', RIT: '🚛', KM: '🛣️', HAZARD: '⚠️', NOLINS: '🛡️', PERINGKAT: '🏆', ULTAH: '🎂', TUKAR: '🎁', BALIK: '↩️', CABUT: '✖️' };
+  var EMO = { KUIS: '❓', P2H: '📋', ABSEN: '🕖', RIT: '🚛', KM: '🛣️', HAZARD: '⚠️', NOLINS: '🛡️', PERINGKAT: '🏆', ULTAH: '🎂', TUKAR: '🎁', BALIK: '↩️', CABUT: '✖️',
+    /* v3.36 poin karyawan (API-APP.md §5) + kuesioner driver */ S_HADIR: '🗓️', S_HZ_CEK: '⚠️', S_PGW_TUNJUK: '🛠️', S_PGW_P2H: '📋', S_PGW_GANTUNG0: '⏱️', S_MEK_STD: '🔧', S_MEK_SOP: '✅', S_MEK_AWET: '💪', S_HR_IZIN: '📝', S_ADM_ACC: '💳', S_LOG_SELIP0: '📦', S_TANTANGAN: '🏆', S_BULANAN: '🏅', S_PAPAN: '🥇', KSD_ISI: '📝', KSN_NILAI: '⭐', BATAL_KURANG: '↩️' };
+  /* v3.36 (Reza 17 Nov malam): pengurang poin NYALA untuk staf & driver. Baris minus di riwayat = merah + alasan (catatan) + tanggal + 'Pengurang final'.
+     Pengurang baru ditulis server SESUDAH masa sanggah 48 jam habis (QA Bugi #5), jadi masa sanggah + tombol Sanggah hanya di kartu 'Akan dikurangi' (poin-staf.js).
+     Sanggah = lewat orang (izin di Kehadiran / admin); tombol kartu membuka Forum. */
+  function bisaSanggah(x, p) {
+    if (!(p < 0) || x.sumber === 'TUKAR' || x.sumber === 'CABUT') return '';
+    return '<small style="color:var(--tMerah)">Pengurang final (masa sanggah sudah lewat)</small>';
+  }
+  function sanggah() {
+    roti('Tulis sanggahanmu ke admin di Forum: tanggal, jenis pengurang, alasan + bukti (izin/foto).');
+    var b = document.createElement('button'); b.type = 'button'; b.setAttribute('data-ke', 'forum'); b.style.display = 'none'; document.body.appendChild(b); try { b.click(); } finally { b.remove(); }
+  }
   function lencanaSt(s) { var w = ST[s] || ['abu', s || '-']; return '<em class="pnSt ' + w[0] + '">' + esc(w[1]) + '</em>'; }
   function alur(s) {
     var L = ['Diajukan', 'Nunggu ACC', 'Siap ambil', 'Selesai + foto'], k = s === 'DIAJUKAN' ? 1 : s === 'SIAP_AMBIL' ? 2 : s === 'SELESAI' ? 4 : -1;
@@ -184,6 +196,8 @@
     var L = []; if (!S || !API.Pusat.asli()) return L;
     if (punya('pusatPoinSaya') && !(P && P.d && P.d.aktif === false)) L.push(['poin', 'Poin WHL', 'poin', 0, 'poin']);
     if (punya('pusatPeringkat') && !(window.WHL_PERINGKAT && window.WHL_PERINGKAT.mati())) L.push(['peringkat', 'Peringkat', 'peringkat', 0, 'peringkat']);
+    if (window.WHL_POIN_STAF && window.WHL_POIN_STAF.boleh(S)) L.push(['kuesioner', 'Nilai rekan', 'nilaiRekan', 0, 'nilaiRekan']); /* v3.36 staf: nilai dari staf & dari driver (milik sendiri) */
+    if (window.WHL_KSD) window.WHL_KSD.menu(S).forEach(function (x) { L.push(x); }); /* v3.36 driver: kuesioner menilai staf (id ksd) */
     if (bolehAcc() && punya('pusatTukarPutus')) L.push(['tukarAcc', 'ACC tukar poin', 'poinAcc', ADM.nunggu || 0, 'poinAcc']);
     if (bolehRekap()) L.push(['rekapTukar', 'Rekap tukar poin', 'poinRekap', 0, 'poinRekap']);
     return L;
@@ -222,8 +236,11 @@
 
   /** pintu dari app.js: true = aksi ini milik modul poin */
   function buka(ke, ctx) {
-    if (ke !== 'poin' && ke !== 'poinKatalog' && ke !== 'poinAcc' && ke !== 'poinRekap' && ke !== 'peringkat') return false;
+    if (ke !== 'poin' && ke !== 'poinKatalog' && ke !== 'poinAcc' && ke !== 'poinRekap' && ke !== 'peringkat' && ke !== 'nilaiRekan' && ke !== 'ksd' && ke !== 'poinSanggah') return false;
     CTX = ctx || CTX; gaya();
+    if (ke === 'nilaiRekan') { if (window.WHL_POIN_STAF) window.WHL_POIN_STAF.buka(ke, CTX); return true; } /* v3.36 */
+    if (ke === 'ksd') { if (window.WHL_KSD) window.WHL_KSD.buka(CTX); return true; }
+    if (ke === 'poinSanggah') { sanggah(); return true; }
     if (ke === 'peringkat') { if (window.WHL_PERINGKAT) window.WHL_PERINGKAT.buka(CTX); return true; }
     if (ke === 'poin') bukaPoin(); else if (ke === 'poinKatalog') bukaKatalog(); else if (ke === 'poinAcc') bukaAcc(); else bukaRekap();
     return true;
@@ -251,7 +268,7 @@
   }
   var LABEL_CARA = [['KUIS', 'Kuis 10 tercepat', 'driver'], ['P2H', 'P2H tepat waktu'], ['ABSEN', 'Absen tepat', 'staf'], ['KM', 'Target KM harian', 'driver'], ['HAZARD', 'Hazard valid'], ['NOLINS', 'Nol insiden / minggu']]; /* v3.30 Reza: target harian = KM dari DO (server susulan-km: aturan.poin.KM; server lama RIT) */
   function gambarPoin(d, dariSimpan) {
-    var S = sesi(), drv = S && S.user.peran === 'driver', A = (d.aturan && d.aturan.poin) || { KUIS: 10, P2H: 2, ABSEN: 2, KM: 3, HAZARD: 10, NOLINS: 10, TOP: [30, 20, 10], ULTAH: 50 };
+    var S = sesi(), drv = S && S.user.peran === 'driver', A = (d.aturan && d.aturan.poin) || { KUIS: 5, P2H: 2, ABSEN: 2, KM: 3, HAZARD: 8, NOLINS: 10, TOP: [30, 20, 10], ULTAH: 50 }; /* v3.36 kalibrasi: kuis 5, hazard 8 (maks 1/hari); server aturan.poin tetap yang dipakai */
     if (A.KM == null) A.KM = A.RIT != null ? A.RIT : 3;
     if (d.targetKmHari == null && d.aturan && d.aturan.targetKmHari != null) d.targetKmHari = d.aturan.targetKmHari;
     var bts = Number(d.batasHarian) || 25, hi = Math.max(0, Number(d.hariIni) || 0), rpp = (d.aturan && d.aturan.rpPerPoin) || 100;
@@ -262,6 +279,7 @@
     if (Number(d.sudahHangus) > 0) h += '<div class="kecil" style="margin:8px 4px 0">' + ang(d.sudahHangus) + ' poin sudah hangus (lewat 6 bulan).</div>';
     h += '<div class="pnAksi">' + (punya('pusatPoinKatalog') ? '<button type="button" data-p="katalog">' + ILUS('hadiah') + 'Tukar hadiah</button>' : '') + (punya('pusatPeringkat') ? '<button type="button" data-p="peringkat">' + ILUS('peringkat') + 'Peringkat</button>' : '') + '</div>';
     if (bolehAcc() || bolehRekap()) h += '<div class="pnAksi">' + (bolehAcc() ? '<button type="button" data-p="acc">' + ILUS('tukarAcc') + 'ACC tukar' + (ADM.nunggu ? ' (' + ADM.nunggu + ')' : '') + '</button>' : '') + (bolehRekap() ? '<button type="button" data-p="rekap">' + ILUS('rekapTukar') + 'Rekap tukar</button>' : '') + '</div>';
+    if (window.WHL_POIN_STAF) h += window.WHL_POIN_STAF.slot(CTX); /* v3.36 staf: akan dikurangi, kriteria peran, tantangan, nilai rekan · driver: akan dikurangi (pusatPoinKurangSaya) */
     h += '<div class="kartu"><div class="pnJd"><b>Cara dapat poin</b><span>maks ' + ang(bts) + ' poin/hari</span></div><div class="pnChips">'
       + LABEL_CARA.filter(function (c) { return !c[2] || (c[2] === 'driver') === !!drv; }).map(function (c) { var lb = c[1]; if (c[0] === 'KM') { var km = Math.round(Number(d.targetKmHari) || 0); lb += (km > 0 ? ' ' + ang(km) + ' km' : '') + ' (dari DO)'; } return '<span>' + esc(lb) + ' +' + esc(A[c[0]]) + '</span>'; }).join('')
       + '<span>Top 3 peringkat +' + esc((A.TOP || [30, 20, 10]).join('/')) + '</span><span>Ulang tahun +' + esc(A.ULTAH || 50) + '</span></div>'
@@ -275,7 +293,7 @@
       if (x.catatan) ket.push(esc(String(x.catatan).split(' · ').map(function (s) { return s.split('|')[0]; }).filter(String).join(' · '))); /* P2H: "lambung|waktu" -> lambung */
       if (p > 0 && x.hangus) ket.push('hangus ' + waktu(x.hangus));
       if (Number(x.diminta) > p && p >= 0 && x.sumber !== 'TUKAR') ket.push('kena batas (minta ' + ang(x.diminta) + ')');
-      return '<div class="pnBrs"><span class="em">' + (EMO[x.sumber] || '⭐') + '</span><div class="tx"><b>' + esc(x.label || x.sumber) + '</b><small>' + ket.filter(String).join(' · ') + '</small></div><span class="pnNil ' + kls + '">' + (p > 0 ? '+' : p < 0 ? '−' : '') + ang(Math.abs(p)) + '</span></div>';
+      return '<div class="pnBrs"><span class="em">' + (EMO[x.sumber] || (p < 0 && x.sumber !== 'TUKAR' ? '⛔' : '⭐')) + '</span><div class="tx"><b>' + esc(x.label || x.sumber) + '</b><small>' + ket.filter(String).join(' · ') + '</small>' + bisaSanggah(x, p) + '</div><span class="pnNil ' + kls + '">' + (p > 0 ? '+' : p < 0 ? '−' : '') + ang(Math.abs(p)) + '</span></div>';
     }).join('') : '<div class="kecil">Belum ada poin. Poin masuk otomatis dari kegiatan kerja harianmu.</div>') + '</div>';
     h += '<div class="kecil" style="margin:14px 6px;text-align:center;line-height:1.5">Poin = tiket hadiah, <b>bukan uang</b>. Tidak bisa dicairkan, ditransfer, atau dijual. Hangus 6 bulan sejak didapat.' + (dariSimpan ? '<br><span class="putar"></span> memperbarui…' : '') + '</div>';
     return h;
@@ -568,6 +586,7 @@
     if (n === 'ulangPoin') { bukaPoin(); return; }
     if (n === 'ulangKat') { bukaKatalog(); return; }
     if (n === 'katalog') { bukaKatalog(); return; }
+    if (n === 'sanggah') { sanggah(); return; } /* v3.36 */
     if (n === 'peringkat') { if (window.WHL_PERINGKAT) window.WHL_PERINGKAT.buka(CTX); return; }
     if (n === 'acc') { bukaAcc(); return; }
     if (n === 'rekap') { bukaRekap(); return; }
@@ -608,7 +627,7 @@
 
   /** tombol Back HP: foto dulu, lalu lapis (dipanggil lewat .ksnKp .kb oleh WHL_KEMBALI; ini cadangan) */
   function kembali() { if (tutupFoto()) return true; return tutup(); }
-  function lupakan() { P = null; P_JALAN = null; KAT = null; ADM = { acc: null, nunggu: 0, t: 0, jalan: false }; ACC = { tab: 'nunggu', d: null, selesai: null, foto: {}, catatan: {}, tolak: {}, yakin: '', kirim: '' }; REK = { bulan: '', status: '', nama: '', d: null, jalan: false }; tutupSemua(); }
+  function lupakan() { P = null; P_JALAN = null; KAT = null; ADM = { acc: null, nunggu: 0, t: 0, jalan: false }; ACC = { tab: 'nunggu', d: null, selesai: null, foto: {}, catatan: {}, tolak: {}, yakin: '', kirim: '' }; REK = { bulan: '', status: '', nama: '', d: null, jalan: false }; tutupSemua(); if (window.WHL_POIN_STAF) window.WHL_POIN_STAF.lupakan(); if (window.WHL_KSD) window.WHL_KSD.lupakan(); }
 
   window.WHL_POIN = { punya: punya, menu: menu, buka: buka, berandaHtml: berandaHtml, bukaNotif: bukaNotif, muat: muat, kembali: kembali, lupakan: lupakan, ilus: ILUS,
     _uji: { infoTukar: infoTukar, ikonBarang: ikonBarang, xlsxB64: function (sh) { return keB64(xlsx(sh)); }, data: function () { return { P: P, ADM: ADM, ACC: ACC, REK: REK, KAT: KAT }; } } };
