@@ -136,12 +136,12 @@
         Gagal jaringan = daftar lama dipertahankan. */
     /* v3.20 (audit bug #1): ping yang sedang jalan dipakai bersama; ping sukses < 5 mnt lalu = tidak ping lagi (kecuali paksa);
        saatBerubah() HANYA kalau daftar fungsi server berubah (dulu tiap ping sukses -> gajiAkses/izin/lembur dimuat ulang 2-3x). */
-    cekUlang: function (paksa) {
+    cekUlang: function (paksa, batas) { /* v3.38: batas = batas waktu ping (ms), bawaan 15 dtk */
       if (cekJalan) return cekJalan;
       if (BERANDA) { var bb = BERANDA; return bb.then(function () { return Pusat.cekUlang(paksa); }); } /* tunggu pusatBeranda (balasannya memuat fn = ping) */
       if (pusatAsli === true && Date.now() - cekTerakhir < (paksa ? 15000 : 5 * 60000)) return Promise.resolve(pusatAsli);
       var lama = pusatFn.slice().sort().join(',');
-      cekJalan = rpc(K.DASH, 'pusat', 'pusatPing', [], 15000).then(function (h) {
+      cekJalan = rpc(K.DASH, 'pusat', 'pusatPing', [], batas || 15000).then(function (h) {
         cekJalan = null;
         if (h && h.api === 'pusat') { pusatAsli = true; pusatFn = h.fn || []; cekTerakhir = Date.now(); Simpan.taruh('whlV2Ping', JSON.stringify({ fn: pusatFn, t: Date.now() })); if (pusatFn.slice().sort().join(',') !== lama && Pusat.saatBerubah) Pusat.saatBerubah(); }
         return pusatAsli;
@@ -167,6 +167,7 @@
     lupakanSimpanan: function () { MEMO = {}; },
     asli: function () { return pusatAsli === true; },
     punya: function (fn) { return pusatFn.indexOf(fn) >= 0; },
+    baruDicek: function (ms) { return cekTerakhir > 0 && Date.now() - cekTerakhir < (ms || 60000); }, /* v3.38: daftar fungsi baru saja terbaca dari server (bukan simpanan HP) */
     dikenal: function () { return pusatFn.length > 0; }, /* v3.9.2: false = daftar fungsi server belum pernah terbaca (ping gagal), bukan berarti fitur tidak ada */ /* mis. punya('pusatForumToken') = forum sudah dipasang di server */
     cekKartu: function (id) { return rpc(K.DASH, 'pusat', 'pusatCekKartu', [id]); },
     login: function (id, pin) { return rpc(K.DASH, 'pusat', 'pusatLogin', [id, pin]); },

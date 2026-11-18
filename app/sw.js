@@ -6,7 +6,7 @@
  *  - berkas ber-?v=<versi app ini> dan berkas cangkang lain (ikon, gambar, suara, pustaka): salinan HP dulu (instan), tanpa menunggu jaringan.
  *  - berkas ber-?v= versi LAIN (index baru, service worker lama): jaringan dulu supaya tidak tercampur versi.
  */
-const VERSI = 'a45ff056ba', CACHE = 'whl-cangkang-' + VERSI, APPV = '3.37';
+const VERSI = '94456959f6', CACHE = 'whl-cangkang-' + VERSI, APPV = '3.38';
 /* WEB PUSH (iPhone iOS 16.4+ dari Layar Utama, Chrome Android): Firebase Cloud Messaging. Pesan ber-"notification" ditampilkan otomatis
  * oleh pustaka Firebase; ketuk -> fcm_options.link (app web, ?buka=forum:ruang / tiket:lambung). */
 try {

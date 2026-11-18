@@ -150,7 +150,12 @@
   function masukAsli(id, pin) {
     return API.Pusat.login(id, pin).then(function (r) {
       if (!r.ok) return r.pesan || 'Gagal masuk.';
-      if (r.peran === 'driver' && !driverSiap()) return 'App ini khusus staf WHL. Driver tetap memakai jalur yang biasa (tablet / Pusat WHL web).'; /* v3.29 tahap2: driver boleh masuk kalau server sudah punya fungsi driver (pusatPing) */
+      if (r.peran === 'driver' && !driverSiap()) return pastikanDriver().then(function (st) { return st === 'siap' ? lanjutMasukAsli(r, id, pin) : st === 'tidak' ? PESAN_DRIVER_TIDAK : PESAN_SINYAL + ' Ketik PIN lagi untuk coba lagi.'; }); /* v3.38: daftar fungsi belum terbaca (4G lemah) -> ping ulang dulu, bukan langsung ditolak */
+      return lanjutMasukAsli(r, id, pin);
+    });
+  }
+  function lanjutMasukAsli(r, id, pin) {
+    {
       var token = r.token; delete r.token; delete r.ok;
       var s = { mode: 'asli', tokenPusat: token, tokenAbm: '', abmPesan: '', user: r, idKetik: id, namaLengkap: r.namaLengkap || r.nama, jabatan: r.jabatan || '',
         idProfil: /^WHL-?D/i.test(r.idKartu || '') ? r.idKartu : (r.nrp || r.idKartu || id) };
@@ -158,7 +163,7 @@
       return API.Absen.login(id, pin).then(function (h) {
         if (h.ok) { s.tokenAbm = h.token; s.jabatan = s.jabatan || h.jabatan || ''; } else s.abmPesan = h.pesan || 'Absen mandiri belum bisa dipakai.';
       }, function (e) { s.abmPesan = 'Absen mandiri belum tersambung (' + e.message + ').'; }).then(function () { selesaiMasuk(s); return null; });
-    });
+    }
   }
   /* Pusat BELUM punya API: identitas & PIN tetap diperiksa server sungguhan (Absensi, api abm). Ringkasan Pusat = data contoh. */
   function masukSementara(id, pin) {
@@ -171,6 +176,23 @@
   }
   /* v3.29 tahap2 (kontrak Armand app-tahap12-16nov §6): driver masuk app; menu driver saja (tanpa Kehadiran, gaji, kasbon, menu admin) */
   function driverSiap() { return !!window.WHL_DRIVER && window.WHL_DRIVER.siap(); }
+  /* v3.38 (bug HENDI 18 Nov): ping gagal / lewat 15 dtk di 4G lemah -> daftar fungsi server kosong -> driver dulu ditolak "khusus staf".
+     Sekarang: ping ulang sampai 3x (batas 20/25/30 dtk). 'siap' = fungsi driver ada; 'tidak' = server baru terbaca & memang tanpa fungsi driver; 'sinyal' = tetap tidak terbaca. */
+  var PESAN_SINYAL = 'Sinyal lemah, daftar fitur server belum terbaca. Cek internet lalu coba lagi.';
+  var PESAN_DRIVER_TIDAK = 'Fitur driver belum aktif di server Pusat WHL. Hubungi admin WHL.';
+  function pastikanDriver(coba) {
+    coba = coba || 0;
+    if (driverSiap()) return Promise.resolve('siap');
+    if (coba > 0 && API.Pusat.dikenal() && API.Pusat.baruDicek()) return Promise.resolve('tidak');
+    if (coba >= 3) return Promise.resolve(API.Pusat.dikenal() && API.Pusat.baruDicek() ? 'tidak' : 'sinyal');
+    var jeda = coba ? new Promise(function (ok) { setTimeout(ok, 1500); }) : Promise.resolve();
+    return jeda.then(function () { return API.Pusat.cekUlang(true, 20000 + coba * 5000); }).then(function () { return pastikanDriver(coba + 1); }, function () { return pastikanDriver(coba + 1); });
+  }
+  function pesanSinyalCoba(ulang) { /* layar masuk: pesan sinyal + tombol Coba lagi (sesi tersimpan tidak dibuang) */
+    var p = $('pesanLogin'); p.textContent = PESAN_SINYAL + ' ';
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'tUtama'; b.id = 'tCobaDriver'; b.style.marginTop = '10px'; b.textContent = 'Coba lagi';
+    b.onclick = function () { p.textContent = ''; ulang(); }; p.appendChild(b);
+  }
   function adalahDriver() { return !!SESI && SESI.user.peran === 'driver'; }
   function ctxDriver() { return { sesi: function () { return SESI; }, roti: roti, bukaWeb: bukaWeb, formP2h: function () { bukaWeb(K.DASH + '?mode=p2hharian'); } /* v3.37 cadangan */, sesiHabis: function () { keLogin('Sesi habis. Silakan masuk lagi pakai PIN.'); }, perbarui: function () { try { if (SESI && tab === 'beranda' && !$('layarApp').classList.contains('sembunyi')) gambar(); } catch (e) { /* */ } } }; }
   var lewatiKenal = false;
@@ -1580,13 +1602,21 @@
 
   /* ---------- mulai ---------- */
   function mulai() {
-    Promise.all([Simpan.ambil(KUNCI_SESI), API.Pusat.deteksi()]).then(function (r) {
+    Promise.all([Simpan.ambil(KUNCI_SESI), API.Pusat.deteksi()]).then(bukaSesi);
+  }
+  function bukaSesi(r) {
+    {
       var s = null; try { s = JSON.parse(r[0] || 'null'); } catch (e) { s = null; }
       var pesan = ''; try { pesan = sessionStorage.getItem('whlV2Pesan') || ''; sessionStorage.removeItem('whlV2Pesan'); } catch (e) { /* */ }
       if (!s || !s.user) { var t0 = null; try { t0 = JSON.parse(sessionStorage.getItem(KUNCI_TERBUKA) || 'null'); } catch (e) { t0 = null; } if (t0 && t0.user) s = t0; }
       if ((!s || !s.user) && window.WHL_LAYAR) { var t1 = window.WHL_LAYAR.ambilSesi(); if (t1 && t1.user) s = t1; } /* v3.33 layar.js: akun biometrik, HP mematikan app di latar < 4 jam -> langsung masuk */
       if (!s || !s.user) { keLogin(pesan); return; }
-      if (s.user.peran === 'driver' && !driverSiap()) { keLogin('App ini khusus staf WHL. Driver tetap memakai jalur yang biasa (tablet / Pusat WHL web).'); return; }
+      if (s.user.peran === 'driver' && !driverSiap()) { /* v3.38: ping ulang dulu; sinyal lemah = pesan + Coba lagi (sesi tetap tersimpan) */
+        var r2 = [JSON.stringify(s), r[1]];
+        layar('layarLogin'); sibuk(true); $('pesanLogin').textContent = 'Menyambung ke server Pusat WHL...';
+        pastikanDriver().then(function (st) { sibuk(false); $('pesanLogin').textContent = ''; if (st === 'siap') bukaSesi(r2); else if (st === 'tidak') keLogin(PESAN_DRIVER_TIDAK); else pesanSinyalCoba(function () { bukaSesi(r2); }); });
+        return;
+      }
       if (s.mode === 'tiruan' && r[1]) { keLogin('Pusat WHL sudah tersambung ke app. Masuk sekali lagi ya.'); return; }
       SESI = s;
       /* halaman absen menghapus token-nya sendiri kalau sesi absen habis -> samakan */
@@ -1596,7 +1626,7 @@
       var sukses = location.hash === '#sukses';
       if (!sukses && window.WHL_LAYAR && window.WHL_LAYAR.lama && window.WHL_LAYAR.lama() && kunciPin()) return; /* v3.34: dibuka lagi sesudah >= 4 jam -> PIN */
       simpanSesi(); mulaiApp(); if (sukses) { keTab('absen'); tampilSuksesAbsen(); }
-    });
+    }
   }
   /* Kait uji (HANYA di server uji lokal, K.UJI): ?ujiMasuk=ID:PIN&tab=unit&tema=terang -> login otomatis ke server tiruan untuk potret layar. */
   if (K.UJI && /[?&]ujiMasuk=/.test(location.search)) {
