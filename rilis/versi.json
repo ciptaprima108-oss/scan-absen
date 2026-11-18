@@ -1,14 +1,13 @@
 {
- "versi": "3.36",
- "versionCode": 337,
+ "versi": "3.37",
+ "versionCode": 338,
  "wajib": false,
  "catatan": [
-  "Poin karyawan untuk staf: kriteria peran, tantangan, papan Peringkat Staf",
-  "Driver bisa menilai pelayanan staf (kuesioner anonim)",
-  "Pengurang poin + masa sanggah 48 jam"
+  "P2H saya untuk driver (riwayat 7/30 hari, baca saja)",
+  "Banyak nota: bukti pengerjaan / barang per nota"
  ],
- "apk": "WHL-App-v3.36.apk",
- "ukuran": 8523775,
- "sha256": "b1d2a5c8be6aaa00dba9b5acf2276588529215018225ab029a78e5ff348ea9bc",
- "dibuat": "2026-11-17 15:17"
+ "apk": "WHL-App-v3.37.apk",
+ "ukuran": 8525945,
+ "sha256": "b9d5bfbff9d045c03ec995e9ea8749ecb9be4e32f4a685a18898f575306091ae",
+ "dibuat": "2026-11-18 05:14"
 }
