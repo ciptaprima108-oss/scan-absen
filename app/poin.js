@@ -266,7 +266,7 @@
       if (gulirKe) { var el = lapisEl.querySelector('#pnTukarSaya'); if (el) el.scrollIntoView({ block: 'start' }); }
     }, function (e) { if (lapisEl && layar === 'poin' && !(P && P.d && aktif())) lapis('Poin WHL', 'Tiket hadiah WHL', kosong('poin', 'Belum bisa dimuat', e.message, ['ulangPoin', 'Coba lagi'])); });
   }
-  var LABEL_CARA = [['KUIS', 'Kuis 10 tercepat', 'driver'], ['P2H', 'P2H tepat waktu'], ['ABSEN', 'Absen tepat', 'staf'], ['KM', 'Target KM harian', 'driver'], ['HAZARD', 'Hazard valid'], ['NOLINS', 'Nol insiden / minggu']]; /* v3.30 Reza: target harian = KM dari DO (server susulan-km: aturan.poin.KM; server lama RIT) */
+  var LABEL_CARA = [['KUIS', 'Kuis 10 tercepat', 'driver'], ['P2H', 'P2H di GASPOL', 'driver'], ['ABSEN', 'Absen tepat', 'staf'], ['KM', 'Target KM harian', 'driver'], ['HAZARD', 'Hazard valid'], ['NOLINS', 'Nol insiden / minggu']]; /* v3.30 Reza: target harian = KM dari DO (server susulan-km: aturan.poin.KM; server lama RIT) */
   function gambarPoin(d, dariSimpan) {
     var S = sesi(), drv = S && S.user.peran === 'driver', A = (d.aturan && d.aturan.poin) || { KUIS: 5, P2H: 2, ABSEN: 2, KM: 3, HAZARD: 8, NOLINS: 10, TOP: [30, 20, 10], ULTAH: 50 }; /* v3.36 kalibrasi: kuis 5, hazard 8 (maks 1/hari); server aturan.poin tetap yang dipakai */
     if (A.KM == null) A.KM = A.RIT != null ? A.RIT : 3;

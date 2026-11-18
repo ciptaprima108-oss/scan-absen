@@ -7,7 +7,7 @@
 (function () {
   'use strict';
   var API = window.WHL_API, R = window.WHL_RASA, Simpan = API.Simpan;
-  var CTX = null, HI = null, HI_JALAN = false, lapisEl = null, jenisL = '', PROF = null, DOS = null, nHari = 7;
+  var CTX = null, HI = null, HI_JALAN = false, lapisEl = null, jenisL = '', PROF = null, DOS = null, nHari = 7, P2HS = null, nP2h = 30; /* v3.37 P2H saya */
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function IK(n) { return window.WHL_IKON ? window.WHL_IKON(n) : ''; }
   function ang(n, des) { var v = Number(n); if (!isFinite(v)) return '–'; return v.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: des == null ? 1 : des }); }
@@ -95,6 +95,7 @@
   function buka(ctx, jenis) {
     CTX = ctx || CTX; gaya(); jenisL = jenis;
     if (jenis === 'do') return bukaDo();
+    if (jenis === 'p2h') return bukaP2h(); /* v3.37 */
     lapis(jenis === 'dok' ? 'Dokumen saya' : 'Profil & ID card', 'Driver WHL', R.kerangka ? R.kerangka('daftar') : '<span class="putar"></span>');
     panggil('pusatProfilDriver', [null]).then(function (h) {
       if (!lapisEl || jenisL !== jenis) return;
@@ -149,14 +150,67 @@
     h += '<div class="kecil" style="margin:12px 4px;text-align:center">Data dari tiket Input DO' + (d.diperbarui ? ' · update ' + esc(String(d.diperbarui).replace(':', '.')) : '') + '.</div>';
     lapis('DO saya', 'Driver WHL · ' + tgl(d.dari) + ' – ' + tgl(d.sampai), h);
   }
+  /* ---------- v3.37 P2H SAYA (p2h-gaspol-18nov, Reza 18 Nov: "P2H tetap di GASPOL Tab, di app driver cuma bisa lihat riwayatnya") ----------
+   * RPC pusatP2hSaya(token, hari 7|30, idKartu=null) -> {hari:[{hari, jumlah, temuan, p2h:[{jam, lambung, status, dibatalkan, hasil, rusak[], catatan, jmlItem}]}],
+   * ringkas:{hariP2h, totalP2h, temuan, hariIniSudah, hariIniJam, hariIniLambung}, items[], formIsi, keterangan, diperbarui}. Tanpa tombol isi P2H
+   * (kecuali server menyalakan formIsi = tombol cadangan ke form P2H Harian, keputusan Reza). */
+  var ST_REQ = { SELESAI: ['hijau', 'UJ selesai'], DITANDATANGANI: ['hijau', 'UJ ditandatangani'], DISETUJUI: ['hijau', 'UJ disetujui'], MENUNGGU: ['kuning', 'Menunggu admin'], MEMPROSES: ['kuning', 'Diproses admin'], DITOLAK: ['merah', 'UJ ditolak'], DIBATALKAN: ['', 'Dibatalkan'] };
+  function gayaP2h() {
+    if (document.getElementById('drvGayaP2h')) return; var st = document.createElement('style'); st.id = 'drvGayaP2h';
+    st.textContent = '.p2hHi{display:flex;align-items:center;gap:12px;border-radius:16px;padding:12px 14px;margin-bottom:12px;font-weight:700;font-size:14px}.p2hHi.ok{background:rgba(22,163,74,.13);color:#15803d}.p2hHi.belum{background:rgba(255,197,48,.18);color:var(--tKuning)}.p2hHi small{display:block;font-weight:600;font-size:12px;opacity:.9}.p2hHi .ikn{width:24px;height:24px;flex:none}'
+      + '.p2hBrs{display:flex;gap:10px;padding:11px 2px;border-top:1px solid var(--garis)}.p2hBrs:first-child{border-top:0}.p2hBrs .jm{font-family:Nunito,sans-serif;font-weight:900;font-size:14px;width:44px;flex:none;padding-top:1px}.p2hBrs .tx{flex:1;min-width:0}.p2hBrs .tx b{display:block;font-size:14px}'
+      + '.p2hHasil{display:inline-block;margin-top:4px;font-size:12px;font-weight:800;padding:3px 9px;border-radius:99px}.p2hHasil.baik{background:rgba(22,163,74,.14);color:#15803d}.p2hHasil.temuan{background:rgba(242,72,77,.14);color:var(--tMerah)}'
+      + '.p2hRusak{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}.p2hRusak span{font-size:12px;font-weight:800;padding:4px 9px;border-radius:10px;background:rgba(242,72,77,.14);color:var(--tMerah);border:1px solid rgba(242,72,77,.35)}'
+      + '.p2hCat{display:block;margin-top:5px;font-size:12px;color:var(--redup);overflow-wrap:anywhere}.p2hBrs.batal{opacity:.55}.p2hBrs.batal .tx b{text-decoration:line-through}.p2hBrs .drvSt{align-self:flex-start;margin-top:1px}'
+      + '.p2hItem{margin-top:6px;font-size:12px;color:var(--redup);line-height:1.5}'
+      + 'html[data-tema="gelap"] .p2hHi.ok,html[data-tema="gelap"] .p2hHasil.baik{color:#4ade80}html[data-tema="gelap"] .p2hHasil.temuan,html[data-tema="gelap"] .p2hRusak span{color:#fca5a5}';
+    document.head.appendChild(st);
+  }
+  function bukaP2h() {
+    gayaP2h(); lapis('P2H saya', 'Driver WHL · dari tablet GASPOL', R.kerangka ? R.kerangka('daftar') : '<span class="putar"></span>');
+    var n0 = nP2h;
+    panggil('pusatP2hSaya', [nP2h, null]).then(function (h) {
+      if (!lapisEl || jenisL !== 'p2h' || n0 !== nP2h) return;
+      if (h && h.login === false) { tutup(); if (CTX.sesiHabis) CTX.sesiHabis(); return; }
+      if (!h || h.ok === false) { lapis('P2H saya', 'Driver WHL', gagal((h && h.pesan) || 'Riwayat P2H belum tersedia.')); return; }
+      P2HS = h; gambarP2h();
+    }, function (e) { if (lapisEl && jenisL === 'p2h') lapis('P2H saya', 'Driver WHL', gagal(e.message)); });
+  }
+  function gambarP2h() {
+    var d = P2HS, K = d.ringkas || {}, H = Array.isArray(d.hari) ? d.hari : [], nItem = Array.isArray(d.items) ? d.items.length : 0;
+    var h = '<div class="segmen" style="margin-bottom:12px">' + [7, 30].map(function (n) { return '<button type="button" data-d="p2hHari:' + n + '" class="' + (nP2h === n ? 'on' : '') + '">' + n + ' hari</button>'; }).join('') + '</div>';
+    h += K.hariIniSudah
+      ? '<div class="p2hHi ok" role="status">' + IK('centang') + '<span>Sudah P2H hari ini' + (K.hariIniJam ? ' · ' + esc(String(K.hariIniJam).replace(':', '.')) : '') + (K.hariIniLambung ? ' · ' + esc(K.hariIniLambung) : '') + '<small>Hari tambang ' + tgl(d.hariTambang || d.sampai) + ' (06.00–06.00)</small></span></div>'
+      : '<div class="p2hHi belum" role="status">' + IK('alarm') + '<span>Belum ada P2H hari ini<small>P2H diisi di tablet GASPOL sebelum minta uang jalan.</small></span></div>';
+    h += '<div class="drvRingkas"><span class="drvSt">' + ang(K.hariP2h, 0) + ' hari P2H</span><span class="drvSt">' + ang(K.totalP2h, 0) + ' kali P2H</span>'
+      + (Number(K.temuan) > 0 ? '<span class="drvSt merah">' + ang(K.temuan, 0) + ' ada temuan</span>' : Number(K.totalP2h) > 0 ? '<span class="drvSt hijau">Tanpa temuan</span>' : '') + '</div>';
+    if (!H.length) h += '<div class="kartu kosongKm">' + IK('dokumen', 'besar') + '<b>Belum ada P2H</b><small>Tidak ada P2H GASPOL dalam ' + nP2h + ' hari terakhir.</small></div>';
+    h += H.map(function (x) {
+      var L = Array.isArray(x.p2h) ? x.p2h : [];
+      return '<div class="drvHari">' + tgl(x.hari, true) + '<span>' + ang(x.jumlah, 0) + ' P2H' + (Number(x.temuan) > 0 ? ' · ' + ang(x.temuan, 0) + ' temuan' : '') + '</span></div>'
+        + '<div class="kartu">' + L.map(function (p) {
+          var R2 = Array.isArray(p.rusak) ? p.rusak : [], w = ST_REQ[String(p.status || '').toUpperCase()] || ['', p.status || '-'];
+          return '<div class="p2hBrs' + (p.dibatalkan ? ' batal' : '') + '"><span class="jm">' + esc(String(p.jam || '').replace(':', '.')) + '</span><div class="tx"><b>' + esc(p.lambung || '-') + '</b>'
+            + (R2.length ? '<span class="p2hHasil temuan">Ada temuan: ' + R2.length + ' item TIDAK BAIK</span><div class="p2hRusak">' + R2.map(function (r) { return '<span>✕ ' + esc(r) + '</span>'; }).join('') + '</div>'
+              : '<span class="p2hHasil baik">Semua baik' + (p.jmlItem ? ' · ' + ang(p.jmlItem, 0) + ' item' : '') + '</span>')
+            + (p.catatan ? '<span class="p2hCat">Catatan: ' + esc(p.catatan) + '</span>' : '') + '</div><em class="drvSt ' + w[0] + '">' + esc(w[1]) + '</em></div>';
+        }).join('') + '</div>';
+    }).join('');
+    if (nItem) h += '<div class="p2hItem"><b>Item yang diperiksa (' + nItem + '):</b> ' + d.items.map(esc).join(' · ') + '</div>';
+    if (d.formIsi && CTX && CTX.formP2h) h += '<button type="button" class="tKecil" data-d="p2hForm" style="width:100%;margin-top:14px">Isi P2H Harian (form Pos Kontrol)</button>';
+    h += '<div class="kecil" style="margin:12px 4px;text-align:center">' + esc(d.keterangan || 'P2H diisi di tablet GASPOL.') + (d.diperbarui ? ' · update ' + esc(String(d.diperbarui).replace(':', '.')) : '') + '</div>';
+    lapis('P2H saya', 'Driver WHL · ' + tgl(d.dari) + ' – ' + tgl(d.sampai), h);
+  }
   function klik(ev) {
     var b = ev.target.closest('[data-d]'); if (!b) return; var n = b.getAttribute('data-d');
     if (n === 'tutup') { R.bunyi('tutup'); tutup(); }
     else if (n === 'ulang') buka(CTX, jenisL);
     else if (n.indexOf('hari:') === 0) { nHari = +n.slice(5) || 7; bukaDo(); }
+    else if (n.indexOf('p2hHari:') === 0) { nP2h = +n.slice(8) || 30; bukaP2h(); } /* v3.37 */
+    else if (n === 'p2hForm' && CTX.formP2h) CTX.formP2h();
     else if (n.indexOf('foto:') === 0 && CTX.bukaWeb) CTX.bukaWeb(n.slice(5));
   }
-  function lupakan() { HI = null; PROF = null; DOS = null; tutup(); }
+  function lupakan() { HI = null; PROF = null; DOS = null; P2HS = null; tutup(); }
 
   /* ---------- v3.30 SETARA RITASE per rute (Reza 17 Nov) ----------
    * Field server `setaraRit` (pusatHariIniDriver & pusatPoinSaya, Armand). Bentuk yang diterima (longgar):

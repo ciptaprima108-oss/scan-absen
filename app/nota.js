@@ -431,7 +431,9 @@
 
   /* ---------- form ---------- */
   function unitKosong() { return { lambung: '', uraian: '', total: 0 }; }
-  function barisKosong() { return { tglNota: hariIni(), lambung: '', unit: '', uraian: '', total: 0, foto: [], video: [], unitManual: false }; }
+  function barisKosong() { return { tglNota: hariIni(), lambung: '', unit: '', uraian: '', total: 0, foto: [], wa: [], video: [], unitManual: false }; }
+  /* nota-banyak-bukti-18nov: tiap nota di mode Banyak punya "Bukti pengerjaan / barang" sendiri (wajib), hanya kalau server sudah mendukung (pusatNotaOpsi.buktiPerNota) */
+  function buktiNota() { return !!(OPSI && OPSI.buktiPerNota); }
   function formBaru(isi, keMode) {
     tab = 'baru'; if (keMode) mode = keMode;
     F = Object.assign({ masukKe: adaLangsung() ? LANGSUNG : BENGKEL, kategori: '', kerja: [], unitR: [unitKosong()], rekBank: '', rekBankLain: '', rekNo: '', rekNama: '', jenisNota: 'JASA', tglNota: hariIni(), lambung: '', unit: '', toko: '', rekening: '', hariBayar: '', uraian: '', total: 0, keperluan: '', foto: [], wa: [], ba: [], video: [], baris: [barisKosong()] }, isi || {});
@@ -506,12 +508,15 @@
       var sub = F.baris.reduce(function (s, n) { return s + Number(n.total || 0); }, 0);
       h += '<div class="kartu notaForm"><b class="notaJudulB">Isian bersama</b>' + bersama(b, af) + (b ? '' : lampiran('ba', 'Berita acara (BA)', true)) + '</div>' + dl
         + F.baris.map(function (n, i) {
-          return '<div class="kartu notaForm notaBarisK"><div class="notaAtas"><b>Nota ' + (i + 1) + '</b>' + (F.baris.length > 1 ? '<button type="button" class="tKecil notaHapusB" data-n="hapusBaris:' + i + '">Hapus</button>' : '') + '</div>'
+          var kurangB = buktiNota() && F.cekBukti && !(n.wa || []).length; /* nota-banyak-bukti-18nov */
+          return '<div class="kartu notaForm notaBarisK' + (kurangB ? ' notaKurang" style="box-shadow:0 0 0 2px var(--tMerah)' : '') + '"><div class="notaAtas"><b>Nota ' + (i + 1) + '</b>' + (F.baris.length > 1 ? '<button type="button" class="tKecil notaHapusB" data-n="hapusBaris:' + i + '">Hapus</button>' : '') + '</div>'
             + '<label class="lb">Tanggal nota</label><input class="isian" type="date" data-f="b' + i + ':tglNota" value="' + esc(n.tglNota) + '">'
             + lbUnit('ntLb' + i, 'ntUnit' + i, 'b' + i + ':lambung', 'b' + i + ':unit', n.lambung, n.unit)
             + '<label class="lb">Uraian</label><textarea class="isian bnrTA" data-f="b' + i + ':uraian" rows="2" placeholder="Barang / pekerjaan">' + esc(n.uraian) + '</textarea>'
             + '<label class="lb">Total <i class="wajib">wajib</i></label><input class="isian notaRp" data-f="b' + i + ':total" inputmode="numeric" placeholder="Rp 0" value="' + (n.total ? rp(n.total) : '') + '">'
-            + lampiran('b' + i + ':foto', 'Foto nota', !b) + bagianVideo('b' + i + ':video') + '</div>';
+            + lampiran('b' + i + ':foto', 'Foto nota', !b)
+            + (buktiNota() ? lampiran('b' + i + ':wa', 'Bukti pengerjaan / barang', true) + (kurangB ? '<div class="kecil notaKurangB" style="color:var(--tMerah);font-weight:700;margin:-2px 2px 6px">Nota ' + (i + 1) + ' belum ada bukti pengerjaan / barang.</div>' : '') : '') /* nota-banyak-bukti-18nov */
+            + bagianVideo('b' + i + ':video') + '</div>';
         }).join('')
         + '<button type="button" class="tKecil notaTambahB" data-n="tambahBaris">+ Nota berikutnya</button>'
         + '<div class="kartu notaSub"><span>' + F.baris.length + ' nota</span><b id="ntSub">' + rp(sub) + '</b></div>'
@@ -619,7 +624,9 @@
     if (b) { var sr2 = periksaRek(); if (sr2) return sr2; }
     if (!b && !F.keperluan.trim()) return 'Isi keperluan / alasan pengajuan.';
     if (!b && !F.ba.length) return 'Lampirkan berita acara (BA).';
-    if (mode === 'banyak') { for (var i = 0; i < F.baris.length; i++) { var s = periksaNota(F.baris[i], b, 'Nota ' + (i + 1) + ': '); if (s) return s; } return ''; }
+    if (mode === 'banyak') { for (var i = 0; i < F.baris.length; i++) { var s = periksaNota(F.baris[i], b, 'Nota ' + (i + 1) + ': '); if (s) return s; }
+      if (buktiNota()) { var tanpaB = []; F.baris.forEach(function (n, j) { if (!(n.wa || []).length) tanpaB.push('Nota ' + (j + 1)); }); if (tanpaB.length) { F.cekBukti = true; return 'Lampirkan bukti pengerjaan / barang di ' + tanpaB.join(', ') + '.'; } } /* nota-banyak-bukti-18nov */
+      return ''; }
     return periksaNota(F, b, '');
   }
   function vidRingkas(L) { return (L || []).map(function (v) { return { vid: v.vid, nama: v.nama, mime: v.mime, ukuran: v.ukuran }; }); }
@@ -639,10 +646,12 @@
       return [{ cid: cid, jenis: 'satu', waktu: Date.now(), d: d }];
     }
     var dasar = paketBersama(b); dasar.wa = []; /* v3.35: Banyak nota tanpa screenshot WA bersama (bukti ada di tiap nota) */
+    var perNota = buktiNota(); if (perNota) dasar.buktiPerNota = true; /* nota-banyak-bukti-18nov */
     var ukDasar = dasar.wa.concat(dasar.ba).reduce(function (s, x) { return s + x.length; }, 0), kel = [], kini = [], uk = ukDasar;
     F.baris.forEach(function (n, i) {
       var r = { tglNota: n.tglNota, lambung: String(n.lambung).trim().toUpperCase(), unit: String(n.unit || '').trim().toUpperCase(), uraian: String(n.uraian || '').trim(), total: Number(n.total), kode: '', foto: n.foto.slice(), videoVid: vidRingkas(n.video), _baris: i + 1 };
-      var ukR = r.foto.reduce(function (s, x) { return s + x.length; }, 0);
+      if (perNota) r.wa = (n.wa || []).slice(); /* nota-banyak-bukti-18nov */
+      var ukR = r.foto.concat(r.wa || []).reduce(function (s, x) { return s + x.length; }, 0);
       if (kini.length && uk + ukR > ((window.WHL_KONFIG && window.WHL_KONFIG.BATAS_KIRIM_NOTA) || BATAS_KIRIM)) { kel.push(kini); kini = []; uk = ukDasar; }
       kini.push(r); uk += ukR;
     });
@@ -651,7 +660,8 @@
   }
   function kirim() {
     var salah = periksa(), p = document.getElementById('ntPesan');
-    if (salah) { if (p) p.textContent = salah; R.bunyi('gagal'); R.getar('awas'); return; }
+    if (salah) { if (mode === 'banyak' && F.cekBukti && F.masukKe !== LANGSUNG) { gambarForm(); p = document.getElementById('ntPesan'); var kb = /^Lampirkan bukti pengerjaan/.test(salah) && lapisEl && lapisEl.querySelector('.notaKurang'); if (kb) kb.scrollIntoView({ block: 'start', behavior: 'smooth' }); } /* nota-banyak-bukti-18nov */
+      if (p) p.textContent = salah; R.bunyi('gagal'); R.getar('awas'); return; }
     var items = buatItem(); mengirim = true; gambarForm();
     antre().then(function (A) { return taruhAntre(A.concat(items)); }).then(function () {
       var hasil = []; return items.reduce(function (pr, it) { return pr.then(function () { return kirimSatu(it).then(function (h) { hasil.push({ it: it, h: h }); }); }); }, Promise.resolve()).then(function () { return hasil; });
@@ -709,7 +719,7 @@
     if (n === 'ulangBuka') { buka(CTX, tab, mode); return; }
     if (n.indexOf('tab:') === 0) { var t = n.slice(4); if (t === 'baru') formBaru(); else daftar(); return; }
     if (n.indexOf('baru:') === 0) { formBaru(null, n.slice(5)); return; }
-    if (n.indexOf('mode:') === 0) { simpanIsian(); mode = n.slice(5); if (mode === 'banyak' && F.baris.length === 1 && !F.baris[0].lambung && F.lambung) F.baris[0] = { tglNota: F.tglNota, lambung: F.lambung, unit: F.unit, uraian: F.uraian, total: F.total, foto: F.foto.slice(), video: F.video.slice() }; gambarForm(); return; }
+    if (n.indexOf('mode:') === 0) { simpanIsian(); mode = n.slice(5); if (mode === 'banyak' && F.baris.length === 1 && !F.baris[0].lambung && F.lambung) F.baris[0] = { tglNota: F.tglNota, lambung: F.lambung, unit: F.unit, uraian: F.uraian, total: F.total, foto: F.foto.slice(), wa: (F.wa || []).slice(), video: F.video.slice() }; gambarForm(); return; }
     if (n.indexOf('set:') === 0) { simpanIsian(); var p = n.split(':'); if (p[1] === 'jenisNota' && F.jenisNota !== p.slice(2).join(':')) F.kategori = ''; if (p[1] === 'masukKe') F.tokoBaru = false; F[p[1]] = p.slice(2).join(':'); if (p[1] === 'masukKe' && F.masukKe === BENGKEL && F.toko && (OPSI.bengkelAf || []).indexOf(F.toko) < 0) F.toko = ''; gambarForm(); R.getar(); return; }
     if (n.indexOf('hapusFoto:') === 0) { simpanIsian(); var q = n.slice(10), i0 = q.lastIndexOf(':'), tp = q.slice(0, i0); var L0 = ambilTempat(tp); L0.splice(+q.slice(i0 + 1), 1); gambarForm(); return; }
     if (n.indexOf('hapusVideo:') === 0) { simpanIsian(); var qv = n.slice(11), iv = qv.lastIndexOf(':'), tv = qv.slice(0, iv), Lv = ambilTempat(tv), x = Lv.splice(+qv.slice(iv + 1), 1)[0]; if (x) vHapus(x.vid).catch(function () { }); gambarForm(); return; }
@@ -732,7 +742,7 @@
         var it = A[ia]; if (!it) return;
         return hapusAntre(it.cid).then(function () {
           var d = it.d, pulih = function (L) { return (L || []).map(function (v) { return Object.assign({}, v); }); };
-          if (it.jenis === 'banyak') formBaru(Object.assign({}, d, { baris: d.nota.map(function (r) { return { tglNota: r.tglNota, lambung: r.lambung, unit: r.unit, uraian: r.uraian, total: r.total, foto: r.foto || [], video: pulih(r.videoVid) }; }) }), 'banyak');
+          if (it.jenis === 'banyak') formBaru(Object.assign({}, d, { baris: d.nota.map(function (r) { return { tglNota: r.tglNota, lambung: r.lambung, unit: r.unit, uraian: r.uraian, total: r.total, foto: r.foto || [], wa: r.wa || [], video: pulih(r.videoVid) }; }) }), 'banyak');
           else formBaru(Object.assign({}, d, { video: pulih(d.videoVid) }, d.unitRinci ? { unitR: d.unitRinci.map(function (u) { return Object.assign({}, u); }) } : {}), 'satu');
         });
       });
