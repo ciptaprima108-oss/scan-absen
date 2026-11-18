@@ -1,13 +1,13 @@
 {
- "versi": "3.37",
- "versionCode": 338,
+ "versi": "3.38",
+ "versionCode": 339,
  "wajib": false,
  "catatan": [
-  "P2H saya untuk driver (riwayat 7/30 hari, baca saja)",
-  "Banyak nota: bukti pengerjaan / barang per nota"
+  "Driver tidak lagi ditolak saat sinyal lemah (daftar fitur server dicoba ulang)",
+  "Pesan jelas + tombol Coba lagi kalau server belum terbaca"
  ],
- "apk": "WHL-App-v3.37.apk",
- "ukuran": 8525945,
- "sha256": "b9d5bfbff9d045c03ec995e9ea8749ecb9be4e32f4a685a18898f575306091ae",
- "dibuat": "2026-11-18 05:14"
+ "apk": "WHL-App-v3.38.apk",
+ "ukuran": 8526731,
+ "sha256": "b0b3f9ac2b997f303c5b17d26c90c6669129d14d8e9546228620e645684fce89",
+ "dibuat": "2026-11-18 17:03"
 }
