@@ -119,7 +119,7 @@
     var el = lapisSiap(), d = DATA, acc = d ? d.acc || [] : [], J = d && d.jadwal || {};
     var tabs = [['acc', 'Antrean ACC', acc.length], ['brf', 'Briefing'], ['jdw', 'Jadwal', J.kelewat || 0], ['eva', 'Evaluasi'], ['lap', 'Laporan']];
     var seg = '<div class="afSeg" role="tablist">' + tabs.map(function (t) { return '<button type="button" role="tab" data-af="tab:' + t[0] + '" class="' + (TAB === t[0] ? 'on' : '') + '">' + t[1] + (t[2] ? '<i>' + t[2] + '</i>' : '') + '</button>'; }).join('') + '</div>';
-    var pita = d ? '<div class="afPita' + (GALAT ? ' gagal' : '') + '"><button type="button" class="afSegar" data-af="segar">' + (MUAT ? 'Memuat…' : '↻ Segarkan') + '</button>' + esc(d.label || '') + ' · data jam ' + esc(String(d.jamServer || '').replace(':', '.')) + (GALAT ? '<br>Belum bisa menyegarkan: ' + esc(GALAT) : '') + '</div>' : '';
+    var pita = d ? '<div class="afPita' + (GALAT ? ' gagal' : '') + '"><button type="button" class="afSegar" data-af="gambar" style="margin-left:6px">⬇ Gambar</button><button type="button" class="afSegar" data-af="segar">' + (MUAT ? 'Memuat…' : '↻ Segarkan') + '</button>' + esc(d.label || '') + ' · data jam ' + esc(String(d.jamServer || '').replace(':', '.')) + (GALAT ? '<br>Belum bisa menyegarkan: ' + esc(GALAT) : '') + '</div>' : '';
     var isi = !d ? (GALAT ? '<div class="kartu afKosong"><b>Asisten belum bisa dimuat</b>' + esc(GALAT) + '<br><button type="button" class="tKecil" data-af="segar" style="margin-top:10px">Coba lagi</button></div>' : (R.kerangka ? R.kerangka('daftar') : '<div class="kartu"><span class="putar"></span> Memuat…</div>'))
       : VENDOR ? htmlVendor() : TAB === 'acc' ? htmlAcc(d) : TAB === 'brf' ? htmlBrf(d) : TAB === 'jdw' ? htmlJadwal(d) : TAB === 'eva' ? htmlEva(d) : htmlLap(d);
     var gulir = el.querySelector('.ksnIsi'), y = gulir ? gulir.scrollTop : 0;
@@ -164,7 +164,8 @@
     if (!T.total) h += '<div class="afPita">Belum ada data unit kemarin.</div>';
     else {
       var P = T.perPenyebab || {}, pil = SUB.peny || '';
-      h += '<div class="afPita">' + (T.efektif || 0) + '/' + T.total + ' unit efektif (target ≥ ' + esc(T.kmMin) + ' km dari DO per hari tambang). Ketuk penyebab untuk menyaring.</div>';
+      h += '<div class="afPita">' + (T.efektif || 0) + '/' + T.total + ' unit efektif (target ' + esc(T.patokan || ('≥ ' + T.kmMin + ' km dari DO per hari tambang')) + '). Ketuk penyebab untuk menyaring.</div>'
+        + (T.patokan ? '<div class="afPita">Rit dari DO admin' + (T.dataJam ? ', data jam ' + esc(String(T.dataJam).replace(':', '.')) : '') + '.' + (T.tanpaDo || (T.menungguDo && T.menungguDo.length) ? ' <b>DO belum lengkap</b>: ' + esc(T.tanpaDo) + ' unit belum ada DO' + (T.menungguDo && T.menungguDo.length ? '; menunggu DO admin (tidak dinilai): ' + T.menungguDo.slice(0, 12).map(function (x) { return esc(x.lambung); }).join(', ') : '') + '.' : '') +(T.ritEstimasi ? ' Tonase estimasi untuk ' + esc(T.ritEstimasi) + ' rit tanpa tonase DO (Trintin 55 t, Tronton 35 t per rit).' : '') + (T.tidakDihitung && T.tidakDihitung.length ? ' Tidak dihitung (' + T.tidakDihitung.length + '): ' + T.tidakDihitung.slice(0, 12).map(function (x) { return esc(x.lambung) + ' ' + esc(x.alasan.split(' (')[0].split(' —')[0]); }).join(', ') + (T.tidakDihitung.length > 12 ? ' …' : '') + '.' : '') + '</div>' : ''); /* revisi2 */
       h += '<div class="afPeny">' + [['driver', '👷 Driver'], ['mekanik', '🔧 Mekanik'], ['jalan', '🛣️ Jalan']].map(function (p) { return '<button type="button" data-af="peny:' + p[0] + '" class="' + (pil === p[0] ? 'on' : '') + '"><b>' + (P[p[0]] || 0) + '</b><small>' + p[1] + '</small></button>'; }).join('') + '</div>';
       var D = (T.daftar || []).filter(function (x) { return !pil || x.penyebab === pil; });
       h += D.length ? D.map(function (x) { return '<div class="afUnit"><b>' + esc(x.lambung) + '</b><span class="afChip afC-' + esc(x.penyebab) + '">' + esc(x.penyebab) + '</span>' + (x.driver ? ' <small style="display:inline;margin:0">· ' + esc(x.driver) + '</small>' : '') + '<small>' + esc(x.alasan) + '</small><small>' + esc(x.rit) + ' rit · ' + esc(x.km) + ' km DO' + (x.gps != null ? ' · GPS ' + esc(x.gps) + ' km' : '') + (x.p2h ? ' · P2H ✓' : ' · tanpa P2H') + '</small></div>'; }).join('') : '<div class="afPita">Tidak ada unit untuk penyebab ini.</div>';
@@ -254,13 +255,18 @@
     if (!E) return h + '<div class="afPita">Evaluasi belum tersedia.</div>';
     var P = E.perPenyebab || {}, tot = (P.driver || 0) + (P.mekanik || 0) + (P.jalan || 0);
     h += '<div class="afPita">' + esc(E.label) + ' · ' + E.hari + ' hari tambang</div>';
-    h += '<div class="afTiles"><div><small>Ritase</small><b>' + angka(E.rit) + '</b></div><div><small>Tonase</small><b>' + angka(Math.round(E.ton)) + '</b></div><div><small>Unit efektif</small><b>' + angka(E.persenEfektif) + '%</b></div>'
+    h += '<div class="afTiles"><div><small>Ritase</small><b>' + angka(E.rit) + '</b></div><div><small>' + (E.tonEstimasi ? 'Ton (estimasi)' : 'Tonase') + '</small><b>' + angka(Math.round(E.ton)) + '</b></div><div><small>Unit efektif</small><b>' + angka(E.persenEfektif) + '%</b></div>'
       + '<div><small>Kepatuhan P2H</small><b>' + angka(E.p2hPersen) + '%</b></div><div><small>Tiket BD</small><b>' + angka(E.bdTiket) + '</b></div><div><small>Rata perbaikan</small><b>' + (E.bdRataJam != null ? angka(E.bdRataJam) + ' j' : '–') + '</b></div></div>';
     h += '<div class="afH"><span>Unit tidak efektif per penyebab</span><small>' + tot + ' unit-hari</small></div><div class="afPanel">' + [['driver', '👷 Driver'], ['mekanik', '🔧 Mekanik'], ['jalan', '🛣️ Jalan']].map(function (p) { var n = P[p[0]] || 0; return '<div class="afBaris" style="display:block"><div style="display:flex;justify-content:space-between"><span>' + p[1] + '</span><b>' + n + '</b></div><div class="afBar"><i style="width:' + (tot ? Math.round(n / tot * 100) : 0) + '%;background:' + (p[0] === 'mekanik' ? '#dc2c2c' : p[0] === 'jalan' ? '#e08a00' : '#1e88e5') + '"></i></div></div>'; }).join('') + '</div>';
     function daftar(jd, L, f) { return L && L.length ? '<div class="afH"><span>' + jd + '</span></div><div class="afPanel">' + L.map(f).join('') + '</div>' : ''; }
     h += daftar('Unit paling sering tidak efektif', E.topUnit, function (u) { return '<div class="afBaris"><span>' + esc(u.lambung) + ' <span class="afChip afC-' + esc(u.penyebab) + '">' + esc(u.penyebab) + '</span></span><b>' + u.n + ' hari</b></div>'; });
     h += daftar('Driver paling sering di bawah target', E.topDriver, function (u) { return '<div class="afBaris"><span>' + esc(u.nama) + ' · ' + esc(u.lambung) + '</span><b>' + u.n + 'x</b></div>'; });
     h += daftar('Mekanik / BD terbanyak', E.topMekanik, function (u) { return '<div class="afBaris"><span>' + esc(u.nama) + ' · ' + esc((u.unit || []).join(', ')) + '</span><b>' + u.n + 'x</b></div>'; });
+    var PN = E.p2hNilai; /* revisi2: penilaian P2H driver & mekanik */
+    if (PN) { h += '<div class="afH"><span>✅ Penilaian P2H</span><small>target ' + PN.target + '%</small></div><div class="afTiles" style="grid-template-columns:repeat(3,1fr)"><div><small>Driver P2H sebelum jalan</small><b style="color:' + (PN.driver.persen >= PN.target ? '#15a34a' : '#dc2c2c') + '">' + PN.driver.persen + '%</b></div><div><small>Temuan ditindak ≤ ' + PN.tindakJam + ' j</small><b>' + (PN.mekanik.persen == null ? '–' : PN.mekanik.persen + '%') + '</b></div><div><small>Kritis tetap jalan</small><b style="color:' + (PN.mekanik.kritis ? '#dc2c2c' : '#15a34a') + '">' + PN.mekanik.kritis + '</b></div></div>';
+      h += daftar('Driver P2H terendah (hari P2H / hari jalan)', PN.driver.terendah, function (u) { return '<div class="afBaris"><span>' + esc(u.nama) + ' · ' + esc(u.lambung) + '</span><b>' + u.p2h + '/' + u.jalan + ' (' + u.persen + '%)</b></div>'; });
+      h += daftar('Temuan P2H belum ditindak', PN.mekanik.belum, function (u) { return '<div class="afBaris" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><span>' + esc(u.lambung) + (u.kritis ? ' <span class="afChip afC-mekanik">kritis, tetap jalan</span>' : '') + '</span><b>' + esc(u.hari.slice(8, 10) + '/' + u.hari.slice(5, 7)) + ' ' + esc(String(u.jam).replace(':', '.')) + '</b></div><small style="color:var(--redup)">' + esc(u.item) + '</small></div>'; });
+      h += '<div class="afPita">' + esc(PN.aturan) + '</div>'; }
     var A = E.acc || {}, Ab = E.absen, V = E.vendor, J = E.jadwal;
     h += '<div class="afH"><span>Lain-lain</span></div><div class="afPanel">'
       + '<div class="afBaris"><span>Kasbon / lembur / izin di-ACC</span><b>' + angka(A.kasbon) + ' / ' + angka(A.lembur) + ' / ' + angka(A.izin) + '</b></div>'
@@ -294,12 +300,76 @@
     function cad() { try { var ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); jadi(); } catch (e2) { roti('Tidak bisa menyalin.'); } }
   }
 
+  /* ---------- revisi2: EKSPOR GAMBAR per tab (canvas sendiri, huruf besar, gaya laporan) ---------- */
+  function modelTab() {
+    var d = DATA || {}, M = { judul: '', sub: (d.label || '') + ' · data jam ' + String(d.jamServer || '').replace(':', '.'), blok: [] };
+    var nmJ = { kasbon: 'Kasbon', lembur: 'Lembur', izin: 'Izin', tukar: 'Tukar poin' };
+    if (TAB === 'acc') { M.judul = 'Antrean ACC'; var A = d.acc || []; M.blok.push({ t: 'kpi', item: [['Menunggu', A.length], ['> 2 jam', A.filter(function (a) { return (a.menitTunggu || 0) >= 120; }).length]] });
+      M.blok.push({ t: 'daftar', j: A.length ? 'Daftar (paling lama di atas)' : 'Semua ACC beres', baris: A.map(function (a) { return [nmJ[a.jenis] + ' · ' + a.nama, a.lama, (a.menitTunggu || 0) >= 120 ? 'merah' : '', a.ringkas]; }) }); }
+    else if (TAB === 'brf') { var B = d.briefing || {}, sore = SUB.brf === 'sore'; M.judul = sore ? 'Briefing Sore' : 'Briefing Pagi'; var U = d.unit || {};
+      M.blok.push({ t: 'kpi', item: [['Ready', U.rfu], ['BD', U.perbaikan], ['Standby', U.standby]] }); M.blok.push({ t: 'poin', j: 'Poin briefing', item: (sore ? B.sore : B.pagi) || [] }); }
+    else if (TAB === 'jdw') { var J = d.jadwal || {}; M.judul = 'Jadwal Hari Ini'; M.blok.push({ t: 'kpi', item: [['Selesai', (J.selesai || 0) + '/' + (J.total || 0)], ['Kelewat', J.kelewat || 0]] });
+      M.blok.push({ t: 'daftar', j: 'Checklist', baris: (J.item || []).map(function (it) { return [(it.selesai ? '✓ ' : '☐ ') + it.teks, it.bagian, it.selesai ? 'hijau' : it.kelewat ? 'kuning' : '', it.dariTgl ? 'dari ' + it.dariTgl : '']; }) }); }
+    else if (TAB === 'eva') { var E = (d.evaluasi || {})[SUB.eva] || {}, P = E.perPenyebab || {}, PN = E.p2hNilai; M.judul = 'Evaluasi ' + (SUB.eva === 'bulanan' ? 'Bulan Ini' : '7 Hari'); M.sub = (E.label || '') + ' · ' + M.sub;
+      M.blok.push({ t: 'kpi', item: [['Ritase', E.rit], [E.tonEstimasi ? 'Ton (estimasi)' : 'Tonase', Math.round(E.ton || 0)], ['Unit efektif', (E.persenEfektif || 0) + '%'], ['P2H', (E.p2hPersen || 0) + '%']] });
+      M.blok.push({ t: 'daftar', j: 'Tidak efektif per penyebab (unit-hari)', baris: [['Driver', P.driver || 0, ''], ['Mekanik', P.mekanik || 0, 'merah'], ['Jalan', P.jalan || 0, 'kuning']] });
+      if (E.topUnit && E.topUnit.length) M.blok.push({ t: 'daftar', j: 'Unit paling sering tidak efektif', baris: E.topUnit.map(function (u) { return [u.lambung + ' · ' + u.penyebab, u.n + ' hari', '']; }) });
+      if (PN) M.blok.push({ t: 'daftar', j: 'Penilaian P2H', baris: [['Driver P2H sebelum jalan', PN.driver.persen + '%', PN.driver.persen >= PN.target ? 'hijau' : 'merah'], ['Temuan P2H ditindak mekanik', PN.mekanik.persen == null ? '–' : PN.mekanik.persen + '%', ''], ['Temuan kritis unit tetap jalan', PN.mekanik.kritis, PN.mekanik.kritis ? 'merah' : 'hijau']] }); }
+    else if (TAB === 'lap') { M.judul = 'Laporan'; var L = (d.laporan || {}).harian || {}; M.blok.push({ t: 'poin', j: L.periode || '', item: [L.kesimpulan || ''].concat(L.perhatian || []) }); }
+    if (TAB === 'brf' || TAB === 'tdk') { var T = d.tidakEfektif || {}, pil = SUB.peny || '';
+      M.blok.push({ t: 'daftar', j: 'Unit tidak efektif ' + (T.label || '') + ' · ' + (T.efektif || 0) + '/' + (T.total || 0) + ' efektif', baris: (T.daftar || []).filter(function (x) { return !pil || x.penyebab === pil; }).map(function (x) { return [x.lambung + ' · ' + x.penyebab + (x.driver ? ' · ' + x.driver : ''), x.rit + ' rit', x.penyebab === 'mekanik' ? 'merah' : x.penyebab === 'jalan' ? 'kuning' : '', x.alasan]; }) });
+      if (T.patokan) M.blok.push({ t: 'catat', item: ['Target: ' + T.patokan + '. Rit dari DO admin. ' + (T.menungguDo && T.menungguDo.length ? T.menungguDo.length + ' unit menunggu DO admin (tidak dinilai). ' : '') + (T.tidakDihitung && T.tidakDihitung.length ? T.tidakDihitung.length + ' unit standby/off tidak dihitung.' : '') + (T.ritEstimasi ? ' Tonase estimasi untuk ' + T.ritEstimasi + ' rit tanpa tonase DO.' : '')] }); }
+    return M;
+  }
+  function lukisTab(M) {
+    var W = 1080, P = 56, cv = document.createElement('canvas'), c = cv.getContext('2d'), FN = 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+    var WR = { merah: '#dc2c2c', kuning: '#d97706', hijau: '#15a34a' };
+    function f(px, b) { c.font = (b ? '700 ' : '400 ') + px + 'px ' + FN; }
+    function bungkus(t, px, b, lebar) { f(px, b); var k = String(t == null ? '' : t).split(/\s+/), L = [], s = ''; k.forEach(function (w) { var u = s ? s + ' ' + w : w; if (c.measureText(u).width > lebar && s) { L.push(s); s = w; } else s = u; }); if (s) L.push(s); return L.length ? L : ['']; }
+    function jalan(gambar) {
+      var y = 0; if (gambar) { c.fillStyle = '#eef3f9'; c.fillRect(0, 0, W, cv.height); c.fillStyle = '#0b2f63'; c.fillRect(0, 0, W, 190); }
+      if (gambar) { c.fillStyle = '#fff'; f(56, 1); c.fillText(M.judul, P, 92); f(28); c.fillStyle = '#c9d8f0'; c.fillText(M.sub, P, 140, W - 2 * P); }
+      y = 230;
+      M.blok.forEach(function (b) {
+        if (b.t === 'kpi') { var n = b.item.length, g = 16, w = (W - 2 * P - g * (n - 1)) / n;
+          b.item.forEach(function (it, i) { var x = P + i * (w + g); if (gambar) { c.fillStyle = '#fff'; c.fillRect(x, y, w, 150); c.fillStyle = '#5b6b82'; f(28, 1); c.fillText(String(it[0]), x + 20, y + 46, w - 30); c.fillStyle = '#0f1b2d'; f(60, 1); c.fillText(it[1] == null ? '–' : String(typeof it[1] === 'number' ? it[1].toLocaleString('id-ID') : it[1]), x + 20, y + 120, w - 30); } });
+          y += 180; return; }
+        if (b.j) { if (gambar) { c.fillStyle = '#0b2f63'; f(36, 1); c.fillText(b.j, P, y + 36, W - 2 * P); } y += 60; }
+        if (b.t === 'poin' || b.t === 'catat') { (b.item || []).forEach(function (t, i) { var px = b.t === 'catat' ? 26 : 32, L = bungkus((b.t === 'poin' ? (i + 1) + '. ' : '') + t, px, false, W - 2 * P - 20);
+          if (gambar) { c.fillStyle = b.t === 'catat' ? '#5b6b82' : '#0f1b2d'; L.forEach(function (s, j) { f(px); c.fillText(s, P + 10, y + px + j * (px + 12)); }); } y += L.length * (px + 12) + 14; }); y += 10; return; }
+        if (b.t === 'daftar') { (b.baris || []).slice(0, 40).forEach(function (r) { var L = bungkus(r[0], 32, true, W - 2 * P - 260), L2 = r[3] ? bungkus(r[3], 26, false, W - 2 * P - 40) : [], h = L.length * 42 + L2.length * 34 + 28;
+          if (gambar) { c.fillStyle = '#fff'; c.fillRect(P, y, W - 2 * P, h - 8); if (r[2]) { c.fillStyle = WR[r[2]] || '#7a8aa3'; c.fillRect(P, y, 10, h - 8); }
+            c.fillStyle = '#0f1b2d'; L.forEach(function (s, j) { f(32, 1); c.fillText(s, P + 28, y + 44 + j * 42); }); c.fillStyle = WR[r[2]] || '#0f1b2d'; f(32, 1); c.textAlign = 'right'; c.fillText(String(r[1] == null ? '' : r[1]), W - P - 20, y + 44); c.textAlign = 'left';
+            c.fillStyle = '#5b6b82'; L2.forEach(function (s, j) { f(26); c.fillText(s, P + 28, y + 44 + L.length * 42 + j * 34 - 6); }); }
+          y += h; }); y += 16; }
+      });
+      if (gambar) { c.fillStyle = '#7a8aa3'; f(24); c.fillText('Asisten Saya · Fanza · App WHL', P, y + 40); }
+      return y + 80;
+    }
+    cv.width = W; cv.height = 400; var H = jalan(false); cv.height = Math.max(600, Math.min(H, 14000)); jalan(true); return cv;
+  }
+  function eksporGambar() {
+    var M = modelTab(), cv; try { cv = lukisTab(M); } catch (e) { roti('Gambar gagal dibuat.'); return; }
+    var nama = 'Asisten-' + M.judul.replace(/[^A-Za-z0-9]+/g, '-') + '-' + String((DATA && DATA.hari) || '') + '.png';
+    cv.toBlob(function (bl) {
+      if (!bl) { roti('Gambar gagal dibuat.'); return; }
+      var file = null; try { file = new File([bl], nama, { type: 'image/png' }); } catch (e) { file = null; }
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) { navigator.share({ files: [file], title: M.judul }).catch(function () { /* dibatalkan */ }); return; }
+      var fr = new FileReader(); fr.onload = function () { var b64 = String(fr.result).split(',')[1];
+        if (window.WHL_BERKAS && window.WHL_BERKAS.buka) { window.WHL_BERKAS.buka(nama, b64, 'image/png').then(function () { roti('Gambar disimpan.'); }, function () { roti('Gambar gagal disimpan.'); }); return; }
+        var a = document.createElement('a'); a.href = fr.result; a.download = nama; document.body.appendChild(a); a.click(); a.remove(); roti('Gambar diunduh.'); };
+      fr.readAsDataURL(bl);
+    }, 'image/png');
+  }
+  window.__afModelTab = modelTab; window.__afLukisTab = lukisTab;
+
   /* ---------- klik ---------- */
   function klik(ev) {
     var b = ev.target.closest('[data-af]'); if (!b || !lapisEl || !lapisEl.contains(b)) return;
     var n = b.getAttribute('data-af'), p = n.split(':'), a = p[0], v = p.slice(1).join(':');
     if (a === 'tutup') { kembali(); return; }
     if (a === 'segar') { muat(true); gambarUlang(); return; }
+    if (a === 'gambar') { getar(); eksporGambar(); return; } /* revisi2 */
     if (a === 'tab') { TAB = v; VENDOR = null; getar(); gambarUlang(); var g = lapisEl.querySelector('.ksnIsi'); if (g) g.scrollTop = 0; return; }
     if (a === 'acc') { getar(); bukaAcc(p[1], p.slice(2).join(':')); return; }
     if (a === 'brf') { SUB.brf = v; gambarUlang(); return; }
