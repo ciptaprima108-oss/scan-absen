@@ -1,13 +1,13 @@
 {
- "versi": "3.41",
- "versionCode": 342,
+ "versi": "3.42",
+ "versionCode": 343,
  "wajib": false,
  "catatan": [
-  "Asisten Saya: Setujui/Tolak langsung di kartu ACC, buka lebih cepat",
-  "Nota: video mulai diunggah saat dipilih; ACC lembur langsung hilang dari daftar"
+  "Tukar poin: hadiah tampil bergambar (ketuk gambar = tampil besar)",
+  "Reza/Fanza/Rike bisa ganti gambar hadiah dari app"
  ],
- "apk": "WHL-App-v3.41.apk",
- "ukuran": 8567885,
- "sha256": "d7fdcd230f6b8f7a1c3cf5905cc820f8dafa711ae58b889429ae9dfe36d0fdaa",
- "dibuat": "2026-11-20 09:27"
+ "apk": "WHL-App-v3.42.apk",
+ "ukuran": 8595701,
+ "sha256": "9a96c3ba9e57c5444caebe8bdd25082add03cf1e80d1c2165fe66cfd8a15cbf3",
+ "dibuat": "2026-11-20 10:42"
 }
