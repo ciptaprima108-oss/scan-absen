@@ -1,13 +1,13 @@
 {
- "versi": "3.38",
- "versionCode": 339,
+ "versi": "3.41",
+ "versionCode": 342,
  "wajib": false,
  "catatan": [
-  "Driver tidak lagi ditolak saat sinyal lemah (daftar fitur server dicoba ulang)",
-  "Pesan jelas + tombol Coba lagi kalau server belum terbaca"
+  "Asisten Saya: Setujui/Tolak langsung di kartu ACC, buka lebih cepat",
+  "Nota: video mulai diunggah saat dipilih; ACC lembur langsung hilang dari daftar"
  ],
- "apk": "WHL-App-v3.38.apk",
- "ukuran": 8526731,
- "sha256": "b0b3f9ac2b997f303c5b17d26c90c6669129d14d8e9546228620e645684fce89",
- "dibuat": "2026-11-18 17:03"
+ "apk": "WHL-App-v3.41.apk",
+ "ukuran": 8567885,
+ "sha256": "d7fdcd230f6b8f7a1c3cf5905cc820f8dafa711ae58b889429ae9dfe36d0fdaa",
+ "dibuat": "2026-11-20 09:27"
 }
