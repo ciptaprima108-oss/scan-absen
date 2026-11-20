@@ -132,7 +132,7 @@
   }
   function muatAntre() {
     ANTRE = null; galat = ''; lapis();
-    panggil('antre', [], 30000).then(function (h) { if (h && h.login === false) galat = 'Sesi habis. Keluar lalu masuk lagi.'; else if (h && h.tolak) galat = h.pesan || 'Persetujuan lembur khusus pimpinan.'; else if (!h || !h.ok) galat = (h && h.pesan) || 'Belum bisa dimuat.'; else ANTRE = h.list || []; if (lapisEl) lapis(); }, function (e) { galat = e.message; if (lapisEl) lapis(); });
+    panggil('antre', [], 30000).then(function (h) { if (h && h.login === false) galat = 'Sesi habis. Keluar lalu masuk lagi.'; else if (h && h.tolak) galat = h.pesan || 'Persetujuan lembur khusus pimpinan.'; else if (!h || !h.ok) galat = (h && h.pesan) || 'Belum bisa dimuat.'; else ANTRE = (h.list || []).filter(function (a) { return !JALAN_P[a.id]; }); /* percepat-app-20nov */ if (lapisEl) lapis(); }, function (e) { galat = e.message; if (lapisEl) lapis(); });
   }
   function bukaAju(ctx) { CTX = ctx || CTX; if (!aktif()) { segera(); return; } mode = 'aju'; LIST = null; lapis(); muatList(); muat(); }
   function bukaAcc(ctx) { CTX = ctx || CTX; if (!aktif() || !punya('antre')) { segera(); return; } mode = 'acc'; yakin = ''; tolakId = ''; lapis(); muatAntre(); }
@@ -157,15 +157,29 @@
       muat(); muatList();
     }, function (e) { sibuk = false; roti(e.message + ' Ketuk Ajukan lagi (tidak akan dobel).'); lapis(); });
   }
+  /* percepat-app-20nov: ACC / Tolak optimistis. Kartu langsung hilang + "Menyimpan…", server menyimpan di belakang (dulu tombol terkunci 5-20 dtk).
+     Server menolak (ok:false) -> kartu kembali di tempatnya + pesan. Koneksi putus / waktu habis -> daftar dimuat ulang dari server (bisa jadi sudah tersimpan). */
+  var JALAN_P = {};
   function putus(id, kep, alasan, jam) {
-    sibuk = true; lapis();
+    if (JALAN_P[id]) return;
     var arg = [id, kep, alasan || '']; if (kep === 'ACC' && jam && aturan().pilihJam) arg.push(jam); /* v3.17: arg ke-5 = jam ACC pilihan pimpinan (server V498 cuma 4 arg) */
+    var awal = (ANTRE || []).slice(), kartu = awal.filter(function (a) { return a.id === id; })[0] || null, nm = kartu ? (kartu.nama || '') : '';
+    JALAN_P[id] = 1; yakin = ''; tolakId = '';
+    ANTRE = (ANTRE || []).filter(function (a) { return a.id !== id; }); if (ST) ST.menunggu = ANTRE.length; if (lapisEl) lapis();
+    if (R.getar) R.getar(); roti((kep === 'ACC' ? 'Menyimpan ACC' : 'Menyimpan penolakan') + (nm ? ' ' + nm : '') + '…');
     panggil('putus', arg, 45000).then(function (h) {
-      sibuk = false; yakin = ''; tolakId = '';
-      if (!h || !h.ok) { roti((h && h.pesan) || 'Belum bisa disimpan.'); lapis(); return; }
+      delete JALAN_P[id];
+      if (!h || !h.ok) {
+        if (ANTRE && kartu && !ANTRE.some(function (a) { return a.id === id; })) ANTRE.splice(Math.min(Math.max(awal.indexOf(kartu), 0), ANTRE.length), 0, kartu);
+        if (ST && ANTRE) ST.menunggu = ANTRE.length; if (R.bunyi) R.bunyi('gagal'); roti((nm ? nm + ': ' : '') + ((h && h.pesan) || 'Belum bisa disimpan.')); if (lapisEl) lapis(); return;
+      }
       if (R.bunyi) R.bunyi('sukses'); roti(h.pesan || (kep === 'ACC' ? 'Lembur di-ACC' + (h.sampai ? ' s/d ' + jamTitik(h.sampai) : '') + '.' : h.status === 'DICABUT' ? 'Lembur dicabut.' : 'Lembur ditolak.'));
-      ANTRE = (ANTRE || []).filter(function (a) { return a.id !== id; }); if (ST) ST.menunggu = ANTRE.length; lapis(); muat();
-    }, function (e) { sibuk = false; roti(e.message); lapis(); });
+      if (ST && ANTRE) ST.menunggu = ANTRE.length; if (lapisEl) lapis(); muat();
+    }, function (e) {
+      delete JALAN_P[id]; if (R.bunyi) R.bunyi('gagal');
+      roti((nm ? nm + ': ' : '') + 'koneksi putus (' + e.message + '). Daftar dimuat ulang, cek apakah sudah tersimpan.');
+      if (lapisEl && mode === 'acc') muatAntre(); else muat();
+    });
   }
   function klik(ev) {
     var b = ev.target.closest('[data-l]'); if (!b || !lapisEl || !lapisEl.contains(b)) return; var n = b.getAttribute('data-l');

@@ -6,6 +6,10 @@
  *   Tampil HANYA untuk akun Fanza dan HANYA kalau pusatPing memuat pusatAsistenFanza (server menolak akun lain juga).
  *   Kartu laporan direksi = laporan-direksi.js (WHL_LAPORAN_DIREKSI.buka(data.laporan.harian|mingguan|bulanan)).
  *   ACC dibuka lewat layar ACC yang SUDAH ADA (ctx.bukaNotif = bukaDariNotif app.js): kasbon_pimpinan / lembur / izin / poin.
+ *   asisten-acc-langsung-20nov (3.41): Setujui / Tolak LANGSUNG di kartu lewat RPC lama yang sama (pusatKasbonPutus / pusatLemburPutus / pusatIzinPutus /
+ *   pusatTukarPutus) -> cek hak, catatan, notifikasi, potong gaji sama dengan halaman aslinya. Konfirmasi di dalam kartu (bukan confirm() browser), anti dobel klik,
+ *   kartu hilang tanpa muat ulang. Percepat: req {aksi:'acc'} (antrean saja, cache server 2 mnt) jalan paralel dengan {aksi:'data'} (cache server 10 mnt);
+ *   data lama di HP tampil dulu, pembaruan di belakang (batas tunggu 150 dtk karena hitung penuh di server bisa 60-90 dtk).
  */
 (function () {
   'use strict';
@@ -13,6 +17,7 @@
   var MILIK = ['WHL01001']; /* Pak FANZA DWIYAN PRASETYA */
   var CTX = null, lapisEl = null, TAB = 'acc', SUB = { brf: 'pagi', eva: 'mingguan' }, DATA = null, DATA_T = 0, MUAT = null, GALAT = '', VENDOR = null, SIBUK = {};
   var SEGAR_MS = 180000, KUNCI = 'whlAsistenFanza1', TERBUKA = false;
+  var SIBUK_ACC = {}, ACC_UI = {}, HILANG = {}, MUAT_ACC = null, ACC_T = 0, HILANG_MS = 600000; /* asisten-acc-langsung-20nov */
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function sesi() { return CTX && CTX.sesi ? CTX.sesi() : null; }
   function roti(t) { if (CTX && CTX.roti) CTX.roti(t); }
@@ -31,15 +36,32 @@
   function muat(paksa) {
     if (MUAT) return MUAT;
     if (!paksa && DATA && Date.now() - DATA_T < SEGAR_MS) return Promise.resolve(DATA);
-    MUAT = panggil({ aksi: 'data' }).then(function (h) {
+    var mulai = Date.now();
+    MUAT = panggil({ aksi: 'data' }, 150000).then(function (h) { /* asisten-acc-langsung-20nov: hitung penuh server bisa 60-90 dtk -> jangan putus di 60 dtk */
       MUAT = null;
       if (h && h.login === false) { if (CTX && CTX.sesiHabis) CTX.sesiHabis(); return null; }
       if (!h || h.ok === false) { GALAT = (h && h.pesan) || 'Asisten belum bisa dimuat.'; return DATA; }
-      DATA = h; DATA_T = Date.now(); GALAT = ''; simpanLokal(); return DATA;
+      var accBaru = DATA && ACC_T > mulai ? { acc: DATA.acc, accGagal: DATA.accGagal, accJam: DATA.accJam } : null; /* antrean dari aksi 'acc' lebih baru */
+      DATA = h; DATA_T = Date.now(); GALAT = ''; if (accBaru) { DATA.acc = accBaru.acc; DATA.accGagal = accBaru.accGagal; DATA.accJam = accBaru.accJam; } saringHilang(); simpanLokal(); return DATA;
     }, function (e) { MUAT = null; GALAT = String((e && e.message) || e || 'Jaringan gagal').slice(0, 120); return DATA; })
       .then(function (d) { gambarUlang(); if (CTX && CTX.perbarui) CTX.perbarui(); return d; });
     return MUAT;
   }
+  /* asisten-acc-langsung-20nov: antrean ACC saja (server cache 2 mnt; paksa = hitung ulang sesudah ACC). Server lama tanpa aksi 'acc' -> diam. */
+  function muatAcc(paksa) {
+    if (MUAT_ACC) return MUAT_ACC;
+    MUAT_ACC = panggil({ aksi: 'acc', paksa: !!paksa }, 60000).then(function (h) {
+      MUAT_ACC = null;
+      if (h && h.login === false) { if (CTX && CTX.sesiHabis) CTX.sesiHabis(); return; }
+      if (!h || h.ok === false || !Array.isArray(h.acc)) return;
+      if (!DATA) DATA = { ok: true, sebagian: true, label: '', acc: [] };
+      DATA.acc = h.acc; DATA.accGagal = h.accGagal || {}; DATA.accJam = h.accJam || ''; ACC_T = Date.now(); saringHilang(); if (!DATA.sebagian) simpanLokal();
+      gambarUlang(); if (CTX && CTX.perbarui) CTX.perbarui();
+    }, function () { MUAT_ACC = null; });
+    return MUAT_ACC;
+  }
+  function kunciAcc(a) { return a.jenis + '|' + a.id; }
+  function saringHilang() { if (!DATA || !DATA.acc) return; var k = Date.now(); DATA.acc = DATA.acc.filter(function (a) { var t = HILANG[kunciAcc(a)]; return !(t && k - t < HILANG_MS); }); }
 
   /* ---------- gaya ---------- */
   function gaya() {
@@ -76,7 +98,12 @@
       + '.afBesar{width:100%;min-height:46px;border-radius:14px;background:#15a34a;color:#fff;font-weight:900;font-size:14.5px}.afBesar.abu{background:var(--panel2);color:var(--teks)}'
       + '.afForm textarea{width:100%;box-sizing:border-box;min-height:110px;border-radius:12px;border:1px solid var(--garis);background:var(--panel);color:var(--teks);padding:10px;font:inherit;font-size:14.5px;resize:vertical}'
       + '.afFoto{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.afFoto img{width:76px;height:76px;object-fit:cover;border-radius:10px}.afFoto button{min-height:40px;padding:0 12px;border-radius:12px;background:var(--panel2);color:var(--teks);font-weight:800;font-size:12.5px}'
-      + '.afPita{font-size:12px;color:var(--redup);margin:4px 2px 10px;line-height:1.4}.afPita.gagal{color:#b42323}.afSegar{float:right;min-height:30px;padding:0 10px;border-radius:99px;background:var(--panel2);color:var(--teks);font-weight:800;font-size:12px}';
+      + '.afPita{font-size:12px;color:var(--redup);margin:4px 2px 10px;line-height:1.4}.afPita.gagal{color:#b42323}.afSegar{float:right;min-height:30px;padding:0 10px;border-radius:99px;background:var(--panel2);color:var(--teks);font-weight:800;font-size:12px}'
+      + '.afAcc{transition:opacity .25s,transform .25s}.afAcc.afHilang{opacity:0;transform:translateX(48px)}.afAcc.sibuk{opacity:.75}.afAksi{display:flex;gap:6px;margin-top:9px}.afAksi button{flex:1;min-height:42px;border-radius:11px;font-weight:800;font-size:13.5px;padding:0 8px}' /* asisten-acc-langsung-20nov */
+      + '.afAksi .afYa{background:#15a34a;color:#fff}.afAksi .afNo{background:transparent;box-shadow:0 0 0 1.5px #dc2c2c inset;color:#b42323}.afAksi .afDet{flex:0 0 auto;background:var(--panel2);color:var(--teks);font-size:12.5px}.afAksi button[disabled]{opacity:.55}'
+      + '.afKonf{margin-top:9px;padding:10px;border-radius:12px;background:var(--panel2);font-size:13px;line-height:1.45;color:var(--teks)}.afAcc .afKonf b{display:inline;font-size:13px;white-space:normal;overflow:visible}.afKonf textarea{display:block;width:100%;box-sizing:border-box;min-height:66px;margin-top:6px;border-radius:10px;border:1px solid var(--garis);background:var(--panel);color:var(--teks);padding:8px 10px;font:inherit;font-size:16px;resize:vertical}'
+      + '.afPil{display:flex;gap:6px;margin:8px 0 2px}.afPil button{flex:1;min-height:40px;border-radius:10px;background:var(--panel);box-shadow:0 0 0 1px var(--garis) inset;color:var(--teks);font-weight:800;font-size:12.5px;padding:0 6px}.afPil button.on{box-shadow:0 0 0 2px var(--utama) inset;color:var(--utama)}'
+      + '.afGalat{display:block;margin-top:7px;color:#b42323;font-weight:700;font-size:12.5px;line-height:1.35}.afKonf .afAksi .afDet{background:var(--panel)}html[data-tema="gelap"] .afAksi .afNo,html[data-tema="gelap"] .afGalat{color:#ff8a8a}';
     document.head.appendChild(st);
   }
 
@@ -101,7 +128,7 @@
   /* ---------- lapis ---------- */
   function buka(ctx, tab) {
     CTX = ctx || CTX; if (!boleh()) { roti('Asisten Saya khusus Pak Fanza.'); return; } gaya(); pasangKlikGlobal();
-    if (tab) TAB = tab; TERBUKA = true; if (!DATA) ambilLokal(); gambarUlang(); muat(!DATA || Date.now() - DATA_T > 60000);
+    if (tab) TAB = tab; TERBUKA = true; if (!DATA) ambilLokal(); saringHilang(); gambarUlang(); muat(!DATA || Date.now() - DATA_T > 60000); if (Date.now() - ACC_T > 30000) muatAcc(false); /* asisten-acc-langsung-20nov */
   }
   function tutup() { TERBUKA = false; if (!lapisEl) return false; var d = lapisEl; lapisEl = null; VENDOR = null; d.classList.remove('tampil'); setTimeout(function () { d.remove(); }, 200); return true; }
   function kembali() { if (VENDOR) { VENDOR = null; gambarUlang(); return true; } return tutup(); }
@@ -111,6 +138,7 @@
       lapisEl = document.createElement('div'); lapisEl.className = 'lapis ksnLapis afLapis'; document.body.appendChild(lapisEl);
       requestAnimationFrame(function () { if (lapisEl) lapisEl.classList.add('tampil'); });
       lapisEl.addEventListener('click', klik); lapisEl.addEventListener('change', ganti);
+      lapisEl.addEventListener('input', function (ev) { var t = ev.target, k = t && t.getAttribute && t.getAttribute('data-af-alasan'); if (k && ACC_UI[k]) ACC_UI[k].alasan = t.value; }); /* asisten-acc-langsung-20nov */
     }
     return lapisEl;
   }
@@ -119,16 +147,81 @@
     var el = lapisSiap(), d = DATA, acc = d ? d.acc || [] : [], J = d && d.jadwal || {};
     var tabs = [['acc', 'Antrean ACC', acc.length], ['brf', 'Briefing'], ['jdw', 'Jadwal', J.kelewat || 0], ['eva', 'Evaluasi'], ['lap', 'Laporan']];
     var seg = '<div class="afSeg" role="tablist">' + tabs.map(function (t) { return '<button type="button" role="tab" data-af="tab:' + t[0] + '" class="' + (TAB === t[0] ? 'on' : '') + '">' + t[1] + (t[2] ? '<i>' + t[2] + '</i>' : '') + '</button>'; }).join('') + '</div>';
-    var pita = d ? '<div class="afPita' + (GALAT ? ' gagal' : '') + '"><button type="button" class="afSegar" data-af="gambar" style="margin-left:6px">⬇ Gambar</button><button type="button" class="afSegar" data-af="segar">' + (MUAT ? 'Memuat…' : '↻ Segarkan') + '</button>' + esc(d.label || '') + ' · data jam ' + esc(String(d.jamServer || '').replace(':', '.')) + (GALAT ? '<br>Belum bisa menyegarkan: ' + esc(GALAT) : '') + '</div>' : '';
-    var isi = !d ? (GALAT ? '<div class="kartu afKosong"><b>Asisten belum bisa dimuat</b>' + esc(GALAT) + '<br><button type="button" class="tKecil" data-af="segar" style="margin-top:10px">Coba lagi</button></div>' : (R.kerangka ? R.kerangka('daftar') : '<div class="kartu"><span class="putar"></span> Memuat…</div>'))
-      : VENDOR ? htmlVendor() : TAB === 'acc' ? htmlAcc(d) : TAB === 'brf' ? htmlBrf(d) : TAB === 'jdw' ? htmlJadwal(d) : TAB === 'eva' ? htmlEva(d) : htmlLap(d);
+    var pita = d ? '<div class="afPita' + (GALAT ? ' gagal' : '') + '"><button type="button" class="afSegar" data-af="gambar" style="margin-left:6px">⬇ Gambar</button><button type="button" class="afSegar" data-af="segar">' + (MUAT ? 'Memuat…' : '↻ Segarkan') + '</button>' + esc(d.label || '') + ' · data jam ' + esc(String(d.jamServer || '').replace(':', '.')) + (MUAT ? ' · memperbarui di belakang…' : '') + (TAB === 'acc' && d.accJam ? ' · antrean ACC jam ' + esc(String(d.accJam).replace(':', '.')) : '') + (GALAT ? '<br>Belum bisa menyegarkan: ' + esc(GALAT) : '') + '</div>' : '';
+    if (d && d.sebagian) pita = '<div class="afPita' + (GALAT ? ' gagal' : '') + '">' + (MUAT ? 'Antrean ACC sudah terbaru. Briefing, jadwal & evaluasi sedang dimuat…' : GALAT ? 'Belum bisa memuat briefing: ' + esc(GALAT) + ' <button type="button" class="afSegar" data-af="segar">↻ Coba lagi</button>' : '') + '</div>'; /* asisten-acc-langsung-20nov */
+    var tunggu = R.kerangka ? R.kerangka('daftar') : '<div class="kartu"><span class="putar"></span> Memuat…</div>';
+    var isi = !d ? (GALAT ? '<div class="kartu afKosong"><b>Asisten belum bisa dimuat</b>' + esc(GALAT) + '<br><button type="button" class="tKecil" data-af="segar" style="margin-top:10px">Coba lagi</button></div>' : tunggu)
+      : VENDOR ? htmlVendor() : d.sebagian && TAB !== 'acc' ? tunggu : TAB === 'acc' ? htmlAcc(d) : TAB === 'brf' ? htmlBrf(d) : TAB === 'jdw' ? htmlJadwal(d) : TAB === 'eva' ? htmlEva(d) : htmlLap(d);
     var gulir = el.querySelector('.ksnIsi'), y = gulir ? gulir.scrollTop : 0;
     el.innerHTML = '<div class="ksnKp"><button type="button" class="kb" data-af="tutup" aria-label="Kembali">‹</button><div class="nm">Pak ' + esc(d && d.fanza ? (String(d.fanza.nama).split(' ')[0].charAt(0) + String(d.fanza.nama).split(' ')[0].slice(1).toLowerCase()) : 'Fanza') + '<b>Asisten Saya</b></div></div><div class="ksnIsi">' + (VENDOR ? '' : seg) + pita + isi + '</div>';
     var g2 = el.querySelector('.ksnIsi'); if (g2 && y) g2.scrollTop = y;
   }
 
   /* ---------- 1. Antrean ACC ---------- */
-  var JN = { kasbon: ['💰', 'Kasbon / cicilan HP', 'Buka ACC kasbon'], lembur: ['⏰', 'Lembur', 'Buka ACC lembur'], izin: ['📝', 'Izin / sakit / cuti', 'Buka persetujuan izin'], tukar: ['🎁', 'Tukar poin', 'Buka ACC tukar poin'] };
+  var JN = { kasbon: ['💰', 'Kasbon / cicilan HP', 'Halaman kasbon'], lembur: ['⏰', 'Lembur', 'Halaman lembur'], izin: ['📝', 'Izin / sakit / cuti', 'Halaman izin'], tukar: ['🎁', 'Tukar poin', 'Halaman tukar poin'] };
+  /* asisten-acc-langsung-20nov: RPC lama per jenis (sama dengan halaman aslinya). Tombol langsung hanya kalau server punya RPC-nya. */
+  var FN_PUTUS = { kasbon: 'pusatKasbonPutus', lembur: 'pusatLemburPutus', izin: 'pusatIzinPutus', tukar: 'pusatTukarPutus' };
+  function bisaLangsung(j) { try { return !!FN_PUTUS[j] && API.Pusat.punya(FN_PUTUS[j]); } catch (e) { return false; } }
+  function rpAcc(n) { return 'Rp ' + String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  function teksKonf(a) {
+    var nm = '<b>' + esc(a.nama) + '</b>';
+    if (a.jenis === 'kasbon') return 'ACC ' + (a.cicilanHp ? 'cicilan HP ' : 'kasbon ') + nm + (a.nominal ? ' · ' + rpAcc(a.nominal) : '') + (a.alurBaru === true ? '. Sesudah ACC, admin mentransfer dan mengunggah bukti, lalu mulai dipotong dari gaji.' : a.alurBaru === false ? '. Catatan diaktifkan dan mulai dipotong dari gaji.' : '. Diproses sama seperti ACC di halaman kasbon.');
+    if (a.jenis === 'lembur') return 'ACC lembur ' + nm + (a.jamMinta ? ' sesuai jam yang diminta (' + esc(a.jamMinta) + ' jam).' : ' (ajuan otomatis = 2 jam).') + ' Mau atur jam lain? Pakai tombol Detail.';
+    if (a.jenis === 'izin') return 'Setujui ' + nm + ': ' + esc(a.ringkas) + '. Roster diisi otomatis.';
+    return 'ACC tukar poin ' + nm + ': ' + esc(a.ringkas) + '. Penerima dapat notifikasi siap ambil.';
+  }
+  function htmlKartuAcc(a, J) {
+    var k = kunciAcc(a), U = ACC_UI[k] || {}, sib = !!SIBUK_ACC[k], dis = sib ? ' disabled' : '', h = '';
+    h += '<div class="afAcc' + (sib ? ' sibuk' : '') + '" data-acc-k="' + esc(k) + '"><div class="afJn">' + J[0] + '</div><div class="afIs"><b>' + esc(a.nama) + '</b><small>' + esc(a.ringkas) + '</small><span class="afLama' + ((a.menitTunggu || 0) >= 120 ? ' lama' : '') + '">⏳ menunggu ' + esc(a.lama || '-') + '</span>';
+    if (!bisaLangsung(a.jenis)) return h + '</div><button type="button" class="afTb" data-af="acc:' + a.jenis + ':' + esc(a.id) + '" aria-label="Buka ACC ' + esc(a.nama) + '">ACC ›</button></div>';
+    if (U.mode === 'setuju') {
+      var perluP = a.perluPilihPotong || U.perluPotong, hariP = a.potongUsulHari || U.potongHari || '';
+      h += '<div class="afKonf" role="group" aria-label="Konfirmasi ACC">' + teksKonf(a)
+        + (perluP ? '<div class="afPil" role="radiogroup" aria-label="Potong gaji"><button type="button" role="radio" aria-checked="' + (U.potong === 'POTONG') + '" class="' + (U.potong === 'POTONG' ? 'on' : '') + '" data-af="potong:POTONG:' + esc(k) + '"' + dis + '>Potong gaji' + (hariP ? ' (' + esc(hariP) + ' hari)' : '') + '</button><button type="button" role="radio" aria-checked="' + (U.potong === 'TIDAK') + '" class="' + (U.potong === 'TIDAK' ? 'on' : '') + '" data-af="potong:TIDAK:' + esc(k) + '"' + dis + '>Tidak dipotong</button></div>' : '')
+        + (U.pesan ? '<span class="afGalat">' + esc(U.pesan) + '</span>' : '')
+        + '<div class="afAksi"><button type="button" class="afYa" data-af="kirimYa:' + esc(k) + '"' + dis + '>' + (sib ? 'Menyimpan…' : '✓ Ya, setujui') + '</button><button type="button" class="afDet" data-af="batalAcc:' + esc(k) + '"' + dis + '>Batal</button></div></div>';
+    } else if (U.mode === 'tolak') {
+      h += '<div class="afKonf" role="group" aria-label="Alasan tolak"><label for="afAl-' + esc(a.id) + '">Tolak ' + (a.jenis === 'izin' ? 'pengajuan' : 'ajuan') + ' <b>' + esc(a.nama) + '</b> — alasan (wajib, dikirim ke pengaju):</label>'
+        + '<textarea id="afAl-' + esc(a.id) + '" data-af-alasan="' + esc(k) + '" maxlength="200" placeholder="Contoh: sisa gaji tidak cukup, ajukan bulan depan"' + dis + '>' + esc(U.alasan || '') + '</textarea>'
+        + (U.pesan ? '<span class="afGalat">' + esc(U.pesan) + '</span>' : '')
+        + '<div class="afAksi"><button type="button" class="afNo" data-af="kirimTolak:' + esc(k) + '"' + dis + '>' + (sib ? 'Menyimpan…' : '✕ Kirim tolak') + '</button><button type="button" class="afDet" data-af="batalAcc:' + esc(k) + '"' + dis + '>Batal</button></div></div>';
+    } else {
+      h += (U.pesan ? '<span class="afGalat">' + esc(U.pesan) + '</span>' : '') + '<div class="afAksi"><button type="button" class="afYa" data-af="ya:' + esc(k) + '" aria-label="Setujui ' + esc(a.nama) + '"' + dis + '>✓ Setujui</button><button type="button" class="afNo" data-af="tolak:' + esc(k) + '" aria-label="Tolak ' + esc(a.nama) + '"' + dis + '>✕ Tolak</button>'
+        + '<button type="button" class="afDet" data-af="acc:' + a.jenis + ':' + esc(a.id) + '" aria-label="Detail ' + esc(a.nama) + '"' + dis + '>Detail ›</button></div>';
+    }
+    return h + '</div></div>';
+  }
+  function cariAcc(k) { return ((DATA && DATA.acc) || []).filter(function (a) { return kunciAcc(a) === k; })[0]; }
+  function pesanSukses(a, setuju, h) {
+    if (a.jenis === 'kasbon') return setuju ? (h.status === 'MENUNGGU ADMIN' ? 'Di-ACC. Menunggu transfer admin.' : 'Disetujui. Mulai dipotong dari gaji.') : 'Ajuan ditolak.';
+    if (a.jenis === 'lembur') return h.pesan || (setuju ? 'Lembur di-ACC' + (h.sampai ? ' s/d ' + String(h.sampai).slice(-5).replace(':', '.') : '') + '.' : h.status === 'DICABUT' ? 'Lembur dicabut.' : 'Lembur ditolak.');
+    if (a.jenis === 'izin') return (h.pesan && !(!setuju && /disetujui/i.test(h.pesan)) ? h.pesan : '') || (setuju ? 'Izin disetujui' + (h.catRoster ? ' · roster ' + h.catRoster : '') + '.' : 'Izin ditolak.');
+    return setuju ? 'Di-ACC. Penerima dapat notifikasi "siap ambil".' : 'Ditolak. Poin dikembalikan ke pemiliknya.';
+  }
+  /** keputusan lewat RPC LAMA (hak & efek sama persis). Anti dobel: SIBUK_ACC + tombol nonaktif; server menolak ajuan yang sudah diputus. */
+  function putusAcc(k, setuju) {
+    var a = cariAcc(k), U = ACC_UI[k] = ACC_UI[k] || {}, S = sesi(); if (!a || SIBUK_ACC[k]) return;
+    if (!S || !S.tokenPusat) { roti('Belum masuk.'); return; }
+    var al = String(U.alasan || '').trim(), kep = setuju ? 'ACC' : 'TOLAK', janji;
+    if (!setuju && al.length < 3) { U.pesan = 'Tulis alasan penolakan (minimal 3 huruf).'; gambarUlang(); var ta = lapisEl && lapisEl.querySelector('[data-af-alasan="' + k.replace(/"/g, '') + '"]'); if (ta) ta.focus(); return; }
+    if (setuju && (a.perluPilihPotong || U.perluPotong) && U.potong !== 'POTONG' && U.potong !== 'TIDAK') { U.pesan = 'Pilih dulu: Potong gaji atau Tidak dipotong.'; try { if (R.getar) R.getar('awas'); } catch (e) { /* */ } gambarUlang(); return; }
+    SIBUK_ACC[k] = 1; U.pesan = ''; gambarUlang();
+    if (a.jenis === 'kasbon' && API.Pusat.kasbonPutus) janji = API.Pusat.kasbonPutus(S, a.id, kep, setuju ? '' : al);
+    else if (a.jenis === 'tukar') janji = API.Pusat.panggil('pusatTukarPutus', [S.tokenPusat, a.id, !!setuju, setuju ? '' : al], 45000);
+    else { var arg = [S.tokenPusat, a.id, kep, setuju ? '' : al]; if (a.jenis === 'izin' && setuju && (a.perluPilihPotong || U.perluPotong)) arg.push(U.potong); janji = API.Pusat.panggil(FN_PUTUS[a.jenis], arg, 45000); }
+    janji.then(function (h) {
+      delete SIBUK_ACC[k];
+      if (h && h.login === false) { if (CTX && CTX.sesiHabis) CTX.sesiHabis(); return; }
+      if (h && h.perluPilihPotong) { U.mode = 'setuju'; U.perluPotong = true; U.potongHari = h.potongUsulHari; U.pesan = h.pesan || 'Pilih dulu: Potong gaji atau Tidak dipotong.'; gambarUlang(); return; }
+      if (!h || !h.ok) { U.pesan = (h && h.pesan) || 'Keputusan belum tersimpan.'; try { if (R.bunyi) R.bunyi('gagal'); } catch (e) { /* */ } gambarUlang(); setTimeout(function () { muatAcc(true); }, 800); return; }
+      HILANG[k] = Date.now(); delete ACC_UI[k];
+      try { if (R.bunyi) R.bunyi('sukses'); if (R.getar) R.getar('sukses'); } catch (e) { /* */ }
+      roti(pesanSukses(a, setuju, h));
+      var el = lapisEl && lapisEl.querySelector('[data-acc-k="' + k.replace(/"/g, '') + '"]'); if (el) el.classList.add('afHilang');
+      setTimeout(function () { saringHilang(); simpanLokal(); gambarUlang(); if (CTX && CTX.perbarui) CTX.perbarui(); }, el ? 260 : 0);
+      setTimeout(function () { muatAcc(true); }, 1500); /* segarkan cache ACC server (data inti ikut memakai antrean baru) */
+    }, function (e) { delete SIBUK_ACC[k]; U.pesan = 'Belum terkirim: ' + String((e && e.message) || 'cek sinyal').slice(0, 100) + '. Coba lagi — kalau ternyata sudah tersimpan, server menolak dobel.'; try { if (R.bunyi) R.bunyi('gagal'); } catch (e2) { /* */ } gambarUlang(); setTimeout(function () { muatAcc(true); }, 3000); });
+  }
   function htmlAcc(d) {
     var acc = d.acc || [];
     if (!acc.length) return '<div class="kartu afKosong">✅<b>Semua ACC beres</b>Tidak ada kasbon, lembur, izin, atau tukar poin yang menunggu Bapak.</div>' + gagalAcc(d);
@@ -137,12 +230,9 @@
     ['kasbon', 'lembur', 'izin', 'tukar'].forEach(function (j) {
       var L = grup[j]; if (!L) return; var J = JN[j];
       h += '<div class="afH"><span>' + J[0] + ' ' + J[1] + ' · ' + L.length + '</span><button type="button" class="afTb" data-af="acc:' + j + '">' + J[2] + ' ›</button></div>';
-      L.forEach(function (a) {
-        h += '<div class="afAcc"><div class="afJn">' + J[0] + '</div><div class="afIs"><b>' + esc(a.nama) + '</b><small>' + esc(a.ringkas) + '</small><span class="afLama' + ((a.menitTunggu || 0) >= 120 ? ' lama' : '') + '">⏳ menunggu ' + esc(a.lama || '-') + '</span></div>'
-          + '<button type="button" class="afTb" data-af="acc:' + j + ':' + esc(a.id) + '" aria-label="Buka ACC ' + esc(a.nama) + '">ACC ›</button></div>';
-      });
+      L.forEach(function (a) { h += htmlKartuAcc(a, J); }); /* asisten-acc-langsung-20nov */
     });
-    return '<div class="afPita">Yang menunggu ACC Bapak, paling lama di atas. Merah = lebih dari 2 jam. Nota pengajuan di-ACC admin Input DO (bukan antrean Bapak).</div>' + h + gagalAcc(d);
+    return '<div class="afPita">Yang menunggu ACC Bapak, paling lama di atas. Merah = lebih dari 2 jam. Setujui / Tolak langsung di kartu; Detail = halaman lengkap (lampiran, atur jam lembur). Nota pengajuan di-ACC admin Input DO (bukan antrean Bapak).</div>' + h + gagalAcc(d);
   }
   function gagalAcc(d) { var g = d.accGagal || {}, k = Object.keys(g); return k.length ? '<div class="afPita gagal">Belum terbaca: ' + esc(k.join(', ')) + ' — coba Segarkan.</div>' : ''; }
   function bukaAcc(j, id) {
@@ -158,17 +248,18 @@
     var B = d.briefing || {}, L = SUB.brf === 'sore' ? B.sore || [] : B.pagi || [], U = d.unit || {}, T = d.tidakEfektif || {};
     var h = '<div class="afSub"><button type="button" data-af="brf:pagi" class="' + (SUB.brf === 'pagi' ? 'on' : '') + '">☀️ Briefing pagi</button><button type="button" data-af="brf:sore" class="' + (SUB.brf === 'sore' ? 'on' : '') + '">🌇 Briefing sore</button></div>';
     h += '<div class="afTiles" style="margin-bottom:10px"><div><small>Ready</small><b style="color:#15a34a">' + angka(U.rfu) + '</b></div><div><small>BD / perbaikan</small><b style="color:#dc2c2c">' + angka(U.perbaikan) + '</b></div><div><small>Standby</small><b>' + angka(U.standby) + '</b></div></div>';
-    h += '<ol class="afBrf">' + L.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol><button type="button" class="afBesar abu" data-af="salinBrf" style="margin:4px 0 6px">📋 Salin poin briefing (untuk dibacakan / WA tim)</button>';
+    h += '<ol class="afBrf">' + L.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol><button type="button" class="afBesar" data-af="bagiBrf" style="margin:4px 0 6px">📤 Bagikan briefing ke WA (gambar + teks)</button>';
     if (U.bd && U.bd.length) h += '<div class="afH"><span>🔧 Unit BD sekarang</span><small>' + U.bd.length + ' unit</small></div><div class="afPanel">' + U.bd.map(function (b) { return '<div class="afBaris"><span>' + esc(b.lambung) + ' · ' + esc(b.status) + (b.storing ? ' · storing' : '') + '</span><b style="color:' + (b.lamaJam >= 24 ? '#dc2c2c' : 'inherit') + '">' + esc(b.lama) + '</b></div>'; }).join('') + '</div>';
     h += '<div class="afH"><span>Unit tidak efektif kemarin</span><small>' + esc(T.label || '') + '</small></div>';
     if (!T.total) h += '<div class="afPita">Belum ada data unit kemarin.</div>';
     else {
       var P = T.perPenyebab || {}, pil = SUB.peny || '';
       h += '<div class="afPita">' + (T.efektif || 0) + '/' + T.total + ' unit efektif (target ' + esc(T.patokan || ('≥ ' + T.kmMin + ' km dari DO per hari tambang')) + '). Ketuk penyebab untuk menyaring.</div>'
-        + (T.patokan ? '<div class="afPita">Rit dari DO admin' + (T.dataJam ? ', data jam ' + esc(String(T.dataJam).replace(':', '.')) : '') + '.' + (T.tanpaDo || (T.menungguDo && T.menungguDo.length) ? ' <b>DO belum lengkap</b>: ' + esc(T.tanpaDo) + ' unit belum ada DO' + (T.menungguDo && T.menungguDo.length ? '; menunggu DO admin (tidak dinilai): ' + T.menungguDo.slice(0, 12).map(function (x) { return esc(x.lambung); }).join(', ') : '') + '.' : '') +(T.ritEstimasi ? ' Tonase estimasi untuk ' + esc(T.ritEstimasi) + ' rit tanpa tonase DO (Trintin 55 t, Tronton 35 t per rit).' : '') + (T.tidakDihitung && T.tidakDihitung.length ? ' Tidak dihitung (' + T.tidakDihitung.length + '): ' + T.tidakDihitung.slice(0, 12).map(function (x) { return esc(x.lambung) + ' ' + esc(x.alasan.split(' (')[0].split(' —')[0]); }).join(', ') + (T.tidakDihitung.length > 12 ? ' …' : '') + '.' : '') + '</div>' : ''); /* revisi2 */
+        + (T.patokan ? '<div class="afPita">Rit dari ' + esc(T.sumberRit || 'DO admin') + (T.dataJam ? ', data jam ' + esc(String(T.dataJam).replace(':', '.')) : '') + '.' + (T.tanpaDo || (T.menungguDo && T.menungguDo.length) ? ' <b>DO belum lengkap</b>: ' + esc(T.tanpaDo) + ' unit belum ada DO' + (T.menungguDo && T.menungguDo.length ? '; menunggu DO admin (tidak dinilai): ' + T.menungguDo.slice(0, 12).map(function (x) { return esc(x.lambung); }).join(', ') : '') + '.' : '') +(T.ritEstimasi ? ' Tonase estimasi untuk ' + esc(T.ritEstimasi) + ' rit tanpa tonase DO (Trintin 55 t, Tronton 35 t per rit).' : '') + (T.tidakDihitung && T.tidakDihitung.length ? ' Tidak dihitung (' + T.tidakDihitung.length + '): ' + T.tidakDihitung.slice(0, 12).map(function (x) { return esc(x.lambung) + ' ' + esc(x.alasan.split(' (')[0].split(' —')[0]); }).join(', ') + (T.tidakDihitung.length > 12 ? ' …' : '') + '.' : '') + '</div>' : ''); /* revisi2 */
       h += '<div class="afPeny">' + [['driver', '👷 Driver'], ['mekanik', '🔧 Mekanik'], ['jalan', '🛣️ Jalan']].map(function (p) { return '<button type="button" data-af="peny:' + p[0] + '" class="' + (pil === p[0] ? 'on' : '') + '"><b>' + (P[p[0]] || 0) + '</b><small>' + p[1] + '</small></button>'; }).join('') + '</div>';
       var D = (T.daftar || []).filter(function (x) { return !pil || x.penyebab === pil; });
       h += D.length ? D.map(function (x) { return '<div class="afUnit"><b>' + esc(x.lambung) + '</b><span class="afChip afC-' + esc(x.penyebab) + '">' + esc(x.penyebab) + '</span>' + (x.driver ? ' <small style="display:inline;margin:0">· ' + esc(x.driver) + '</small>' : '') + '<small>' + esc(x.alasan) + '</small><small>' + esc(x.rit) + ' rit · ' + esc(x.km) + ' km DO' + (x.gps != null ? ' · GPS ' + esc(x.gps) + ' km' : '') + (x.p2h ? ' · P2H ✓' : ' · tanpa P2H') + '</small></div>'; }).join('') : '<div class="afPita">Tidak ada unit untuk penyebab ini.</div>';
+      if (T.readyTidakMuat && T.readyTidakMuat.length) h += '<div class="afH"><span>🅿️ Ready tapi TIDAK MUAT kemarin</span><small>' + T.readyTidakMuat.length + ' unit</small></div><div class="afPita">Unit tanpa tiket BD tapi 0 rit di laporan muat, dengan dugaan sebabnya dari DO/UJ, P2H, GPS, kendala.</div>' + T.readyTidakMuat.map(function (x) { return '<div class="afUnit"><b>' + esc(x.lambung) + '</b>' + (x.driver ? ' <small style="display:inline;margin:0">· ' + esc(x.driver) + '</small>' : '') + '<small>' + esc(x.dugaan) + '</small></div>'; }).join(''); /* revisi3 */
       if (T.sumberKurang && T.sumberKurang.length) h += '<div class="afPita">Sumber belum lengkap: ' + esc(T.sumberKurang.join(', ')) + '.</div>';
     }
     return h;
@@ -260,12 +351,15 @@
     h += '<div class="afH"><span>Unit tidak efektif per penyebab</span><small>' + tot + ' unit-hari</small></div><div class="afPanel">' + [['driver', '👷 Driver'], ['mekanik', '🔧 Mekanik'], ['jalan', '🛣️ Jalan']].map(function (p) { var n = P[p[0]] || 0; return '<div class="afBaris" style="display:block"><div style="display:flex;justify-content:space-between"><span>' + p[1] + '</span><b>' + n + '</b></div><div class="afBar"><i style="width:' + (tot ? Math.round(n / tot * 100) : 0) + '%;background:' + (p[0] === 'mekanik' ? '#dc2c2c' : p[0] === 'jalan' ? '#e08a00' : '#1e88e5') + '"></i></div></div>'; }).join('') + '</div>';
     function daftar(jd, L, f) { return L && L.length ? '<div class="afH"><span>' + jd + '</span></div><div class="afPanel">' + L.map(f).join('') + '</div>' : ''; }
     h += daftar('Unit paling sering tidak efektif', E.topUnit, function (u) { return '<div class="afBaris"><span>' + esc(u.lambung) + ' <span class="afChip afC-' + esc(u.penyebab) + '">' + esc(u.penyebab) + '</span></span><b>' + u.n + ' hari</b></div>'; });
-    h += daftar('Driver paling sering di bawah target', E.topDriver, function (u) { return '<div class="afBaris"><span>' + esc(u.nama) + ' · ' + esc(u.lambung) + '</span><b>' + u.n + 'x</b></div>'; });
-    h += daftar('Mekanik / BD terbanyak', E.topMekanik, function (u) { return '<div class="afBaris"><span>' + esc(u.nama) + ' · ' + esc((u.unit || []).join(', ')) + '</span><b>' + u.n + 'x</b></div>'; });
+    h += daftar('👷 Driver paling sering TIDAK MUAT (unit 0 rit, tanpa BD)', E.topDriver, function (u) { return '<div class="afBaris"><span>' + esc(u.nama) + ' · ' + esc(u.lambung) + '</span><b>' + u.n + 'x</b></div>'; });
+    if (E.mekanikTiket && E.mekanikTiket.length) { h += daftar('🔧 Mekanik paling banyak menangani BD (' + (SUB.eva === 'bulanan' ? 'bulan ini' : '7 hari') + ')', E.mekanikTiket, function (u) { return '<div class="afBaris" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><span>' + esc(u.nama) + '</span><b>' + u.tiket + ' tiket BD</b></div><small style="color:var(--redup)">rata-rata perbaikan ' + (u.rataJam != null ? esc(String(u.rataJam).replace('.', ',')) + ' jam' : '–') + (u.terbuka ? ' · ' + u.terbuka + ' masih dikerjakan' : '') + ' · unit: ' + esc((u.unit || []).join(', ')) + (u.nUnit > 6 ? ' …' : '') + '</small></div>'; }); h += '<div class="afPita">Jumlah tiket BD yang dikerjakan = BEBAN KERJA, bukan nilai baik/buruk. Kinerja lihat rata-rata lama perbaikan (makin kecil makin cepat).</div>'; }
+    else h += daftar('Mekanik / BD terbanyak', E.topMekanik, function (u) { return '<div class="afBaris"><span>' + esc(u.nama) + ' · ' + esc((u.unit || []).join(', ')) + '</span><b>' + u.n + 'x</b></div>'; });
+    if (E.unitBd && E.unitBd.length) h += daftar('🚚 Unit paling sering BD', E.unitBd, function (u) { return '<div class="afBaris"><span>' + esc(u.lambung) + ' · total ' + u.jam + ' jam perbaikan' + (u.terbuka ? ' · ' + u.terbuka + ' belum selesai' : '') + '</span><b>' + u.tiket + ' tiket</b></div>'; }); /* revisi3 */
     var PN = E.p2hNilai; /* revisi2: penilaian P2H driver & mekanik */
-    if (PN) { h += '<div class="afH"><span>✅ Penilaian P2H</span><small>target ' + PN.target + '%</small></div><div class="afTiles" style="grid-template-columns:repeat(3,1fr)"><div><small>Driver P2H sebelum jalan</small><b style="color:' + (PN.driver.persen >= PN.target ? '#15a34a' : '#dc2c2c') + '">' + PN.driver.persen + '%</b></div><div><small>Temuan ditindak ≤ ' + PN.tindakJam + ' j</small><b>' + (PN.mekanik.persen == null ? '–' : PN.mekanik.persen + '%') + '</b></div><div><small>Kritis tetap jalan</small><b style="color:' + (PN.mekanik.kritis ? '#dc2c2c' : '#15a34a') + '">' + PN.mekanik.kritis + '</b></div></div>';
-      h += daftar('Driver P2H terendah (hari P2H / hari jalan)', PN.driver.terendah, function (u) { return '<div class="afBaris"><span>' + esc(u.nama) + ' · ' + esc(u.lambung) + '</span><b>' + u.p2h + '/' + u.jalan + ' (' + u.persen + '%)</b></div>'; });
-      h += daftar('Temuan P2H belum ditindak', PN.mekanik.belum, function (u) { return '<div class="afBaris" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><span>' + esc(u.lambung) + (u.kritis ? ' <span class="afChip afC-mekanik">kritis, tetap jalan</span>' : '') + '</span><b>' + esc(u.hari.slice(8, 10) + '/' + u.hari.slice(5, 7)) + ' ' + esc(String(u.jam).replace(':', '.')) + '</b></div><small style="color:var(--redup)">' + esc(u.item) + '</small></div>'; });
+    if (PN) { h += '<div class="afH"><span>✅ Penilaian P2H</span><small>target ' + PN.target + '%</small></div><div class="afTiles" style="grid-template-columns:repeat(3,1fr)"><div><small>Driver P2H sebelum jalan</small><b style="color:' + (PN.driver.persen >= PN.target ? '#15a34a' : '#dc2c2c') + '">' + PN.driver.persen + '%</b><small>hari unit jalan yang ada P2H (24 jam)</small></div><div><small>Temuan P2H ditindak</small><b>' + (PN.mekanik.persen == null ? '–' : PN.mekanik.persen + '%') + '</b><small>dapat tiket perbaikan ≤ ' + PN.tindakJam + ' jam</small></div><div><small>Temuan kritis</small><b style="color:' + (PN.mekanik.kritis ? '#dc2c2c' : '#15a34a') + '">' + PN.mekanik.kritis + '</b><small>rem/ban/kemudi, unit tetap jalan tanpa tiket</small></div></div>';
+      h += daftar('🚫 Driver paling sering jalan TANPA P2H (' + (SUB.eva === 'bulanan' ? 'bulan ini' : '7 hari') + ')', (PN.driver.terendah || []).filter(function (u) { return u.jalan > u.p2h; }), function (u) { return '<div class="afBaris" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><span>' + esc(u.nama) + ' · ' + esc(u.lambung) + '</span><b style="color:#dc2c2c">' + (u.jalan - u.p2h) + '× tanpa P2H</b></div><small style="color:var(--redup)">jalan ' + u.jalan + ' hari · P2H ' + u.p2h + ' hari</small></div>'; });
+      if (PN.driver.tanpaP2h != null) h += '<div class="afPita">Dihitung per hari unit jalan: sudah P2H kalau ada P2H GASPOL unit itu atau driver-nya di hari itu / hari sebelumnya (≤ 24 jam sebelum muat). Total ' + PN.driver.tanpaP2h + ' hari jalan tanpa P2H.</div>'; /* revisi3 */
+      h += daftar('🛠️ Temuan P2H (TIDAK BAIK) yang belum ditindak mekanik', PN.mekanik.belum, function (u) { var um = DATA && DATA.hari ? Math.max(0, Math.round((Date.parse(DATA.hari + 'T00:00:00Z') - Date.parse(u.hari + 'T00:00:00Z')) / 864e5)) : null; return '<div class="afBaris" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><span>' + esc(u.lambung) + (u.kritis ? ' <span class="afChip afC-mekanik">kritis, tetap jalan</span>' : '') + '</span><b>' + (um == null ? '' : um === 0 ? 'hari ini' : um + ' hari belum ditindak') + '</b></div><small style="color:var(--redup)">' + esc(u.item) + ' · dicatat ' + esc(u.hari.slice(8, 10) + '/' + u.hari.slice(5, 7)) + ' ' + esc(String(u.jam).replace(':', '.')) + '</small></div>'; });
       h += '<div class="afPita">' + esc(PN.aturan) + '</div>'; }
     var A = E.acc || {}, Ab = E.absen, V = E.vendor, J = E.jadwal;
     h += '<div class="afH"><span>Lain-lain</span></div><div class="afPanel">'
@@ -314,11 +408,11 @@
       M.blok.push({ t: 'kpi', item: [['Ritase', E.rit], [E.tonEstimasi ? 'Ton (estimasi)' : 'Tonase', Math.round(E.ton || 0)], ['Unit efektif', (E.persenEfektif || 0) + '%'], ['P2H', (E.p2hPersen || 0) + '%']] });
       M.blok.push({ t: 'daftar', j: 'Tidak efektif per penyebab (unit-hari)', baris: [['Driver', P.driver || 0, ''], ['Mekanik', P.mekanik || 0, 'merah'], ['Jalan', P.jalan || 0, 'kuning']] });
       if (E.topUnit && E.topUnit.length) M.blok.push({ t: 'daftar', j: 'Unit paling sering tidak efektif', baris: E.topUnit.map(function (u) { return [u.lambung + ' · ' + u.penyebab, u.n + ' hari', '']; }) });
-      if (PN) M.blok.push({ t: 'daftar', j: 'Penilaian P2H', baris: [['Driver P2H sebelum jalan', PN.driver.persen + '%', PN.driver.persen >= PN.target ? 'hijau' : 'merah'], ['Temuan P2H ditindak mekanik', PN.mekanik.persen == null ? '–' : PN.mekanik.persen + '%', ''], ['Temuan kritis unit tetap jalan', PN.mekanik.kritis, PN.mekanik.kritis ? 'merah' : 'hijau']] }); }
+      if (PN) M.blok.push({ t: 'daftar', j: 'Penilaian P2H', baris: [['Hari unit jalan dengan P2H', PN.driver.persen + '%', PN.driver.persen >= PN.target ? 'hijau' : 'merah'], ['Temuan P2H ditindak mekanik', PN.mekanik.persen == null ? '–' : PN.mekanik.persen + '%', ''], ['Temuan kritis unit tetap jalan', PN.mekanik.kritis, PN.mekanik.kritis ? 'merah' : 'hijau']] }); }
     else if (TAB === 'lap') { M.judul = 'Laporan'; var L = (d.laporan || {}).harian || {}; M.blok.push({ t: 'poin', j: L.periode || '', item: [L.kesimpulan || ''].concat(L.perhatian || []) }); }
     if (TAB === 'brf' || TAB === 'tdk') { var T = d.tidakEfektif || {}, pil = SUB.peny || '';
       M.blok.push({ t: 'daftar', j: 'Unit tidak efektif ' + (T.label || '') + ' · ' + (T.efektif || 0) + '/' + (T.total || 0) + ' efektif', baris: (T.daftar || []).filter(function (x) { return !pil || x.penyebab === pil; }).map(function (x) { return [x.lambung + ' · ' + x.penyebab + (x.driver ? ' · ' + x.driver : ''), x.rit + ' rit', x.penyebab === 'mekanik' ? 'merah' : x.penyebab === 'jalan' ? 'kuning' : '', x.alasan]; }) });
-      if (T.patokan) M.blok.push({ t: 'catat', item: ['Target: ' + T.patokan + '. Rit dari DO admin. ' + (T.menungguDo && T.menungguDo.length ? T.menungguDo.length + ' unit menunggu DO admin (tidak dinilai). ' : '') + (T.tidakDihitung && T.tidakDihitung.length ? T.tidakDihitung.length + ' unit standby/off tidak dihitung.' : '') + (T.ritEstimasi ? ' Tonase estimasi untuk ' + T.ritEstimasi + ' rit tanpa tonase DO.' : '')] }); }
+      if (T.patokan) M.blok.push({ t: 'catat', item: ['Target: ' + T.patokan + '. Rit dari ' + (T.sumberRit || 'DO admin') + '. ' + (T.menungguDo && T.menungguDo.length ? T.menungguDo.length + ' unit menunggu DO admin (tidak dinilai). ' : '') + (T.tidakDihitung && T.tidakDihitung.length ? T.tidakDihitung.length + ' unit standby/off tidak dihitung.' : '') + (T.ritEstimasi ? ' Tonase estimasi untuk ' + T.ritEstimasi + ' rit tanpa tonase DO.' : '')] }); }
     return M;
   }
   function lukisTab(M) {
@@ -363,19 +457,57 @@
   }
   window.__afModelTab = modelTab; window.__afLukisTab = lukisTab;
 
+  /* ---------- revisi3: BAGIKAN BRIEFING KE WA (gambar + teks rapi) ---------- */
+  var EMO_BRF = [[/^PR besok/i, '📌'], [/^Unit hari ini/i, '🚛'], [/^Kemarin/i, '📊'], [/^Tidak efektif/i, '⚠️'], [/^Ready tapi/i, '🅿️'], [/^Target/i, '🎯'], [/^Fokus BD/i, '🔧'], [/^Fokus/i, '📌'],
+    [/KUNJUNGAN VENDOR|SAFETY TALK|JUMAT BERSIH|^Senin|^Selasa|^Sabtu|rekap/i, '🏭'], [/Kimper|SIMPER|MCU/i, '🪪'], [/^Safety/i, '🦺'], [/^ACC/i, '✍️'], [/^Hasil hari ini/i, '📊'], [/^Mekanik/i, '🔧'], [/^Jalan/i, '🛣️'], [/^Driver/i, '👷'], [/^Catatan kendala/i, '📝'], [/^PR besok/i, '📌']];
+  function emoBrf(s) { for (var i = 0; i < EMO_BRF.length; i++) if (EMO_BRF[i][0].test(s)) return EMO_BRF[i][1]; return '▪️'; }
+  function tebalWa(s) { return String(s).replace(/\d+(?:[.,]\d+)?(?:\/\d+)?\s?(?:%|rit|unit|ton|jam)(?![A-Za-z])|\d+\/\d+/g, function (m) { return '*' + m + '*'; }); } /* angka penting (%, rit, unit, ton, jam, x/y) ditebalkan, tanggal tidak */
+  function teksWaBrf() {
+    var d = DATA || {}, B = d.briefing || {}, sore = SUB.brf === 'sore', L = (sore ? B.sore : B.pagi) || [], G = '━━━━━━━━━━━━';
+    return '*' + (sore ? '🌇 BRIEFING SORE' : '☀️ BRIEFING PAGI') + '*\n' + (d.label || '') + '\n' + G + '\n\n' + L.map(function (x) { return emoBrf(x) + ' ' + tebalWa(x); }).join('\n\n')
+      + '\n\n' + G + '\n— Fanza Dwiyan Prasetya, Manager Operation';
+  }
+  function bagiBrf() {
+    var tks = teksWaBrf(), lama = TAB; TAB = 'brf'; var cv; try { cv = lukisTab(modelTab()); } catch (e) { cv = null; } TAB = lama;
+    var nama = 'Briefing-' + (SUB.brf === 'sore' ? 'Sore' : 'Pagi') + '-' + String((DATA && DATA.hari) || '') + '.png';
+    function cadangan(bl) {
+      salin(tks);
+      var buka = function () { try { window.open('https:' + '/' + '/wa.me/?text=' + encodeURIComponent(tks), '_blank'); } catch (e) { /* */ } };
+      if (!bl) { buka(); return; }
+      var fr = new FileReader(); fr.onload = function () { var b64 = String(fr.result).split(',')[1];
+        var lanjut = function () { roti('Gambar disimpan & teks disalin. Lampirkan gambar di WA.'); setTimeout(buka, 700); };
+        if (window.WHL_BERKAS && window.WHL_BERKAS.buka) window.WHL_BERKAS.buka(nama, b64, 'image/png').then(lanjut, lanjut);
+        else { var a = document.createElement('a'); a.href = fr.result; a.download = nama; document.body.appendChild(a); a.click(); a.remove(); lanjut(); } };
+      fr.readAsDataURL(bl);
+    }
+    if (!cv) { cadangan(null); return; }
+    cv.toBlob(function (bl) {
+      var file = null; try { file = bl ? new File([bl], nama, { type: 'image/png' }) : null; } catch (e) { file = null; }
+      if (file && navigator.canShare && navigator.canShare({ files: [file], text: tks })) { navigator.share({ files: [file], text: tks, title: 'Briefing' }).then(function () { salin(tks); }, function (e) { if (!e || e.name !== 'AbortError') cadangan(bl); }); return; }
+      cadangan(bl);
+    }, 'image/png');
+  }
+  window.__afTeksWaBrf = teksWaBrf;
+
   /* ---------- klik ---------- */
   function klik(ev) {
     var b = ev.target.closest('[data-af]'); if (!b || !lapisEl || !lapisEl.contains(b)) return;
     var n = b.getAttribute('data-af'), p = n.split(':'), a = p[0], v = p.slice(1).join(':');
     if (a === 'tutup') { kembali(); return; }
-    if (a === 'segar') { muat(true); gambarUlang(); return; }
+    if (a === 'segar') { muat(true); muatAcc(false); gambarUlang(); return; }
     if (a === 'gambar') { getar(); eksporGambar(); return; } /* revisi2 */
-    if (a === 'tab') { TAB = v; VENDOR = null; getar(); gambarUlang(); var g = lapisEl.querySelector('.ksnIsi'); if (g) g.scrollTop = 0; return; }
+    if (a === 'tab') { TAB = v; VENDOR = null; getar(); gambarUlang(); var g = lapisEl.querySelector('.ksnIsi'); if (g) g.scrollTop = 0; if (v === 'acc' && Date.now() - ACC_T > 60000) muatAcc(false); return; }
     if (a === 'acc') { getar(); bukaAcc(p[1], p.slice(2).join(':')); return; }
+    if (a === 'ya' || a === 'tolak') { if (SIBUK_ACC[v]) return; getar(); var Ux = ACC_UI[v] = ACC_UI[v] || {}; Ux.mode = a === 'ya' ? 'setuju' : 'tolak'; Ux.pesan = ''; gambarUlang(); if (a === 'tolak') setTimeout(function () { var ta = lapisEl && lapisEl.querySelector('[data-af-alasan="' + v.replace(/"/g, '') + '"]'); if (ta) ta.focus(); }, 60); return; } /* asisten-acc-langsung-20nov */
+    if (a === 'batalAcc') { if (SIBUK_ACC[v]) return; delete ACC_UI[v]; gambarUlang(); return; }
+    if (a === 'potong') { var kP = p.slice(2).join(':'); if (SIBUK_ACC[kP]) return; var Up = ACC_UI[kP] = ACC_UI[kP] || {}; Up.potong = p[1]; Up.pesan = ''; gambarUlang(); return; }
+    if (a === 'kirimYa') { putusAcc(v, true); return; }
+    if (a === 'kirimTolak') { var taT = lapisEl.querySelector('[data-af-alasan="' + v.replace(/"/g, '') + '"]'); if (taT && ACC_UI[v]) ACC_UI[v].alasan = taT.value; putusAcc(v, false); return; }
     if (a === 'brf') { SUB.brf = v; gambarUlang(); return; }
     if (a === 'peny') { SUB.peny = SUB.peny === v ? '' : v; gambarUlang(); return; }
     if (a === 'eva') { SUB.eva = v; gambarUlang(); return; }
     if (a === 'lap') { getar(); bukaLap(v); return; }
+    if (a === 'bagiBrf') { getar(); bagiBrf(); return; } /* revisi3 */
     if (a === 'salinBrf') { var B = DATA && DATA.briefing || {}, L = SUB.brf === 'sore' ? B.sore || [] : B.pagi || []; salin((SUB.brf === 'sore' ? 'Briefing sore ' : 'Briefing pagi ') + (DATA.label || '') + '\n' + L.map(function (x, i) { return (i + 1) + '. ' + x; }).join('\n')); return; }
     if (a === 'vendor') { ev.stopPropagation(); bukaVendor(v); return; }
     if (a === 'cek') { centang(v); return; }
@@ -387,8 +519,8 @@
   }
   function simpanTeks() { var ta = lapisEl && lapisEl.querySelector('#afVCat'); if (ta && VENDOR) VENDOR.catatan = ta.value; }
   function ganti(ev) { var t = ev.target; if (t.id === 'afVKam' || t.id === 'afVGal') { simpanTeks(); tambahFoto(t.files); t.value = ''; } }
-  function lupakan() { DATA = null; DATA_T = 0; GALAT = ''; VENDOR = null; tutup(); try { localStorage.removeItem(KUNCI); } catch (e) { /* */ } }
+  function lupakan() { DATA = null; DATA_T = 0; GALAT = ''; VENDOR = null; SIBUK_ACC = {}; ACC_UI = {}; HILANG = {}; ACC_T = 0; tutup(); try { localStorage.removeItem(KUNCI); } catch (e) { /* */ } }
 
-  window.WHL_ASISTEN = { boleh: boleh, milik: milik, kartuHtml: kartuHtml, buka: buka, muat: muat, kembali: kembali, tutup: tutup, lupakan: lupakan,
+  window.WHL_ASISTEN = { boleh: boleh, milik: milik, kartuHtml: kartuHtml, buka: buka, muat: muat, muatAcc: muatAcc, kembali: kembali, tutup: tutup, lupakan: lupakan,
     _uji: { data: function () { return DATA; }, atur: function (d) { DATA = d; DATA_T = Date.now(); gambarUlang(); }, tab: function (t) { TAB = t; gambarUlang(); }, sub: SUB } };
 })();

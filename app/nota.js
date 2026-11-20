@@ -196,7 +196,8 @@
   function vBlob(vid) { return vtx('blob', 'readonly', function (s) { return s.get(vid); }); }
   function vInfo(vid) { return vtx('unggah', 'readonly', function (s) { return s.get(vid); }); }
   function vTaruhInfo(vid, x) { return vtx('unggah', 'readwrite', function (s) { return s.put(x, vid); }); }
-  function vHapus(vid) { return vtx('blob', 'readwrite', function (s) { return s.delete(vid); }).then(function () { return vtx('unggah', 'readwrite', function (s) { return s.delete(vid); }); }); }
+  var BATAL_V = {}; /* percepat-app-20nov: vid yang dihapus -> unggahan di belakang berhenti */
+  function vHapus(vid) { BATAL_V[vid] = 1; return vtx('blob', 'readwrite', function (s) { return s.delete(vid); }).then(function () { return vtx('unggah', 'readwrite', function (s) { return s.delete(vid); }); }); }
   function durasi(file) {
     return new Promise(function (ok) {
       var v = document.createElement('video'), u = URL.createObjectURL(file), t = setTimeout(function () { ok(null); }, 6000);
@@ -216,8 +217,16 @@
     });
   }
   function keBase64(b) { return new Promise(function (ok, gagal) { var r = new FileReader(); r.onload = function () { var s = String(r.result); ok(s.slice(s.indexOf(',') + 1)); }; r.onerror = function () { gagal(r.error); }; r.readAsDataURL(b); }); }
+  /* percepat-app-20nov: 1 video = 1 unggahan berjalan (pramuat saat dipilih + Kirim / antrean memakai janji yang sama, tidak kirim potongan dobel) */
+  var JALAN_V = {};
+  function unggahVideo(v) { if (JALAN_V[v.vid]) return JALAN_V[v.vid]; var p = unggahVideoInti(v), lepas = function () { if (JALAN_V[v.vid] === p) delete JALAN_V[v.vid]; }; JALAN_V[v.vid] = p; p.then(lepas, lepas); return p; }
+  /** percepat-app-20nov: video mulai diunggah di belakang begitu dipilih; gagal = diam (diulang saat Kirim). WHL_KONFIG.VIDEO_DULUAN = false = mati. */
+  function videoDuluan(x) {
+    var K2 = window.WHL_KONFIG || {}; if (!x || !x.vid || K2.VIDEO_DULUAN === false || !navigator.onLine || !sesi() || !boleh()) return;
+    unggahVideo(x).catch(function () { /* diulang saat Kirim */ });
+  }
   /** unggah 1 video sampai selesai (lanjut dari potongan terakhir) -> fileId */
-  function unggahVideo(v) {
+  function unggahVideoInti(v) {
     return vInfo(v.vid).then(function (st) {
       st = st || { ke: 0, upId: '', fileId: '' }; if (st.fileId) return st.fileId;
       return vBlob(v.vid).then(function (blob) {
@@ -228,6 +237,7 @@
         });
         return mulai.then(function (upId) {
           var lanjut = function () {
+            if (BATAL_V[v.vid] && st.ke < total) throw new Error('video dihapus'); /* percepat-app-20nov */
             PROGRES[v.vid] = st.ke / total; segarProgres();
             if (st.ke >= total) return API.Pusat.notaVideoSelesai(sesi(), upId).then(function (h) {
               if (!h || !h.ok) throw tolak((h && h.pesan) || 'video gagal diselesaikan'); st.fileId = h.fileId; PROGRES[v.vid] = 1; segarProgres();
@@ -582,7 +592,7 @@
     var v = e.getAttribute('data-video');
     if (v && e.files && e.files[0]) {
       var fv = e.files[0]; e.value = ''; simpanIsian(); if (p) p.textContent = 'Memeriksa video...';
-      tambahVideo(fv).then(function (x) { taruhTempat(v, (ambilTempat(v) || []).concat([x]).slice(0, MAKS_VIDEO_NOTA)); gambarForm(); R.getar(); }, function (x) { if (p) p.textContent = 'Video: ' + x.message; R.bunyi('gagal'); R.getar('awas'); });
+      tambahVideo(fv).then(function (x) { taruhTempat(v, (ambilTempat(v) || []).concat([x]).slice(0, MAKS_VIDEO_NOTA)); gambarForm(); R.getar(); videoDuluan(x); /* percepat-app-20nov */ }, function (x) { if (p) p.textContent = 'Video: ' + x.message; R.bunyi('gagal'); R.getar('awas'); });
     }
   }
   function periksaNota(n, b, label) {
