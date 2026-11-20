@@ -134,6 +134,9 @@
       + '.pnPeringat{border-radius:16px;padding:11px 13px;margin-bottom:12px;background:rgba(255,197,48,.2);color:var(--tKuning);font-weight:700;font-size:13px;line-height:1.45}.pnPeringat.biru{background:var(--tint);color:var(--utama)}.pnPeringat.hijau{background:rgba(22,163,74,.13);color:#15803d}'
       + '.pnKtlg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.pnHd{position:relative;border-radius:18px;padding:12px;background:var(--panel);box-shadow:0 0 0 1px var(--garis);display:flex;flex-direction:column;gap:6px;min-width:0}'
       + '.pnHd .gb{height:78px;border-radius:14px;display:grid;place-items:center;background:var(--tint)}.pnHd .gb .ilus{width:62px;height:62px}.pnHd b{font-size:13.5px;line-height:1.25;min-height:34px}.pnHd .stok{position:absolute;top:8px;right:8px;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:99px;background:var(--panel);color:var(--redup);box-shadow:0 0 0 1px var(--garis)}'
+      + '.pnHd .gb.foto{height:118px;padding:0;overflow:hidden;background:#fff;cursor:zoom-in}.pnHd .gb.foto img{width:100%;height:100%;object-fit:contain;display:block}.pnHd .gb.memuat{background:var(--panel2)}.pnHd .gantiGb{min-height:36px;border-radius:10px;font-weight:800;font-size:12px;background:var(--panel2);color:var(--utama)}' /* poin-gambar-hadiah-20nov */
+      + '.pnGbIsi{padding:14px 2px 28px}.pnGbPrev{height:min(56vh,340px);border-radius:16px;background:#fff;box-shadow:0 0 0 1px var(--garis);display:grid;place-items:center;overflow:hidden}.pnGbPrev img{max-width:100%;max-height:100%;object-fit:contain;display:block}.pnGbSt{text-align:center;margin-top:8px;font-size:12.5px;font-weight:800;color:var(--redup)}'
+      + '.pnGbTb{display:grid;gap:10px;margin-top:14px}.pnGbTb label,.pnGbTb button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;border-radius:14px;font-weight:800;font-size:14.5px;cursor:pointer}.pnGbTb label{border:2px dashed var(--utama);color:var(--utama)}.pnGbTb label.mati{opacity:.45;pointer-events:none}.pnGbTb .pnGbSimpan{background:var(--utama);color:#fff}.pnGbTb .pnGbLogo{background:var(--panel2);color:var(--teks)}.pnGbTb button:disabled{opacity:.45;cursor:default}.pnGbKet{font-size:12.5px;color:var(--redup);line-height:1.5;margin-top:12px;text-align:center}'
       + '.pnHd .hrg{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px}.pnHd .hrg span{font-family:Nunito,sans-serif;font-weight:900;font-size:18px;white-space:nowrap}.pnHd .hrg span small{font-size:11px;font-weight:800;color:var(--redup);margin-left:2px}'
       + '.pnHd .hrg button{flex:1 0 auto;min-height:36px;padding:0 10px;border-radius:10px;font-weight:800;font-size:12.5px;white-space:nowrap;background:var(--utama);color:#fff}.pnHd .hrg button:disabled{background:var(--panel2);color:var(--redup)}.pnHd small.rp{color:var(--redup);font-size:11px;font-weight:700}'
       + '.pnFoto{display:flex;gap:8px;margin-top:10px}.pnFoto label{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;border-radius:12px;border:2px dashed var(--garis);font-weight:800;font-size:13px;color:var(--utama);cursor:pointer}'
@@ -230,7 +233,7 @@
     var g2 = lapisEl.querySelector('.ksnIsi'); if (g2 && y) g2.scrollTop = y;
   }
   function tutup() { if (!lapisEl) return false; var d = lapisEl; lapisEl = null; layar = ''; d.classList.remove('tampil'); setTimeout(function () { d.remove(); }, 200); return true; }
-  function tutupSemua() { tutupFoto(); tutup(); }
+  function tutupSemua() { tutupFoto(); tutupGb(); tutup(); }
   function kosong(ik, judul, ket, tombol) { return '<div class="kartu pnKosong">' + ILUS(ik) + '<b>' + esc(judul) + '</b><small>' + esc(ket || '') + '</small>' + (tombol ? '<button type="button" class="tKecil" data-p="' + tombol[0] + '" style="margin-top:12px">' + esc(tombol[1]) + '</button>' : '') + '</div>'; }
   function memuat() { return R && R.kerangka ? R.kerangka('daftar') : '<span class="putar"></span>'; }
 
@@ -331,12 +334,111 @@
       else if (uji) tb = '<button type="button" disabled>Belum buka</button>';
       else if (!I.hariIni) tb = '<button type="button" disabled>' + esc(I.berikut ? 'Buka ' + I.berikut.split(' ')[0] : 'Tutup') + '</button>';
       else tb = '<button type="button" data-p="tukar:' + esc(b.id) + '">Tukar</button>';
-      return '<div class="pnHd">' + (stok ? '<span class="stok">' + esc(stok) + '</span>' : '') + '<div class="gb">' + ILUS(ikonBarang(b.nama)) + '</div><b>' + esc(b.nama) + '</b>'
-        + (b.perkiraanRp ? '<small class="rp">± ' + rp(b.perkiraanRp) + '</small>' : '') + '<div class="hrg"><span>' + ang(b.poin) + '<small>poin</small></span>' + tb + '</div></div>';
+      return '<div class="pnHd">' + (stok ? '<span class="stok">' + esc(stok) + '</span>' : '') + gbBarang(b) + '<b>' + esc(b.nama) + '</b>'
+        + (b.perkiraanRp ? '<small class="rp">± ' + rp(b.perkiraanRp) + '</small>' : '') + '<div class="hrg"><span>' + ang(b.poin) + '<small>poin</small></span>' + tb + '</div>'
+        + (k.bolehGambar && punya('pusatPoinGambarSimpan') ? '<button type="button" class="gantiGb" data-p="gbGanti:' + esc(b.id) + '">🖼️ Ganti gambar</button>' : '') + '</div>';
     }).join('') + '</div>';
     if (!B.length) h += kosong('hadiah', 'Katalog kosong', 'Admin belum mengisi daftar hadiah.');
     h += '<div class="kecil" style="margin:14px 6px;text-align:center;line-height:1.5">Hadiah fisik diambil di <b>' + esc(k.tempatAmbil || 'kantor WHL') + '</b> tiap ' + esc(I.label) + '. Maks ' + esc(k.maksPerMinggu || 1) + 'x tukar per minggu.<br>Di-ACC salah satu: Fanza · Reza · Puput · Rike. Ditolak = poin kembali.</div>';
+    setTimeout(function () { muatGambar(k); }, 0); /* poin-gambar-hadiah-20nov */
     return h;
+  }
+  /* ---------- gambar hadiah (poin-gambar-hadiah-20nov): KATALOG simpan Gambar ID (Drive), kosong = logo WHL; ganti khusus Reza/Fanza/Rike ---------- */
+  var GBM = {}, GB_JALAN = {}, GB_LOGO = 'img/logo-hadiah.jpg', GB_LS = 'whlHdg_', GB_MAKS = 560000, GB_LEBAR = 800, GB = { el: null, id: '', baru: '', kirim: false };
+  function cssId(s) { return window.CSS && CSS.escape ? CSS.escape(String(s)) : String(s).replace(/["\\]/g, ''); }
+  function gbCari(id) { return KAT && (KAT.barang || []).filter(function (x) { return String(x.id) === String(id); })[0]; }
+  function gbSrc(gid) { if (!gid) return ''; if (GBM[gid]) return GBM[gid]; try { var s = localStorage.getItem(GB_LS + gid); if (s) { GBM[gid] = s; return s; } } catch (e) { /* abaikan */ } return ''; }
+  function gbSimpanLokal(gid, src) { GBM[gid] = src; try { localStorage.setItem(GB_LS + gid, src); } catch (e) { /* penyimpanan penuh: cukup di memori */ } }
+  function gbBersih(B) { try { var pakai = {}; B.forEach(function (b) { if (b.gambarId) pakai[GB_LS + b.gambarId] = 1; }); for (var i = localStorage.length - 1; i >= 0; i--) { var k = localStorage.key(i); if (k && k.indexOf(GB_LS) === 0 && !pakai[k]) localStorage.removeItem(k); } } catch (e) { /* abaikan */ } }
+  function gbBarang(b) {
+    if (!b || !('gambarId' in b)) return '<div class="gb">' + ILUS(ikonBarang(b && b.nama)) + '</div>'; /* server lama: ikon lama */
+    var src = b.gambarId ? gbSrc(b.gambarId) : GB_LOGO;
+    return '<div class="gb foto' + (src ? '' : ' memuat') + '" data-gb="' + esc(b.id) + '" data-p="gbLihat:' + esc(b.id) + '" role="button" aria-label="Lihat gambar ' + esc(b.nama) + '">' + (src ? '<img alt="' + esc(b.nama) + '" src="' + esc(src) + '">' : ILUS(ikonBarang(b.nama))) + '</div>';
+  }
+  function gbPasang(id, src, nama) { if (!lapisEl) return; var el = lapisEl.querySelector('[data-gb="' + cssId(id) + '"]'); if (!el) return; el.classList.remove('memuat'); el.innerHTML = '<img alt="' + esc(nama || '') + '" src="' + esc(src) + '">'; }
+  function muatGambar(k) {
+    var B = k && Array.isArray(k.barang) ? k.barang : []; if (!B.some(function (b) { return 'gambarId' in b; })) return;
+    gbBersih(B); if (!punya('pusatPoinGambar')) return;
+    B.forEach(function (b) {
+      var gid = b.gambarId; if (!gid || gbSrc(gid) || GB_JALAN[gid]) return;
+      GB_JALAN[gid] = 1;
+      panggil('pusatPoinGambar', [b.id], 45000).then(function (h) {
+        delete GB_JALAN[gid]; if (habis(h) || !h || !h.ok) return;
+        if (h.b64 && h.gambarId === gid) { var src = 'data:' + (h.mime || 'image/jpeg') + ';base64,' + h.b64; gbSimpanLokal(gid, src); gbPasang(b.id, src, b.nama); }
+        else if (h.logo) gbPasang(b.id, GB_LOGO, b.nama);
+      }, function () { delete GB_JALAN[gid]; });
+    });
+  }
+  function lihatGambar(id) {
+    var b = gbCari(id); if (!b) return; var src = b.gambarId ? gbSrc(b.gambarId) : GB_LOGO; if (!src) return;
+    tutupFoto();
+    fotoEl = document.createElement('div'); fotoEl.className = 'lapis pnLihat tampil';
+    fotoEl.innerHTML = '<div class="ksnKp"><button type="button" class="kb" data-p="tutupFoto" aria-label="Kembali">‹</button><div class="nm">Hadiah ' + ang(b.poin) + ' poin<b>' + esc(b.nama) + '</b></div></div><div class="isiF"><img alt="' + esc(b.nama) + '" src="' + esc(src) + '"></div><div class="ket">' + esc(b.keterangan || '') + '</div>';
+    fotoEl.addEventListener('click', function (ev) { if (ev.target.closest('[data-p="tutupFoto"]')) tutupFoto(); });
+    document.body.appendChild(fotoEl);
+  }
+  function bukaGantiGb(id) {
+    var b = gbCari(id); if (!b || !KAT || !KAT.bolehGambar) return;
+    tutupGb(); GB = { el: document.createElement('div'), id: String(id), baru: '', kirim: false };
+    GB.el.className = 'lapis ksnLapis pnLapis pnGbLapis tampil';
+    GB.el.addEventListener('click', klikGb); GB.el.addEventListener('change', ubahGb);
+    document.body.appendChild(GB.el); gambarGb();
+  }
+  function gambarGb() {
+    if (!GB.el) return; var b = gbCari(GB.id); if (!b) { tutupGb(); return; }
+    var src = GB.baru || (b.gambarId ? gbSrc(b.gambarId) : GB_LOGO), k = GB.kirim;
+    GB.el.innerHTML = '<div class="ksnKp"><button type="button" class="kb" data-g="tutup" aria-label="Kembali">‹</button><div class="nm">Ganti gambar hadiah<b>' + esc(b.nama) + '</b></div></div>'
+      + '<div class="ksnIsi"><div class="pnGbIsi"><div class="pnGbPrev">' + (src ? '<img alt="' + esc(b.nama) + '" src="' + esc(src) + '">' : '<span class="putar"></span>') + '</div>'
+      + '<div class="pnGbSt">' + (GB.baru ? 'Foto baru — belum disimpan' : b.gambarId ? 'Gambar sekarang' : 'Sekarang memakai logo WHL') + '</div>'
+      + '<div class="pnGbTb"><label class="pilih' + (k ? ' mati' : '') + '">🖼️ ' + (GB.baru ? 'Pilih foto lain' : 'Pilih foto dari HP') + '<input type="file" accept="image/*" data-gbfile="1" hidden' + (k ? ' disabled' : '') + '></label>'
+      + '<button type="button" class="pnGbSimpan" data-g="simpan"' + (!GB.baru || k ? ' disabled' : '') + '>' + (k === 'foto' ? 'Menyimpan…' : 'Simpan gambar') + '</button>'
+      + '<button type="button" class="pnGbLogo" data-g="logo"' + (k || (!b.gambarId && !GB.baru) ? ' disabled' : '') + '>' + (k === 'logo' ? 'Menyimpan…' : (!b.gambarId ? 'Batal, tetap logo WHL' : 'Pakai logo WHL')) + '</button></div>'
+      + '<div class="pnGbKet">Foto dikecilkan otomatis (lebar maks 800 px) sebelum dikirim. Gambar baru terlihat semua orang saat membuka katalog. Khusus Reza · Fanza · Rike.</div></div></div>';
+  }
+  function klikGb(ev) {
+    var t = ev.target.closest('[data-g]'); if (!t || !GB.el || t.disabled) return; var n = t.getAttribute('data-g');
+    if (n === 'tutup') { tutupGb(); return; }
+    if (n === 'simpan') { simpanGb(false); return; }
+    if (n === 'logo') {
+      var b = gbCari(GB.id); if (b && !b.gambarId) { GB.baru = ''; gambarGb(); return; }
+      R.tanya({ judul: 'Pakai logo WHL?', ket: 'Gambar ' + (b ? b.nama : 'hadiah') + ' diganti logo WHL. Foto lama tetap tersimpan di Drive.', ya: 'Ya, pakai logo', tidak: 'Batal' }).then(function (y) { if (y) simpanGb(true); });
+    }
+  }
+  function ubahGb(ev) {
+    var t = ev.target; if (!t.hasAttribute('data-gbfile') || !t.files || !t.files[0]) return;
+    var f = t.files[0]; t.value = ''; roti('Mengecilkan foto…');
+    kompresGb(f).then(function (d) { GB.baru = d; gambarGb(); }, function (e) { roti(e.message); });
+  }
+  function simpanGb(logo) {
+    if (!GB.el || GB.kirim) return; var id = GB.id; if (!logo && !GB.baru) return;
+    var d = logo ? { idBarang: id, logo: true } : { idBarang: id, foto: GB.baru };
+    GB.kirim = logo ? 'logo' : 'foto'; gambarGb();
+    panggil('pusatPoinGambarSimpan', [d], 90000).then(function (h) {
+      GB.kirim = false; if (habis(h)) return;
+      if (!h || !h.ok) { if (R.bunyi) R.bunyi('gagal'); roti((h && h.pesan) || 'Gambar belum tersimpan.'); gambarGb(); return; }
+      var b = gbCari(id); if (b) { b.gambarId = h.gambarId || ''; if (h.gambarId && d.foto) gbSimpanLokal(h.gambarId, d.foto); }
+      if (R.bunyi) R.bunyi('sukses'); if (R.getar) R.getar('sukses'); roti(h.pesan || 'Gambar tersimpan.');
+      tutupGb(); if (KAT && lapisEl && layar === 'katalog') lapis('Tukar poin', 'Saldo ' + ang(KAT.saldo) + ' poin · 1 poin = Rp 100', gambarKatalog(KAT));
+    }, function (e) { GB.kirim = false; roti(e.message + ' — foto masih di layar, coba simpan lagi.'); gambarGb(); });
+  }
+  function tutupGb() { if (!GB.el) return false; GB.el.remove(); GB.el = null; GB.baru = ''; GB.kirim = false; return true; }
+  function kompresGb(file) {
+    return new Promise(function (ok, gagal) {
+      if (!/^image\//.test(file.type || 'image/')) { gagal(new Error('Pilih file gambar (JPG/PNG).')); return; }
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var w = img.naturalWidth, hh = img.naturalHeight, sk = Math.min(1, GB_LEBAR / w, 1600 / hh), q = 0.85, d = '';
+        for (var i = 0; i < 10; i++) {
+          var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * sk)); c.height = Math.max(1, Math.round(hh * sk));
+          var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+          d = c.toDataURL('image/jpeg', q); if (d.length <= GB_MAKS) break;
+          if (q > 0.55) q -= 0.1; else sk *= 0.85;
+        }
+        URL.revokeObjectURL(url); if (d.length > GB_MAKS) gagal(new Error('Foto terlalu besar.')); else ok(d);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); gagal(new Error('Foto tidak bisa dibaca. Coba foto lain.')); };
+      img.src = url;
+    });
   }
   function ajukanTukar(id) {
     var k = KAT, b = k && (k.barang || []).filter(function (x) { return String(x.id) === String(id); })[0]; if (!b) return;
@@ -590,6 +692,8 @@
     if (n === 'peringkat') { if (window.WHL_PERINGKAT) window.WHL_PERINGKAT.buka(CTX); return; }
     if (n === 'acc') { bukaAcc(); return; }
     if (n === 'rekap') { bukaRekap(); return; }
+    if (n.indexOf('gbLihat:') === 0) { lihatGambar(n.slice(8)); return; } /* poin-gambar-hadiah-20nov */
+    if (n.indexOf('gbGanti:') === 0) { bukaGantiGb(n.slice(8)); return; }
     if (n.indexOf('tukar:') === 0) { ajukanTukar(n.slice(6)); return; }
     if (n.indexOf('batal:') === 0) { batalTukar(n.slice(6)); return; }
     if (n.indexOf('foto:') === 0) { lihatFoto(n.slice(5), 'Foto diambil admin saat hadiah diserahkan.'); return; }
@@ -626,7 +730,7 @@
   document.addEventListener('keydown', function (ev) { var t = ev.target; if (ev.key === 'Enter' && lapisEl && lapisEl.contains(t) && t.getAttribute('data-r') === 'nama') { REK.nama = t.value.trim(); muatRekap(); } });
 
   /** tombol Back HP: foto dulu, lalu lapis (dipanggil lewat .ksnKp .kb oleh WHL_KEMBALI; ini cadangan) */
-  function kembali() { if (tutupFoto()) return true; return tutup(); }
+  function kembali() { if (tutupFoto()) return true; if (tutupGb()) return true; return tutup(); } /* poin-gambar-hadiah-20nov: + tutupGb */
   function lupakan() { P = null; P_JALAN = null; KAT = null; ADM = { acc: null, nunggu: 0, t: 0, jalan: false }; ACC = { tab: 'nunggu', d: null, selesai: null, foto: {}, catatan: {}, tolak: {}, yakin: '', kirim: '' }; REK = { bulan: '', status: '', nama: '', d: null, jalan: false }; tutupSemua(); if (window.WHL_POIN_STAF) window.WHL_POIN_STAF.lupakan(); if (window.WHL_KSD) window.WHL_KSD.lupakan(); }
 
   window.WHL_POIN = { punya: punya, menu: menu, buka: buka, berandaHtml: berandaHtml, bukaNotif: bukaNotif, muat: muat, kembali: kembali, lupakan: lupakan, ilus: ILUS,
