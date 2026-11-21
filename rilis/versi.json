@@ -1,13 +1,15 @@
 {
- "versi": "3.42",
- "versionCode": 343,
+ "versi": "3.43",
+ "versionCode": 344,
  "wajib": false,
  "catatan": [
-  "Tukar poin: hadiah tampil bergambar (ketuk gambar = tampil besar)",
-  "Reza/Fanza/Rike bisa ganti gambar hadiah dari app"
+  "iPhone (app dari Layar Utama): buka app lebih cepat, tidak mengunduh ulang data app tiap dibuka",
+  "HP dipakai bergantian: Nota 'Ajuan saya' tidak lagi menampilkan nota akun sebelumnya",
+  "Sesi habis / keluar: data akun lama dibersihkan dari app",
+  "Forum: cuplikan pesan tidak lagi berakhir dengan kode aneh"
  ],
- "apk": "WHL-App-v3.42.apk",
- "ukuran": 8595701,
- "sha256": "9a96c3ba9e57c5444caebe8bdd25082add03cf1e80d1c2165fe66cfd8a15cbf3",
- "dibuat": "2026-11-20 10:42"
+ "apk": "WHL-App-v3.43.apk",
+ "ukuran": 8596150,
+ "sha256": "515a64799d1314004359a0641119e4941ccf0a8451001aed12e4189115be4a6c",
+ "dibuat": "2026-11-21 00:34"
 }
