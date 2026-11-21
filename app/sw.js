@@ -5,8 +5,11 @@
  *  - index.html / navigasi / versi.json: jaringan dulu (maks 3,5 dtk; halaman yang sudah tersimpan maks 1,2 dtk sejak v3.33) supaya versi baru langsung terpakai; gagal -> salinan di HP.
  *  - berkas ber-?v=<versi app ini> dan berkas cangkang lain (ikon, gambar, suara, pustaka): salinan HP dulu (instan), tanpa menunggu jaringan.
  *  - berkas ber-?v= versi LAIN (index baru, service worker lama): jaringan dulu supaya tidak tercampur versi.
+ * v3.43 (audit 20 Nov #3): SATU sumber versi = VERSI konfig.js. Semua ?v= di index/absen/galat salinan PWA diseragamkan ke versi app
+ *  saat dirakit (dulu ?v= lama per berkas -> 42/44 skrip lewat jaringan tiap buka, ±1,4 MB). Sekarang tiap buka = salinan HP (instan);
+ *  unduh ulang hanya sekali saat versi app berubah (service worker baru dipasang).
  */
-const VERSI = 'dd0fdd289d', CACHE = 'whl-cangkang-' + VERSI, APPV = '3.42';
+const VERSI = '718de12c27', CACHE = 'whl-cangkang-' + VERSI, APPV = '3.43';
 /* WEB PUSH (iPhone iOS 16.4+ dari Layar Utama, Chrome Android): Firebase Cloud Messaging. Pesan ber-"notification" ditampilkan otomatis
  * oleh pustaka Firebase; ketuk -> fcm_options.link (app web, ?buka=forum:ruang / tiket:lambung). */
 try {

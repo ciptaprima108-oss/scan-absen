@@ -37,8 +37,16 @@
     try { if (window.WHL_LAYAR) window.WHL_LAYAR.simpanSesi(SESI && SESI.bio ? SESI : null); } catch (e) { /* */ } /* v3.33 layar.js */
     return Simpan.taruh(KUNCI_SESI, SESI && !SESI.bio ? JSON.stringify(SESI) : null);
   }
+  /* v3.43 (audit 20 Nov #4/#5): data modul akun lama dibuang dari memori (Keluar, sesi habis, kunci 4 jam) */
+  function bersihModul() {
+    HI = null; /* angka Hari ini */
+    try { if (API.Pusat.lupakanSimpanan) API.Pusat.lupakanSimpanan(); } catch (e) { /* */ }
+    ['WHL_DRIVER', 'WHL_GAJI', 'WHL_KASBON', 'WHL_DOKKAS', 'WHL_LEMBUR', 'WHL_LABA', 'WHL_KATALOG', 'WHL_POIN', 'WHL_PERINGKAT', 'WHL_IZIN', 'WHL_ASISTEN', 'WHL_NOTA', 'WHL_ROSTER', 'WHL_KUIS', 'WHL_POIN_STAF', 'WHL_KSD'].forEach(function (n) {
+      try { var m = window[n]; if (m && typeof m.lupakan === 'function') m.lupakan(); } catch (e) { /* satu modul gagal, yang lain tetap dibersihkan */ }
+    });
+  }
   function keLogin(pesan) {
-    SESI = null; D = {}; ABSEN = null; KPI = null; PROFIL = null; KSN = null; if (window.WHL_KSN) window.WHL_KSN.lupa(); if (window.WHL_FORUM) window.WHL_FORUM.keluar(); FORUM = null; lepasPush(); simpanSesi();
+    bersihModul(); SESI = null; D = {}; ABSEN = null; KPI = null; PROFIL = null; KSN = null; if (window.WHL_KSN) window.WHL_KSN.lupa(); if (window.WHL_FORUM) window.WHL_FORUM.keluar(); FORUM = null; lepasPush(); simpanSesi();
     $('pesanLogin').textContent = pesan || ''; sibuk(false); layar('layarLogin'); gambarBioLogin();
   }
 
@@ -1573,7 +1581,7 @@
         if (SESI && PUSH.token && API.Pusat.punya('pusatLepasPerangkat')) API.Pusat.lepasPerangkat(SESI, PUSH.token).catch(function () { });
         try { if (webPesan) webPesan.deleteToken().catch(function () { }); } catch (e) { /* */ }
         KOTAK = []; simpanKotak(); Simpan.taruh('whlBanner', null); HI = null; /* tahap1-16nov: angka Hari ini dibuang */ if (window.WHL_DRIVER) window.WHL_DRIVER.lupakan(); /* v3.29 */
-        if (API.Pusat.lupakanSimpanan) API.Pusat.lupakanSimpanan(); if (window.WHL_GAJI) window.WHL_GAJI.lupakan(); if (window.WHL_KASBON) window.WHL_KASBON.lupakan(); if (window.WHL_DOKKAS) window.WHL_DOKKAS.lupakan(); if (window.WHL_LEMBUR) window.WHL_LEMBUR.lupakan(); if (window.WHL_LABA) window.WHL_LABA.lupakan(); if (window.WHL_KATALOG) window.WHL_KATALOG.lupakan(); /* katalog-unit-16nov */ if (window.WHL_POIN) window.WHL_POIN.lupakan(); if (window.WHL_PERINGKAT) window.WHL_PERINGKAT.lupakan(); /* app-tahap36 C */ if (window.WHL_IZIN) window.WHL_IZIN.lupakan(); /* v3.20: + izin */ if (window.WHL_ASISTEN) window.WHL_ASISTEN.lupakan(); /* v3.39 */ /* gaji-driver-app-15nov: angka gaji/laba dibuang dari memori */
+        bersihModul(); /* v3.43 (audit 20 Nov #5): pembersihan modul dipindah ke bersihModul(), juga dipanggil saat sesi habis */
         if (SESI) bioGugur(SESI.idProfil || SESI.idKetik); /* v3.9 */
         var habis = function () { keLogin(''); }; if (window.WHL_ONLINE) { var tunda = setTimeout(habis, 2500); window.WHL_ONLINE.berhenti().then(function () { clearTimeout(tunda); habis(); }); } else habis();
       });

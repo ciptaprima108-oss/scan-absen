@@ -18,7 +18,7 @@
 (function () {
   'use strict';
   var R = window.WHL_RASA, API = window.WHL_API, Simpan = API.Simpan;
-  var CTX = null, OPSI = null, LIST = null, lapisEl = null, F = null, mengirim = false, tab = 'daftar', mode = 'satu';
+  var CTX = null, OPSI = null, LIST = null, LIST_AKUN = '', lapisEl = null, /* v3.43 (audit 20 Nov #4): LIST milik akun LIST_AKUN saja */ F = null, mengirim = false, tab = 'daftar', mode = 'satu';
   var BENGKEL = 'BENGKEL TETAP', AJU = 'PENGAJUAN > 3 JT', LANGSUNG = 'BAYAR LANGSUNG', MAKS_B64 = 200000, OPSI_T = 0;
   function adaLangsung() { return !!(OPSI && Array.isArray(OPSI.masukKe) && OPSI.masukKe.indexOf(LANGSUNG) >= 0); }
   /* v3.22 (Reza 16 Nov 10.20): bengkel & kategori dari daftar server (combobox: pilih atau ketik baru), rekening terstruktur + riwayat per bengkel.
@@ -301,22 +301,26 @@
   function pramuat(ctx) {
     CTX = ctx || CTX; if (!boleh()) return;
     opsiLatar();
-    API.Pusat.notaSaya(sesi()).then(function (h) { if (h && h.ok) { LIST = h.list || []; Simpan.taruh('whlNotaSaya_' + akun(), JSON.stringify(LIST)); } }, function () { /* diam */ });
+    cekAkun(); var ak = akun();
+    API.Pusat.notaSaya(sesi()).then(function (h) { if (h && h.ok && ak === akun()) { LIST = h.list || []; LIST_AKUN = ak; Simpan.taruh('whlNotaSaya_' + ak, JSON.stringify(LIST)); } }, function () { /* diam */ });
   }
+  /* v3.43 (audit 20 Nov #4): HP dipakai bergantian -> daftar "Ajuan saya" akun lain tidak boleh terbawa */
+  function cekAkun() { var a = akun(); if (LIST_AKUN !== a) { LIST = null; LIST_AKUN = a; } }
+  function lupakan() { LIST = null; LIST_AKUN = ''; OPSI = null; OPSI_T = 0; F = null; mengirim = false; tutupPemilih(); tutupRetur(); if (window.WHL_NOTA_EDIT) window.WHL_NOTA_EDIT.tutup(); tutup(); Simpan.taruh('whlNotaOpsi', null); }
   var daftarUrut = 0;
   function pitaSegar() { var el = lapisEl && lapisEl.querySelector('.notaIsi'); if (el && !el.querySelector('.ntSegar')) el.insertAdjacentHTML('afterbegin', '<div class="pitaData ntSegar" style="display:flex;gap:8px;align-items:center"><span class="putar"></span><span>Menyegarkan dari server…</span></div>'); }
   function daftar() {
     tab = 'daftar';
-    var urutD = ++daftarUrut, beres = false;
+    cekAkun(); var ak = LIST_AKUN, urutD = ++daftarUrut, beres = false; /* v3.43: jawaban untuk akun lain (permintaan lama) dibuang */
     lapis('<div class="kecil" style="text-align:center;padding:20px"><span class="putar"></span> Memuat ajuan...</div>');
     /* percepat-app-16nov A3: daftar terakhir (memori / HP) tampil langsung, lalu diganti hasil server */
-    Promise.all([antre(), LIST ? Promise.resolve() : Simpan.ambil('whlNotaSaya_' + akun()).then(function (v) { try { var c = JSON.parse(v || 'null'); if (Array.isArray(c) && !LIST) LIST = c; } catch (x) { /* */ } })]).then(function (r0) {
-      if (beres || urutD !== daftarUrut || tab !== 'daftar' || !lapisEl || !LIST) return;
+    Promise.all([antre(), LIST ? Promise.resolve() : Simpan.ambil('whlNotaSaya_' + ak).then(function (v) { try { var c = JSON.parse(v || 'null'); if (Array.isArray(c) && !LIST && LIST_AKUN === ak) LIST = c; } catch (x) { /* */ } })]).then(function (r0) {
+      if (beres || urutD !== daftarUrut || tab !== 'daftar' || !lapisEl || !LIST || LIST_AKUN !== ak) return;
       gambarDaftar(r0[0], ''); pitaSegar();
     });
-    Promise.all([antre(), API.Pusat.notaSaya(sesi()).then(function (h) { beres = true; if (h && h.ok) { LIST = h.list || []; Simpan.taruh('whlNotaSaya_' + akun(), JSON.stringify(LIST)); return null; } return (h && h.pesan) || 'Daftar belum bisa dimuat.'; }, function (e) {
-      return Simpan.ambil('whlNotaSaya_' + akun()).then(function (v) { try { LIST = JSON.parse(v || 'null') || LIST; } catch (x) { /* */ } return e.message; });
-    })]).then(function (r) { if (tab === 'daftar' && lapisEl) gambarDaftar(r[0], r[1]); }); /* jangan menimpa form kalau pengguna sudah pindah ke Ajukan nota */
+    Promise.all([antre(), API.Pusat.notaSaya(sesi()).then(function (h) { beres = true; if (ak !== akun() || LIST_AKUN !== ak) return 'Akun berganti.'; if (h && h.ok) { LIST = h.list || []; Simpan.taruh('whlNotaSaya_' + ak, JSON.stringify(LIST)); return null; } return (h && h.pesan) || 'Daftar belum bisa dimuat.'; }, function (e) {
+      return Simpan.ambil('whlNotaSaya_' + ak).then(function (v) { try { if (LIST_AKUN === ak) LIST = JSON.parse(v || 'null') || LIST; } catch (x) { /* */ } return e.message; });
+    })]).then(function (r) { if (tab === 'daftar' && lapisEl && urutD === daftarUrut) gambarDaftar(r[0], r[1]); }); /* jangan menimpa form kalau pengguna sudah pindah ke Ajukan nota */
   }
   function ringkasAntre(x) { var d = x.d; if (d.unitRinci) return d.toko + ' · ' + d.unitRinci.map(function (u) { return u.lambung || '-'; }).join(' + ') + ' · ' + rp(d.unitRinci.reduce(function (s, u) { return s + Number(u.total || 0); }, 0)); if (x.jenis === 'banyak') return d.toko + ' · ' + d.nota.length + ' nota · ' + rp(d.nota.reduce(function (s, n) { return s + Number(n.total || 0); }, 0)); return d.toko + ' · ' + d.lambung + ' · ' + rp(d.total); }
   function jumlahVideo(x) { var d = x.d; return x.jenis === 'banyak' ? d.nota.reduce(function (s, n) { return s + (n.videoVid || []).length; }, 0) : (d.videoVid || []).length; }
@@ -761,5 +765,5 @@
   /** untuk tombol Back HP */
   function kembali() { if (tutupPemilih()) return true; if (tutupRetur()) return true; if (window.WHL_NOTA_EDIT && window.WHL_NOTA_EDIT.tutup()) return true; /* nota-edit-ajuan-17nov */ if (!lapisEl) return false; if (tab === 'baru' && F) { simpanIsian(); daftar(); } else tutup(); return true; }
   window.WHL_PEMILIH = { buka: pemilih, tutup: tutupPemilih, gaya: gayaNota };
-  window.WHL_NOTA = { pasang: function (c) { CTX = c; }, boleh: boleh, buka: buka, kirimAntrean: kirimAntrean, kembali: kembali, pramuat: pramuat, /* percepat-app-16nov A5 */ _uji: { form: function (isi, m) { formBaru(isi, m); }, isi: function () { return F; } } };
+  window.WHL_NOTA = { pasang: function (c) { CTX = c; }, boleh: boleh, buka: buka, kirimAntrean: kirimAntrean, kembali: kembali, pramuat: pramuat, lupakan: lupakan, /* v3.43 */ /* percepat-app-16nov A5 */ _uji: { form: function (isi, m) { formBaru(isi, m); }, isi: function () { return F; } } };
 })();

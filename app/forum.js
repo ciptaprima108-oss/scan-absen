@@ -125,7 +125,7 @@
     if (window.WHL_ONLINE) h += window.WHL_ONLINE.htmlForum(); /* v3.9: siapa online (semua staf) */
     h += RUANG.map(function (x) {
       var n = BARU[x.id] || 0, c = CUPLIK[x.id];
-      return '<button type="button" class="app fmR" data-ruang="' + x.id + '"><span class="ik">' + ikRuang(x) + '</span><span class="tx"><b>' + esc(x.nama) + '</b><small>' + (c ? esc(pendek(c.nama)) + ': ' + esc(c.teks).slice(0, 70) : esc(x.ket)) + '</small></span>' + (n ? '<span class="fmN">' + (n > 20 ? '20+' : n) + '</span>' : (c ? '<em class="fmJ">' + jam(c.waktu) + '</em>' : '')) + '</button>';
+      return '<button type="button" class="app fmR" data-ruang="' + x.id + '"><span class="ik">' + ikRuang(x) + '</span><span class="tx"><b>' + esc(x.nama) + '</b><small>' + (c ? esc(pendek(c.nama)) + ': ' + esc(String(c.teks || '').slice(0, 70)) : esc(x.ket)) + '</small></span>' + (n ? '<span class="fmN">' + (n > 20 ? '20+' : n) + '</span>' : (c ? '<em class="fmJ">' + jam(c.waktu) + '</em>' : '')) + '</button>';
     }).join('');
     h += '<div class="app mati"><span class="ik">✉️</span><span class="tx"><b>Pesan langsung (1 lawan 1)</b><small>Ditunda, menyusul</small></span><span class="chip kuning">Segera</span></div>';
     h += '<div class="kecil" style="margin:10px 4px">Ruang yang tampil mengikuti peranmu di Pusat WHL. Pesan baru berbunyi saat app terbuka. Saat app ditutup, notifikasi muncul kalau Notifikasi langsung di Akun sudah Aktif.</div>';
