@@ -1,15 +1,12 @@
 {
- "versi": "3.43",
- "versionCode": 344,
+ "versi": "3.44",
+ "versionCode": 345,
  "wajib": false,
  "catatan": [
-  "iPhone (app dari Layar Utama): buka app lebih cepat, tidak mengunduh ulang data app tiap dibuka",
-  "HP dipakai bergantian: Nota 'Ajuan saya' tidak lagi menampilkan nota akun sebelumnya",
-  "Sesi habis / keluar: data akun lama dibersihkan dari app",
-  "Forum: cuplikan pesan tidak lagi berakhir dengan kode aneh"
+  "Menu baru Data karyawan untuk pimpinan (muncul setelah server siap)"
  ],
- "apk": "WHL-App-v3.43.apk",
- "ukuran": 8596150,
- "sha256": "515a64799d1314004359a0641119e4941ccf0a8451001aed12e4189115be4a6c",
- "dibuat": "2026-11-21 00:34"
+ "apk": "WHL-App-v3.44.apk",
+ "ukuran": 8609657,
+ "sha256": "54558c481071bc4cc87dff1feb5613d4efe076c17946bc97596f5993472dfe9e",
+ "dibuat": "2026-11-21 13:48"
 }
