@@ -19,12 +19,35 @@
   #muat.hilang{opacity:0}
   @keyframes p{to{transform:rotate(360deg)}}
   #v{position:fixed;width:2px;height:2px;opacity:0;pointer-events:none;left:0;top:0}
+  /* 22 Nov 2026 gaspol-foto-do: kamera foto DO di dalam halaman (bukan app kamera luar) */
+  #fk{position:fixed;inset:0;z-index:50;background:#000;display:none;flex-direction:column;font-family:system-ui,sans-serif;color:#fff}
+  #fk.on{display:flex}
+  #fkAtas{padding:12px 16px;font:800 18px system-ui;background:rgba(15,27,51,.92);display:flex;gap:10px;align-items:center}
+  #fkAtas span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #fkWrap{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  #fkV,#fkImg{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;background:#000}
+  #fkImg{display:none}
+  #fkPesan{position:absolute;left:12px;right:12px;bottom:12px;text-align:center;font:700 16px system-ui;background:rgba(0,0,0,.55);padding:10px;border-radius:12px}
+  #fkBawah{display:flex;gap:12px;padding:14px 16px calc(14px + env(safe-area-inset-bottom));background:rgba(15,27,51,.92)}
+  #fk button{border:0;border-radius:16px;font:800 20px system-ui;padding:18px 16px;cursor:pointer;color:#0f1b33;background:#fff}
+  #fk button.utama{flex:1;background:linear-gradient(135deg,#f5b400,#ff8a00);color:#1a1200}
+  #fk button:disabled{opacity:.5}
+  #fk .kecil{font-size:16px;padding:10px 14px}
+  #tabLain{position:fixed;inset:0;z-index:60;background:#0f1b33;color:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center;font:700 20px system-ui,sans-serif}
+  #tabLain.on{display:flex}
+  #tabLain button{border:0;border-radius:16px;font:800 20px system-ui;padding:18px 26px;background:linear-gradient(135deg,#f5b400,#ff8a00);color:#1a1200}
 </style>
 </head>
 <body>
 <iframe id="g" title="GASPOL" allow="camera; microphone; geolocation; bluetooth; fullscreen; clipboard-read; clipboard-write; screen-wake-lock; web-share; autoplay"></iframe>
 <div id="muat"><i></i><span>Membuka GASPOL…</span></div>
 <video id="v" autoplay playsinline muted></video>
+<div id="fk" role="dialog" aria-label="Foto DO">
+  <div id="fkAtas"><span id="fkJudul">📷 Foto DO</span><button class="kecil" id="fkGanti" type="button">🔄 Ganti kamera</button></div>
+  <div id="fkWrap"><video id="fkV" autoplay playsinline muted></video><img id="fkImg" alt=""><div id="fkPesan">Arahkan ke kertas DO + stiker barcode, tahan tegak, lalu tekan JEPRET</div></div>
+  <div id="fkBawah"><button id="fkBatal" type="button">✕ Batal</button><button class="utama" id="fkJepret" type="button" disabled>📸 JEPRET</button><button id="fkUlang" type="button" style="display:none">↻ Ulang</button><button class="utama" id="fkPakai" type="button" style="display:none">✅ Pakai foto ini</button></div>
+</div>
+<div id="tabLain"><div style="font-size:64px">🗂️</div><div>GASPOL sudah dibuka di tab lain.<br><small style="font-weight:500;opacity:.8">Tab ini dimatikan supaya tablet tidak berat &amp; kamera tidak rebutan. Tutup tab ini.</small></div><button id="tabLainPakai" type="button">Pakai di tab ini saja</button></div>
 <script>
 (function () {
   "use strict";
@@ -154,7 +177,7 @@
     S.mesin = ""; nyalakan();
   }
   function hidup() { S.aktif = true; clearTimeout(S.tMati); var tr = S.stream && S.stream.getVideoTracks()[0]; if (!tr || tr.readyState === "ended") { S.mesin = ""; nyalakan(); } else { S.mesin = ""; /* status LIVE dikirim ulang oleh cari() */ } }
-  function istirahat() { S.aktif = false; clearTimeout(S.tMati); S.tMati = setTimeout(function () { if (!S.aktif) { matikan(); S.mesin = ""; } }, 90000); /* kamera dimatikan kalau 1,5 menit tidak di layar scan */ }
+  function istirahat() { S.aktif = false; clearTimeout(S.tMati); S.tMati = setTimeout(function () { if (!S.aktif) { matikan(); S.mesin = ""; } }, 15000); /* kamera dimatikan kalau 15 dtk tidak di layar scan (22 Nov: dulu 90 dtk, tablet berat) */ }
 
   /* ---- jembatan dengan GASPOL (Apps Script, bingkai googleusercontent) ---- */
   window.addEventListener("message", function (ev) {
@@ -165,11 +188,97 @@
     else if (d.gaspolKam === "off") istirahat();
     else if (d.gaspolKam === "ganti") ganti();
   });
-  document.addEventListener("visibilitychange", function () { if (!document.hidden && S.aktif) { var tr = S.stream && S.stream.getVideoTracks()[0]; if (!tr || tr.readyState === "ended") nyalakan(); } kunciLayar(); });
+  document.addEventListener("visibilitychange", function () { if (document.hidden && !F.on) { matikan(); S.mesin = ""; } /* 22 Nov: lepas kamera saat tab di belakang */ if (!document.hidden && S.aktif) { var tr = S.stream && S.stream.getVideoTracks()[0]; if (!tr || tr.readyState === "ended") nyalakan(); } kunciLayar(); });
   /* layar tablet jangan mati sendiri */
   var WL = null; function kunciLayar() { try { if (navigator.wakeLock && !document.hidden && !WL) navigator.wakeLock.request("screen").then(function (l) { WL = l; l.addEventListener("release", function () { WL = null; }); }).catch(function () { }); } catch (e) { } }
   kunciLayar(); document.addEventListener("click", kunciLayar, true);
-  window.__gaspolScan = S; /* buat uji */
+  /* ---- 22 Nov 2026 gaspol-foto-do: FOTO DO DI DALAM HALAMAN ----
+     Dulu fotoDo.html (Dashboard) membuka app kamera luar (input capture) -> Android membunuh tab Chrome -> GASPOL reload ke
+     Scan kartu. Sekarang fotoDo.html minta foto ke halaman ini; kamera dibuka di sini (getUserMedia), hasil JPEG dikirim balik sbg Blob. */
+  var F = { on: false, src: null, asal: "", stream: null, blob: null, pasfoto: false, perangkat: [], urlImg: "" };
+  var KUNCI_FOTO_ID = "gaspolFotoKameraId";
+  var fk = document.getElementById("fk"), fkV = document.getElementById("fkV"), fkImg = document.getElementById("fkImg"), fkPesan = document.getElementById("fkPesan");
+  function fkTombol(mode) { /* "live" | "hasil" | "proses" */
+    document.getElementById("fkJepret").style.display = mode === "hasil" ? "none" : "";
+    document.getElementById("fkUlang").style.display = mode === "hasil" ? "" : "none";
+    document.getElementById("fkPakai").style.display = mode === "hasil" ? "" : "none";
+    document.getElementById("fkJepret").disabled = mode !== "live";
+    fkV.style.display = mode === "hasil" ? "none" : ""; fkImg.style.display = mode === "hasil" ? "block" : "none";
+  }
+  function fkStop() { if (F.stream) { F.stream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) { } }); F.stream = null; } fkV.srcObject = null; }
+  function fkKirim(m) { try { if (F.src) F.src.postMessage(m, F.asal); } catch (e) { } }
+  function fkTutup() { F.on = false; fkStop(); fk.classList.remove("on"); if (F.urlImg) { try { URL.revokeObjectURL(F.urlImg); } catch (e) { } F.urlImg = ""; } F.blob = null; fkImg.removeAttribute("src"); if (S.aktif) nyalakan(); }
+  function fkNyala() {
+    fkStop(); fkTombol("proses"); fkPesan.textContent = "Menyalakan kamera…"; fkPesan.style.display = "";
+    var devId = baca(KUNCI_FOTO_ID), ukuran = { width: { ideal: 3840 }, height: { ideal: 2160 } };
+    var buka = function (c, cadangan) {
+      navigator.mediaDevices.getUserMedia({ video: c, audio: false }).then(function (st) {
+        if (!F.on) { st.getTracks().forEach(function (t) { t.stop(); }); return; }
+        F.stream = st; fkV.srcObject = st; var p = fkV.play(); if (p && p.catch) p.catch(function () { });
+        var tr = st.getVideoTracks()[0];
+        try { var cap = tr.getCapabilities ? tr.getCapabilities() : {}; if (cap.focusMode && cap.focusMode.indexOf("continuous") >= 0) tr.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(function () { }); } catch (e) { }
+        try { navigator.mediaDevices.enumerateDevices().then(function (d) { F.perangkat = d.filter(function (x) { return x.kind === "videoinput" && x.deviceId; }); }).catch(function () { }); } catch (e) { }
+        var siap = function () { if (!F.on || F.stream !== st) return; if (!fkV.videoWidth) { setTimeout(siap, 100); return; } /* JEPRET aktif setelah gambar kamera benar-benar ada */
+          fkTombol("live"); fkPesan.textContent = F.pasfoto ? "Wajah & badan masuk bingkai, lalu tekan JEPRET" : "Arahkan ke kertas DO + stiker barcode, tahan tegak, lalu tekan JEPRET"; };
+        siap();
+      }).catch(function (e) {
+        var n = (e && e.name) || "";
+        if (!cadangan && n !== "NotAllowedError" && n !== "SecurityError") { simpan(KUNCI_FOTO_ID, null); buka({ facingMode: { ideal: "environment" } }, true); return; }
+        /* kamera tidak bisa dibuka di sini -> fotoDo.html pakai cara lama (input file) */
+        fkKirim({ gaspolFotoGagal: 1, alasan: n || "error" }); fkTutup();
+      });
+    };
+    buka(devId ? Object.assign({ deviceId: { exact: devId } }, ukuran) : Object.assign({ facingMode: { ideal: "environment" } }, ukuran), false);
+  }
+  function fkBuka(src, asal, d) {
+    F.src = src; F.asal = asal; F.pasfoto = !!(d && d.pasfoto); F.on = true;
+    clearTimeout(S.tMati); matikan(); S.mesin = ""; /* lepas kamera scan QR dulu supaya tidak rebutan */
+    document.getElementById("fkJudul").textContent = (F.pasfoto ? "🪪 Pas foto " : "📷 Foto DO ") + String((d && d.judul) || "").slice(0, 80);
+    fk.classList.add("on"); fkNyala();
+  }
+  function fkJepret() {
+    if (!F.stream || !fkV.videoWidth) return; fkTombol("proses"); fkPesan.textContent = "Mengambil foto…";
+    var tr = F.stream.getVideoTracks()[0];
+    var dariVideo = function () {
+      return new Promise(function (res) {
+        var w = fkV.videoWidth, h = fkV.videoHeight, c = document.createElement("canvas"); c.width = w; c.height = h;
+        c.getContext("2d").drawImage(fkV, 0, 0, w, h); c.toBlob(function (b) { res(b); }, "image/jpeg", 0.92);
+      });
+    };
+    var foto = (window.ImageCapture && tr) ? new Promise(function (res) {
+      var selesai = false, t = setTimeout(function () { if (!selesai) { selesai = true; res(null); } }, 5000);
+      try { new window.ImageCapture(tr).takePhoto().then(function (b) { if (!selesai) { selesai = true; clearTimeout(t); res(b && b.size > 20000 ? b : null); } }, function () { if (!selesai) { selesai = true; clearTimeout(t); res(null); } }); } catch (e) { selesai = true; clearTimeout(t); res(null); }
+    }) : Promise.resolve(null);
+    foto.then(function (b) { return b || dariVideo(); }).then(function (b) {
+      if (!F.on) return; if (!b) { fkTombol("live"); fkPesan.textContent = "Gagal mengambil foto, coba JEPRET lagi"; return; }
+      F.blob = b; if (F.urlImg) { try { URL.revokeObjectURL(F.urlImg); } catch (e) { } } F.urlImg = URL.createObjectURL(b); fkImg.src = F.urlImg;
+      fkStop(); fkTombol("hasil"); fkPesan.textContent = "Jelas & barcode kelihatan? Tekan PAKAI. Buram? Tekan ULANG.";
+      try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) { }
+    });
+  }
+  document.getElementById("fkJepret").addEventListener("click", fkJepret);
+  document.getElementById("fkUlang").addEventListener("click", function () { if (F.urlImg) { try { URL.revokeObjectURL(F.urlImg); } catch (e) { } F.urlImg = ""; } F.blob = null; fkNyala(); });
+  document.getElementById("fkPakai").addEventListener("click", function () { var b = F.blob; if (!b) return; fkKirim({ gaspolFotoHasil: b }); fkTutup(); });
+  document.getElementById("fkBatal").addEventListener("click", function () { fkKirim({ gaspolFotoBatal: 1 }); fkTutup(); });
+  document.getElementById("fkGanti").addEventListener("click", function () {
+    var L = F.perangkat, tr = F.stream && F.stream.getVideoTracks()[0], kini = tr && tr.getSettings ? tr.getSettings().deviceId : baca(KUNCI_FOTO_ID);
+    if (L.length > 1) { var i = -1; L.forEach(function (x, j) { if (x.deviceId === kini) i = j; }); simpan(KUNCI_FOTO_ID, L[(i + 1) % L.length].deviceId); }
+    if (fkImg.style.display !== "block") fkNyala();
+  });
+  window.addEventListener("message", function (ev) { /* dari fotoDo.html (Dashboard, bingkai googleusercontent) */
+    var d = ev.data; if (!d || typeof d !== "object" || !ASAL_OK.test(ev.origin || "") || !ev.source) return;
+    if (d.gaspolFotoTanya) { try { ev.source.postMessage({ gaspolFotoBisa: 1 }, ev.origin); } catch (e) { } return; }
+    if (d.gaspolFotoMinta) { if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { try { ev.source.postMessage({ gaspolFotoGagal: 1 }, ev.origin); } catch (e) { } return; } fkBuka(ev.source, ev.origin, d); return; }
+  });
+
+  /* ---- 22 Nov 2026: kunci 1 tab. Tab GASPOL Scan terbaru yang dipakai; tab lama melepas kamera & GASPOL-nya ---- */
+  var TAB_ID = Date.now() + "-" + Math.random().toString(36).slice(2, 8), BC = null;
+  function tabDimatikan() { if (document.getElementById("tabLain").classList.contains("on")) return; S.aktif = false; matikan(); if (F.on) fkTutup(); try { g.src = "about:blank"; } catch (e) { } document.getElementById("tabLain").classList.add("on"); }
+  try { BC = new BroadcastChannel("gaspol-scan"); BC.onmessage = function (e) { var m = e.data || {}; if (m.hai && m.id !== TAB_ID) tabDimatikan(); }; BC.postMessage({ hai: 1, id: TAB_ID }); } catch (e) { BC = null; }
+  if (!BC) { /* cadangan tanpa BroadcastChannel */ window.addEventListener("storage", function (e) { if (e.key === "gaspolScanTab" && e.newValue && e.newValue !== TAB_ID) tabDimatikan(); }); simpan("gaspolScanTab", TAB_ID); }
+  document.getElementById("tabLainPakai").addEventListener("click", function () { location.reload(); });
+
+  window.__gaspolScan = S; window.__gaspolFoto = F; /* buat uji */
 })();
 </script>
 </body>
