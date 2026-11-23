@@ -130,6 +130,7 @@
       + '<button type="button" class="kb segar' + ((det ? uMuat : memuat) ? ' putar' : '') + '" data-l="segar" aria-label="Muat ulang">⟳</button></div>'
       + '<div class="ksnIsi">' + (det ? isiDetail() : isiDaftar()) + '</div>' + htmlLembar() + htmlLihat();
     var g2 = lapisEl.querySelector('.ksnIsi'); if (g2) g2.scrollTop = y;
+    if (lihat && window.WHL_ZOOM) { var zt = lapisEl.querySelector('.ktlLihat .tg'), zi = zt && zt.querySelector('img'); if (zi) WHL_ZOOM.pasang(zt, zi.getAttribute('src')); } /* v3.47 foto bisa di-zoom */
     if (det) muatFotoGaleri();
   }
   function tutup() { if (!lapisEl) return; var d = lapisEl; lapisEl = null; d.classList.remove('tampil'); setTimeout(function () { d.remove(); }, 200); if (CTX && CTX.perbarui) CTX.perbarui(); }
@@ -347,7 +348,7 @@
         + (f.bisaHapus && adminK() ? '<button type="button" class="' + (hapusSiap === f.id ? 'mrh' : '') + '" data-l="hapus:' + esc(f.id) + '">' + (hapusSiap === f.id ? 'Ketuk lagi untuk hapus' : '🗑 Hapus') + '</button>' : '') + '</div>' : '') + '</div>';
   }
   function bukaLihat(id) {
-    lihat = id; hapusSiap = ''; lapis();
+    if (window.WHL_ZOOM) WHL_ZOOM.lupakan(); lihat = id; hapusSiap = ''; lapis();
     var f = U.foto.filter(function (x) { return x.id === id; })[0]; if (!f || FOTO[f.fileId]) return;
     panggil('pusatKatalogFoto', [U.unit.l, f.fileId], 60000).then(function (h) {
       if (h && h.ok) { FOTO[f.fileId] = 'data:' + h.mime + ';base64,' + h.b64; if (lihat === id) lapis(); } else { roti((h && h.pesan) || 'Foto tidak bisa dibuka.'); }

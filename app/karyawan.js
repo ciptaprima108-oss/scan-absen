@@ -7,6 +7,9 @@
  *   pusatKbOpsi [token] · pusatKbDaftar [token, paksa] · pusatKbDetail [token, id] · pusatKbFoto [token, id, 'ID'|'KTP'|'SIM']
  *   pusatKbUnggah [token, {jenis, mime, b64, baca}] · pusatKbSimpan [token, {mode, id, isi, foto, mini, orangBeda}] · pusatKbEkspor [token, {jenis, semua, ids, tandai}]
  * Data pribadi TIDAK disimpan di HP (cuma di memori selama layar terbuka; dibuang saat Keluar lewat lupakan()).
+ * v3.47 (23 Nov, Fanza): langkah 3 = FOTO WAJAH (latar apa saja) -> dipotong + latar diputihkan di HP (idcard.js, tanpa AI)
+ *   -> disimpan sebagai foto ID card (pusatKbUnggah jenis ID, server tidak berubah) -> KARTU ID CARD resmi dirakit otomatis (depan + QR belakang).
+ *   Upload foto ID card jadi (cara lama) tetap ada. Foto di penampil bisa di-zoom (zoom-foto.js).
  */
 (function () {
   'use strict';
@@ -95,13 +98,19 @@
       '.kbIdc .jb{background:#f5b400;border-radius:99px;padding:3px 12px;font-weight:900;font-size:9.5px;letter-spacing:.8px;margin-top:5px}.kbIdc .nk{font-size:7.5px;letter-spacing:1.4px;color:#64748b;font-weight:800;margin-top:7px}.kbIdc .id{font-family:Consolas,monospace;font-weight:900;font-size:16px}',
       '.kbTsv{width:100%;box-sizing:border-box;min-height:120px;font-family:Consolas,monospace;font-size:12px}',
       '.kbLihat{position:fixed;inset:0;z-index:10;background:#000;display:flex;flex-direction:column}.kbLihat .ats{display:flex;align-items:center;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;color:#fff}.kbLihat .ats b{flex:1}',
-      '.kbLihat .ats button{color:#fff;font-size:26px;min-width:44px;min-height:44px}.kbLihat .tg{flex:1;display:flex;align-items:center;justify-content:center}.kbLihat .tg img{max-width:100%;max-height:100%;object-fit:contain}'
+      '.kbAtur{position:fixed;inset:0;z-index:11;background:#0b0f16;color:#fff;display:flex;flex-direction:column}.kbAtur .ats{display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 12px 6px}.kbAtur .ats b{flex:1;font-size:16px}.kbAtur .ats button{color:#fff;font-size:24px;min-width:44px;min-height:44px}',
+      '.kbAtur .isi{flex:1;overflow:auto;padding:4px 16px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:10px}.kbAtur .bk{width:min(70vw,290px);flex:none;margin-top:10px;border:5px solid #0b1a33;outline:7px solid #f5b400;background:#fff}.kbAtur .bk canvas{display:block;width:100%;height:auto;touch-action:none}',
+      '.kbAtur .tip{font-size:12.5px;color:#cbd5e1;text-align:center;max-width:380px;line-height:1.45}.kbAtur .tbl{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.kbAtur .tbl button{min-width:52px;min-height:44px;border-radius:12px;background:rgba(255,255,255,.14);color:#fff;font-weight:900;font-size:17px;padding:0 14px}',
+      '.kbAtur .kbCent{color:#fff;margin-top:2px}.kbAtur .tUtama{width:100%;max-width:380px;min-height:52px;margin:4px 0 0}',
+      '.kbKartuMini{margin-top:9px;text-align:center}.kbKartuMini img{width:150px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.25)}.kbIdJadi{display:block;margin:10px 0 0;font-size:12px;color:var(--redup);text-align:center;font-weight:600}.kbIdJadi u{color:var(--utama);font-weight:800}',
+      '.kbKartuJadi{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:520px;margin:4px auto}.kbKartuJadi img{width:100%;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25)}.kbKartuJadi .kbKosong{grid-column:1/-1}',
+      '.kbLihat .ats button{color:#fff;font-size:26px;min-width:44px;min-height:44px}.kbLihat .tg{flex:1;min-height:0;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}.kbLihat .tg img{max-width:100%;max-height:100%;object-fit:contain}'
     ].join('');
     document.head.appendChild(st);
   }
 
   /* ---------- lapis ---------- */
-  var LIHAT = null;
+  var LIHAT = null, ATUR = null, KARTU = {};
   function lapis() {
     if (lapisEl && !document.body.contains(lapisEl)) lapisEl = null;
     if (!lapisEl) {
@@ -115,13 +124,16 @@
     lapisEl.innerHTML = '<div class="ksnKp"><button type="button" class="kb" data-l="kembali" aria-label="Kembali">‹</button><div class="nm">' + esc(J[0]) + '<b>' + esc(J[1]) + '</b></div><span class="sp"></span>'
       + (layar === 'daftar' ? '<button type="button" class="kb segar' + (memuat ? ' putar' : '') + '" data-l="segar" aria-label="Muat ulang">⟳</button>' : '') + '</div>'
       + '<div class="ksnIsi">' + (layar === 'daftar' ? isiDaftar() : layar === 'detail' ? isiDetail() : layar === 'form' ? isiForm() : layar === 'kartu' ? isiKartu() : isiEkspor()) + '</div>'
-      + (LIHAT ? '<div class="kbLihat" data-l="tutupLihat"><div class="ats"><b>' + esc(LIHAT.judul) + '</b><button type="button" data-l="tutupLihat" aria-label="Tutup">✕</button></div><div class="tg"><img src="' + LIHAT.src + '" alt=""></div></div>' : '');
+      + (LIHAT ? '<div class="kbLihat" data-l="tutupLihat"><div class="ats"><b>' + esc(LIHAT.judul) + '</b><button type="button" data-l="tutupLihat" aria-label="Tutup">✕</button></div><div class="tg"><img src="' + LIHAT.src + '" alt=""></div></div>' : '') + htmlAtur();
     var g2 = lapisEl.querySelector('.ksnIsi'); if (g2) g2.scrollTop = y;
+    if (LIHAT && window.WHL_ZOOM) WHL_ZOOM.pasang(lapisEl.querySelector('.kbLihat .tg'), LIHAT.src); /* v3.47 foto bisa di-zoom */
+    if (ATUR) pasangAtur(); if (layar === 'form') kartuForm(); if (layar === 'kartu') buatKartu();
   }
-  function tutup() { if (!lapisEl) return; var d = lapisEl; lapisEl = null; d.classList.remove('tampil'); setTimeout(function () { d.remove(); }, 200); FORM = null; U = null; EK = null; LIHAT = null; if (CTX && CTX.perbarui) CTX.perbarui(); }
+  function tutup() { if (!lapisEl) return; var d = lapisEl; lapisEl = null; d.classList.remove('tampil'); setTimeout(function () { d.remove(); }, 200); FORM = null; U = null; EK = null; LIHAT = null; ATUR = null; if (CTX && CTX.perbarui) CTX.perbarui(); }
   function kembali() {
     if (!lapisEl) return false;
     if (LIHAT) { LIHAT = null; lapis(); return true; }
+    if (ATUR) { ATUR = null; lapis(); return true; }
     if (layar === 'form') { layar = FORM && FORM.mode === 'lengkapi' && U ? 'detail' : 'daftar'; FORM = null; lapis(); return true; }
     if (layar === 'kartu') { layar = U ? 'detail' : 'daftar'; lapis(); return true; }
     if (layar === 'detail' || layar === 'ekspor') { layar = 'daftar'; U = null; EK = null; lapis(); return true; }
@@ -217,7 +229,7 @@
     var h = '<div class="kbAtas"><div class="pp">' + (pf ? '<img src="' + pf + '" alt="">' : esc(inisial(o.nama || U.namaSistem))) + '</div><div style="min-width:0"><h1>' + esc(o.nama || U.namaSistem) + '</h1><div class="sub">' + esc(U.id + (U.kartu && U.kartu !== U.id ? ' · kartu ' + U.kartu : '')) + '</div>'
       + '<div class="kbTags"><span class="kbTag">' + esc(U.jenis) + '</span>' + (U.lambung ? '<span class="kbTag">' + esc(U.lambung) + '</span>' : '') + (U.baru ? '<span class="kbTag">Dari app</span>' : '') + '<span class="kbTag ' + (U.kurang.length ? 'blm' : 'ok') + '">' + (U.kurang.length ? 'Kurang ' + U.kurang.length : '✓ Lengkap') + '</span></div></div></div>';
     if (U.kurang.length) h += '<div class="kbKurang"><b>Yang masih kurang:</b> ' + esc(U.kurang.join(', ')) + '</div>';
-    h += '<div class="kbAksi" style="margin-top:0"><button type="button" class="tUtama" data-l="lengkapi">📷 Lengkapi</button><button type="button" class="kbBtn2" data-l="kartu">🪪 Pratinjau ID card</button></div>';
+    h += '<div class="kbAksi" style="margin-top:0"><button type="button" class="tUtama" data-l="lengkapi">📷 Lengkapi</button><button type="button" class="kbBtn2" data-l="kartu">🪪 ID card jadi</button></div>';
     h += '<div class="kbH2">Dokumen</div><div class="kbDok">' + [['ID', 'Foto ID card'], ['KTP', 'KTP'], ['SIM', 'SIM']].map(function (x) {
       var k = { ID: 'id', KTP: 'ktp', SIM: 'sim' }[x[0]], s = fotoSrc(U.id, x[0]);
       return '<button type="button" data-l="' + (s ? 'lihat:' + x[0] : 'lengkapi') + '">' + (s ? '<img src="' + s + '" alt="">' : U.foto[k] === 'KARTU' ? 'Foto kartu GASPOL' : U.foto[k] ? 'Memuat…' : '＋ ' + x[1]) + '<i>' + x[1] + '</i></button>';
@@ -255,6 +267,66 @@
       + (p ? '<div class="prev"><img src="' + p + '" alt="Foto ' + j + '"></div>' : '')
       + (pr ? '<div class="st blm"><span class="putar"></span> ' + (j === 'ID' ? 'Mengunggah…' : 'Mengunggah & AI membaca… (±10–30 dtk)') + '</div>' : st ? '<div class="st ' + st[0] + '">' + esc(st[1]) + '</div>' : '') + '</div>';
   }
+  /* ---------- v3.47: FOTO WAJAH -> ID card otomatis ---------- */
+  function statusFoto(j) { var pr = FORM.proses[j], st = FORM.st[j]; return pr ? '<div class="st blm"><span class="putar"></span> Mengunggah…</div>' : st ? '<div class="st ' + st[0] + '">' + esc(st[1]) + '</div>' : ''; }
+  function kotakWajah() {
+    var p = FORM.prev.ID, ada = !!window.WHL_IDCARD;
+    if (!ada) return kotakUnggah('ID', '3. Foto ID card', 'Format ID card: <b>latar putih, seragam hitam</b>, badan tegak, wajah jelas.');
+    return '<div class="kbUp"><h3>3. Foto wajah → ID card jadi otomatis</h3><div class="kc">Cukup foto wajah / setengah badan, <b>latar apa saja</b>. App memotong foto & memutihkan latarnya (wajah & baju tidak diubah), lalu kartu ID card resmi (nama, jabatan, ID, QR) dibuat otomatis.</div>'
+      + '<div class="tb"><label class="kbBtn2">📷 Kamera<input type="file" accept="image/*" capture="environment" data-f="WAJAH" hidden></label><label class="kbBtn2">🖼️ Galeri<input type="file" accept="image/*" data-f="WAJAH" hidden></label></div>'
+      + (p ? '<div class="kbKartuMini"><img id="kbKartuForm" src="' + (FORM.kartuSrc || p) + '" alt="Kartu ID card"></div>' : '') + statusFoto('ID')
+      + '<label class="kbIdJadi">Sudah punya foto ID card jadi (latar putih)? <u>Unggah langsung</u><input type="file" accept="image/*" data-f="ID" hidden></label></div>';
+  }
+  function kartuForm() {
+    if (!FORM || !FORM.prev.ID || !window.WHL_IDCARD) return;
+    var form = FORM, p = form.prev.ID, jab = form.isi.jabatan || (U && U.o && U.o.jabatan) || '', id = form.id || (OPSI && OPSI.idBerikut) || 'WHL-01???';
+    var key = [id, form.isi.nama, jab, p.length, p.slice(-24)].join('|'); if (form.kartuKey === key) return; form.kartuKey = key;
+    WHL_IDCARD.kartu({ id: id, nama: form.isi.nama || '', jabatan: jab }, p).then(function (r) {
+      if (FORM !== form || form.kartuKey !== key) return; form.kartuSrc = r.depan; var im = lapisEl && lapisEl.querySelector('#kbKartuForm'); if (im) im.src = r.depan;
+    }).catch(function () { /* pratinjau saja */ });
+  }
+  function sumberAtur() { return ATUR ? (ATUR.putih && ATUR.info.putih ? ATUR.info.putih : ATUR.info.asli) : null; }
+  function htmlAtur() {
+    if (!ATUR) return ''; var bisaPutih = !!ATUR.info.putih;
+    return '<div class="kbAtur"><div class="ats"><button type="button" data-l="tutupAtur" aria-label="Batal">✕</button><b>Atur foto ID card</b></div><div class="isi">'
+      + '<div class="bk"><canvas id="kbAturKv" width="752" height="936"></canvas></div>'
+      + '<div class="tip">Geser & cubit 2 jari supaya pas: <b>kepala di atas, bahu kelihatan</b>. Foto cuma dipotong' + (bisaPutih ? ' & latarnya diputihkan' : '') + ', wajah & baju tidak diubah.</div>'
+      + '<div class="tbl"><button type="button" data-l="aturZoom:-" aria-label="Perkecil">−</button><button type="button" data-l="aturZoom:+" aria-label="Perbesar">+</button><button type="button" data-l="aturZoom:0">⟲ Otomatis</button></div>'
+      + (bisaPutih ? '<label class="kbCent"><input type="checkbox" id="kbAturPutih"' + (ATUR.putih ? ' checked' : '') + '> Latar putih</label>' : '<div class="tip">Latar terlalu ramai untuk diputihkan otomatis. Tetap bisa dipakai, atau foto ulang di depan dinding polos.</div>')
+      + '<button type="button" class="tUtama" data-l="pakaiAtur">✓ Pakai foto ini</button></div></div>';
+  }
+  function gambarAtur() { var cv = lapisEl && lapisEl.querySelector('#kbAturKv'), s = sumberAtur(); if (!cv || !s) return; WHL_IDCARD.gambarBingkai(cv.getContext('2d'), cv.width, cv.height, s, ATUR.at); }
+  function pasangAtur() {
+    var cv = lapisEl.querySelector('#kbAturKv'); if (!cv) return;
+    WHL_IDCARD.pasangEditor(cv, function () { return ATUR ? { at: ATUR.at, sumber: sumberAtur() } : null; }, gambarAtur); gambarAtur();
+  }
+  function bukaAtur(form, f) {
+    bacaFile(f).then(function (a) { return kecilkan(a, 1600, 0.92); }).then(WHL_IDCARD.muat).then(function (im) {
+      if (FORM !== form) return; var info = WHL_IDCARD.siapkan(im);
+      ATUR = { form: form, info: info, putih: !!(info.putih && info.sarankanPutih) }; ATUR.at = WHL_IDCARD.aturAwal(info); lapis();
+    }).catch(function (e) { roti((e && e.message) || 'Foto tidak bisa dibaca.'); });
+  }
+  function pakaiAtur() {
+    if (!ATUR) return; var A = ATUR, form = A.form, besar; ATUR = null;
+    try { besar = WHL_IDCARD.potret(A.putih && A.info.putih ? A.info.putih : A.info.asli, A.at); } catch (e) { roti('Foto gagal diproses.'); lapis(); return; }
+    kirimFoto(form, 'ID', Promise.all([besar, kecilkan(besar, 120, 0.6, true)]));
+  }
+  function buatKartu() {
+    if (!U || !window.WHL_IDCARD) return; var id = U.id, o = U.o, f = fotoSrc(id, 'ID');
+    if (U.foto.id === 'ada' && !f) return; /* foto masih dimuat: muatFoto memanggil lapis lagi */
+    var key = [f.length, f.slice(-24), o.nama || U.namaSistem, o.jabatan].join('|'); if (KARTU[id] && KARTU[id].key === key) return;
+    KARTU[id] = { key: key };
+    WHL_IDCARD.kartu({ id: id, nama: o.nama || U.namaSistem, jabatan: o.jabatan || '' }, f).then(function (r) {
+      if (!KARTU[id] || KARTU[id].key !== key) return; KARTU[id] = { key: key, depan: r.depan, belakang: r.belakang };
+      if (lapisEl && layar === 'kartu' && U && U.id === id) lapis();
+    }).catch(function () { delete KARTU[id]; roti('Kartu gagal dibuat.'); });
+  }
+  function simpanKartu(sisi) {
+    var k = U && KARTU[U.id]; if (!k || !k[sisi]) return;
+    var nama = U.id + ' - ' + String(U.o.nama || U.namaSistem || '').toUpperCase() + ' - ' + (sisi === 'depan' ? 'DEPAN' : 'BELAKANG') + '.png', b64 = k[sisi].split(',')[1];
+    if (window.WHL_BERKAS && window.WHL_BERKAS.buka) { window.WHL_BERKAS.buka(nama, b64, 'image/png').then(function () { roti('Kartu disimpan.'); }, function (e) { roti((e && e.message) || 'Gagal menyimpan.'); }); return; }
+    var a = document.createElement('a'); a.href = k[sisi]; a.download = nama; document.body.appendChild(a); a.click(); a.remove();
+  }
   function isiForm() {
     if (!FORM) return '';
     var baru = FORM.mode === 'baru', idn = baru || FORM.bolehIdentitas, J = OPSI ? OPSI.jabatan.map(function (x) { return x.j; }) : ['TYREMAN', 'MEKANIK MAINTENANCE'];
@@ -263,7 +335,7 @@
       : '<div class="kbIdBaru">Melengkapi <b>' + esc(FORM.id) + '</b>' + (idn ? '' : ' · nama & jabatan di sistem tidak diubah dari sini') + '</div>';
     h += kotakUnggah('KTP', '1. Foto KTP', 'Foto KTP lurus, terang, tidak silau. AI ' + (OPSI && OPSI.ai ? '(' + esc(OPSI.ai) + ') ' : '') + 'mengisi NIK, nama, lahir, alamat. Cek lagi sebelum simpan.');
     h += kotakUnggah('SIM', '2. Foto SIM' + (FORM.jenis === 'DRIVER' ? ' <span class="wajib">*</span>' : ' (kalau ada)'), 'No SIM, golongan, dan masa berlaku terisi otomatis.');
-    h += kotakUnggah('ID', '3. Foto ID card', 'Format ID card: <b>latar putih, seragam hitam</b>, badan tegak, wajah jelas.');
+    h += kotakWajah();
     h += '<div class="kbH2">Isian (bisa dikoreksi)</div>';
     h += inp('nama', 'Nama lengkap (sesuai KTP)', { wajib: baru, dis: !idn && false, max: 60 });
     if (idn) h += inp('jabatan', 'Jabatan / divisi', { wajib: true, pilih: J });
@@ -306,14 +378,20 @@
   function ubah(ev) {
     var t = ev.target; if (!t) return;
     if (t.id === 'kbOrangBeda' && FORM) { FORM.orangBeda = !!t.checked; return; }
-    if (t.getAttribute('data-k') && FORM) { FORM.isi[t.getAttribute('data-k')] = t.value; delete FORM.ai[t.getAttribute('data-k')]; if (t.getAttribute('data-k') === 'kop') lapis(); return; }
+    if (t.id === 'kbAturPutih' && ATUR) { ATUR.putih = !!t.checked; gambarAtur(); return; }
+    if (t.getAttribute('data-k') && FORM) { FORM.isi[t.getAttribute('data-k')] = t.value; delete FORM.ai[t.getAttribute('data-k')]; if (t.getAttribute('data-k') === 'kop') lapis(); kartuForm(); return; }
     var j = t.getAttribute('data-f'); if (!j || !FORM) return;
     var f = t.files && t.files[0]; t.value = ''; if (!f) return;
     if (!/^image\//.test(f.type || 'image/')) { roti('Pilih file foto.'); return; }
-    var form = FORM; form.proses[j] = true; form.st[j] = null; form.galat = ''; lapis();
-    bacaFile(f).then(function (asli) {
+    var form = FORM;
+    if (j === 'WAJAH') { if (window.WHL_IDCARD) bukaAtur(form, f); return; }
+    kirimFoto(form, j, bacaFile(f).then(function (asli) {
       return Promise.all([kecilkan(asli, 1600, 0.85), j === 'ID' ? kecilkan(asli, 120, 0.6, true) : Promise.resolve('')]);
-    }).then(function (hs) {
+    }));
+  }
+  function kirimFoto(form, j, janji) {
+    form.proses[j] = true; form.st[j] = null; form.galat = ''; if (lapisEl && FORM === form) lapis();
+    janji.then(function (hs) {
       form.prev[j] = hs[0]; if (j === 'ID') form.mini = hs[1]; if (lapisEl && FORM === form) lapis();
       return panggil('pusatKbUnggah', [{ jenis: j, mime: 'image/jpeg', b64: hs[0].split(',')[1], baca: j !== 'ID' }], 120000);
     }).then(function (h) {
@@ -358,6 +436,13 @@
   /* ---------- pratinjau ID card (tampilan saja; kartu cetak tetap dari skrip IDCardWHL) ---------- */
   function isiKartu() {
     if (!U) return '';
+    if (window.WHL_IDCARD) {
+      var k = KARTU[U.id], f0 = fotoSrc(U.id, 'ID'), h0 = '<div class="kbKartuJadi">' + (k && k.depan ? '<img src="' + k.depan + '" alt="ID card depan" data-l="lihatKartu:depan"><img src="' + k.belakang + '" alt="ID card belakang" data-l="lihatKartu:belakang">' : '<div class="kbKosong"><span class="putar"></span> Membuat kartu…</div>') + '</div>';
+      if (k && k.depan) h0 += '<div class="kbAksi"><button type="button" class="kbBtn2" data-l="simpanKartu:depan">⬇️ Simpan depan</button><button type="button" class="kbBtn2" data-l="simpanKartu:belakang">⬇️ Simpan belakang</button></div>';
+      h0 += '<div class="kbAksi"><button type="button" class="tUtama" data-l="lengkapi" style="grid-column:1/-1">📷 ' + (f0 ? 'Ganti foto wajah' : 'Ambil foto wajah') + '</button></div>';
+      if (!f0) h0 += '<div class="kbKurang" style="margin-top:10px">' + (U.foto.id === 'KARTU' ? 'Foto dari kartu GASPOL belum bisa dipakai di sini.' : U.foto.id ? 'Foto ID card sedang dimuat…' : 'Foto ID card belum ada.') + ' Tekan <b>Ambil foto wajah</b>: cukup foto wajah, kartu jadi otomatis.</div>';
+      return h0 + '<div class="kbJml" style="text-align:center;margin-top:10px">Kartu dibuat otomatis dari data + foto (desain resmi WHL, QR ke profil ' + esc(U.id) + '). Ketuk kartu untuk memperbesar. Cetak banyak sekaligus tetap bisa lewat Ekspor → Paket ID card.</div>';
+    }
     var o = U.o, f = fotoSrc(U.id, 'ID'), jab = o.jabatan || '-';
     return '<div class="kbIdc"><div class="ka">PT. WHALE HOLDER LOGISTIC<small>COAL HAULING · MINING LOGISTICS</small></div><div class="kbPita">KARTU IDENTITAS KARYAWAN</div><div class="fo">' + (f ? '<img src="' + f + '" alt="">' : esc(inisial(o.nama || U.namaSistem))) + '</div>'
       + '<div class="nm">' + esc(o.nama || U.namaSistem) + '</div><div class="jb">' + esc(jab) + '</div><div class="nk">NIK KARYAWAN</div><div class="id">' + esc(U.id) + '</div></div>'
@@ -405,7 +490,12 @@
     if (n === 'baru') { bukaBaru(); return; }
     if (n === 'lengkapi') { bukaLengkapi(); return; }
     if (n === 'kartu') { layar = 'kartu'; lapis(); return; }
-    if (n === 'lihat') { var s = fotoSrc(U && U.id, v); if (s) { LIHAT = { src: s, judul: v === 'ID' ? 'Foto ID card' : v }; lapis(); } return; }
+    if (n === 'lihat') { var s = fotoSrc(U && U.id, v); if (s) { if (window.WHL_ZOOM) WHL_ZOOM.lupakan(); LIHAT = { src: s, judul: v === 'ID' ? 'Foto ID card' : v }; lapis(); } return; }
+    if (n === 'tutupAtur') { ATUR = null; lapis(); return; }
+    if (n === 'aturZoom') { if (!ATUR) return; if (v === '0') ATUR.at = WHL_IDCARD.aturAwal(ATUR.info); else WHL_IDCARD.zoom({ at: ATUR.at, sumber: sumberAtur() }, v === '+' ? 1.25 : 0.8); gambarAtur(); return; }
+    if (n === 'pakaiAtur') { pakaiAtur(); return; }
+    if (n === 'lihatKartu') { var kk = U && KARTU[U.id]; if (kk && kk[v]) { if (window.WHL_ZOOM) WHL_ZOOM.lupakan(); LIHAT = { src: kk[v], judul: 'ID card ' + v }; lapis(); } return; }
+    if (n === 'simpanKartu') { simpanKartu(v); return; }
     if (n === 'simpan') { simpan(); return; }
     if (n === 'ekspor') { bukaEkspor(v); return; }
     if (n === 'jalanEkspor') { jalankanEkspor(); return; }
@@ -413,7 +503,7 @@
     if (n === 'salin') { var t = lapisEl.querySelector('#kbTsv'); if (!t) return; var ok = function () { roti('Disalin. Tempel di sel A baris kosong DATA KIMPER.'); }; if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(ok, function () { t.select(); document.execCommand('copy'); ok(); }); else { t.select(); document.execCommand('copy'); ok(); } return; }
   }
   /** Keluar / ganti akun: buang semua data pribadi dari memori. */
-  function lupakan() { D = null; OPSI = null; U = null; FORM = null; EK = null; FOTO = {}; LIHAT = null; if (lapisEl) { try { lapisEl.remove(); } catch (e) { /* */ } lapisEl = null; } }
+  function lupakan() { D = null; OPSI = null; U = null; FORM = null; EK = null; FOTO = {}; LIHAT = null; ATUR = null; KARTU = {}; if (lapisEl) { try { lapisEl.remove(); } catch (e) { /* */ } lapisEl = null; } }
 
   window.WHL_KARYAWAN = { boleh: boleh, buka: buka, kembali: kembali, lupakan: lupakan, _uji: { sayaBoleh: sayaBoleh, cocok: cocok, F: F } };
 })();
