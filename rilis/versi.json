@@ -1,13 +1,13 @@
 {
- "versi": "3.46",
- "versionCode": 347,
+ "versi": "3.47",
+ "versionCode": 348,
  "wajib": false,
  "catatan": [
-  "Katalog unit: tombol Nonaktifkan unit (dijual / tidak dipakai) untuk Fanza/Reza/Rike",
-  "Unit nonaktif tampil merah dan bisa diaktifkan lagi"
+  "Foto di Data karyawan & Katalog unit bisa di-zoom (cubit 2 jari, ketuk 2x, tombol + -)",
+  "Data karyawan: cukup foto wajah, ID card resmi jadi otomatis (latar diputihkan, QR profil)"
  ],
- "apk": "WHL-App-v3.46.apk",
- "ukuran": 8612077,
- "sha256": "f917bbdebf6f76eda94dc4c10dbbcb7279586455e9cc395eae74121d2cf6c41e",
- "dibuat": "2026-11-23 03:56"
+ "apk": "WHL-App-v3.47.apk",
+ "ukuran": 8818822,
+ "sha256": "45f8a5a8fac2ea33743f075b240dc693c6f71ae6a16d735f8f15bba6b8d5f5f6",
+ "dibuat": "2026-11-23 05:28"
 }
