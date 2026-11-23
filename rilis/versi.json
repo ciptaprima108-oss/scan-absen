@@ -1,12 +1,13 @@
 {
- "versi": "3.44",
- "versionCode": 345,
+ "versi": "3.45",
+ "versionCode": 346,
  "wajib": false,
  "catatan": [
-  "Menu baru Data karyawan untuk pimpinan (muncul setelah server siap)"
+  "Data karyawan: tab Gaji/Kasbon/Dokumen tidak ikut muncul lagi",
+  "Data karyawan: kartu menyebut isian yang belum ada"
  ],
- "apk": "WHL-App-v3.44.apk",
- "ukuran": 8609657,
- "sha256": "54558c481071bc4cc87dff1feb5613d4efe076c17946bc97596f5993472dfe9e",
- "dibuat": "2026-11-21 13:48"
+ "apk": "WHL-App-v3.45.apk",
+ "ukuran": 8609942,
+ "sha256": "2829ae7890652e3d4c6b0b1dda87139ffd9a8fab85fe254331f17acd26f14740",
+ "dibuat": "2026-11-23 02:32"
 }
