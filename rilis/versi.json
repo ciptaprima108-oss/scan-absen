@@ -1,13 +1,13 @@
 {
- "versi": "3.45",
- "versionCode": 346,
+ "versi": "3.46",
+ "versionCode": 347,
  "wajib": false,
  "catatan": [
-  "Data karyawan: tab Gaji/Kasbon/Dokumen tidak ikut muncul lagi",
-  "Data karyawan: kartu menyebut isian yang belum ada"
+  "Katalog unit: tombol Nonaktifkan unit (dijual / tidak dipakai) untuk Fanza/Reza/Rike",
+  "Unit nonaktif tampil merah dan bisa diaktifkan lagi"
  ],
- "apk": "WHL-App-v3.45.apk",
- "ukuran": 8609942,
- "sha256": "2829ae7890652e3d4c6b0b1dda87139ffd9a8fab85fe254331f17acd26f14740",
- "dibuat": "2026-11-23 02:32"
+ "apk": "WHL-App-v3.46.apk",
+ "ukuran": 8612077,
+ "sha256": "f917bbdebf6f76eda94dc4c10dbbcb7279586455e9cc395eae74121d2cf6c41e",
+ "dibuat": "2026-11-23 03:56"
 }
