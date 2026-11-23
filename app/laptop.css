@@ -1,0 +1,90 @@
+/* v3.48 (Fanza 23 Nov: "buatkan App WHL untuk laptop juga") â€” TATA LETAK LAPTOP / PC.
+ * Hanya berlaku di layar lebar (>= 1200 px) DENGAN mouse/touchpad (hover + pointer halus).
+ * HP & tablet (iPad sentuh) tidak kena sama sekali -> tampilan HP tetap persis sama. Logika app tidak diubah.
+ *  - bilah navigasi bawah jadi MENU SAMPING kiri (Beranda, Aktivitas, Forum, Kotak masuk, Akun)
+ *  - isi lebih lebar (maks 1180 px) + daftar jadi grid 2-4 kolom (katalog unit, data karyawan, nota, kasbon, unit, kartu ringkasan)
+ *  - layar modul (lapis) dibuka di sebelah kanan menu samping; lembar bawah (tirai) jadi kotak dialog di tengah
+ * Pasangannya laptop.js (menu samping menutup layar modul lewat tombol Kembali app, tombol Esc = Kembali).
+ * Selektor modul diawali "html" supaya menang dari <style> yang disuntik modul (katalog.js, karyawan.js) sesudah berkas ini.
+ */
+@media (min-width:1200px) and (hover:hover) and (pointer:fine) {
+  :root { --sb:236px; }
+
+  /* ---------- menu samping ---------- */
+  #layarApp { padding-left:var(--sb); }
+  #layarApp .nav { top:0; bottom:0; left:0; right:auto; width:var(--sb); padding:18px 14px; border-top:0; border-right:1px solid var(--garis); box-shadow:4px 0 18px rgba(16,42,84,.05); overflow-y:auto; z-index:6; backdrop-filter:none; -webkit-backdrop-filter:none; background:var(--panel); }
+  #layarApp .nav::before { content:"Pusat WHL"; display:flex; align-items:center; gap:10px; height:44px; padding:0 8px 0 56px; margin:0 0 18px; font:800 17px/1.15 'Plus Jakarta Sans', Nunito, system-ui, sans-serif; color:var(--teks);
+    background:url("img/logo-whl-biru.png") 6px center / 40px 40px no-repeat; }
+  #layarApp .nav > div { max-width:none; margin:0; display:flex; flex-direction:column; align-items:stretch; gap:4px; }
+  #layarApp .nav button { flex-direction:row; justify-content:flex-start; align-items:center; gap:12px; min-height:48px; padding:6px 12px; border-radius:14px; font-size:14.5px; font-weight:700; color:var(--redup); text-align:left; cursor:pointer; transition:background-color .15s, color .15s; }
+  #layarApp .nav button:hover { background:var(--panel2); color:var(--teks); }
+  #layarApp .nav button.on { background:var(--tint); color:var(--utama); }
+  #layarApp .nav .ne { width:34px; height:34px; flex:none; border-radius:10px; background:transparent !important; }
+  #layarApp .nav .tanda { top:8px; left:34px; }
+  #layarApp .nav .tanda.angka { left:auto; right:12px; top:50%; transform:translateY(-50%); }
+
+  /* ---------- kepala + isi ---------- */
+  #layarApp .kpl { padding-left:28px; padding-right:28px; border-radius:0 0 28px 28px; }
+  #layarApp .kpl.ringkas { border-radius:0; }
+  #layarApp .kp-top .av { display:none; } /* logo sudah ada di menu samping */
+  #layarApp #kpSapa { max-width:1180px; margin:0 auto; }
+  #layarApp .kp-top { max-width:1180px; margin:0 auto; }
+  #layarApp .isiWrap { max-width:1180px; padding:0 28px 120px; }
+  #layarApp .kpl.ringkas + .isiWrap { margin-top:18px; }
+
+  /* Beranda: banner (kiri) + kotak layanan (kanan) bersebelahan, sisanya selebar isi */
+  #isi:has(> .bnrKotak + .kLayanan) { display:grid; grid-template-columns:minmax(0, 1.15fr) minmax(0, 1fr); column-gap:18px; align-items:start; }
+  #isi:has(> .bnrKotak + .kLayanan) > * { grid-column:1 / -1; }
+  #isi:has(> .bnrKotak + .kLayanan) > .bnrKotak { grid-column:1; }
+  #isi:has(> .bnrKotak + .kLayanan) > .bnrKotak + .kLayanan { grid-column:2; align-self:stretch; display:flex; flex-direction:column; justify-content:center; margin-bottom:14px; }
+  #isi .layanan { gap:14px 6px; }
+  .ly { cursor:pointer; } .ly span { transition:transform .15s; } .ly:hover span { transform:translateY(-2px); }
+
+  /* kartu geser (sorot) jadi grid, bukan geser ke samping */
+  #isi .geser { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); overflow:visible; margin:0 0 10px; padding:2px 0 8px; scroll-snap-type:none; }
+  #isi .geser .sorot { max-width:none; flex:none; }
+  #isi .gridKt { grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:14px; }
+  #isi .unitGrid { grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:10px; }
+  #isi .lencana { grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); }
+  #isi .grid3 { max-width:720px; }
+  #isi .uh, #isi .kartu { box-sizing:border-box; }
+  #isi .peta-isi svg.skm-tegak { max-width:760px; }
+
+  /* kartu melayang (absen / storing) di pojok kanan bawah, notifikasi roti di tengah isi */
+  #layarApp .melayang { left:auto; right:28px; bottom:22px; width:440px; max-width:calc(100vw - var(--sb) - 56px); margin:0; }
+  .roti { bottom:28px; left:calc(50% + var(--sb) / 2); }
+  .pitaPasang { left:auto; right:24px; bottom:24px; width:440px; margin:0; }
+
+  /* ---------- layar modul (lapis): di kanan menu samping, isi lebar ---------- */
+  body:has(> #layarApp:not(.sembunyi)) > .lapis:not(.pinLapis):not(.kgSpesial) { left:var(--sb); }
+  html .ksnKp { padding-left:24px; padding-right:24px; border-radius:0 0 22px 22px; }
+  html .ksnKp .kb { cursor:pointer; }
+  html .ksnIsi { max-width:1180px; padding:18px 28px 48px; }
+  html .lapis .hubTab { max-width:1180px; margin-left:auto; margin-right:auto; }
+
+  /* daftar kartu -> grid */
+  html .ktlLapis .ktlGrid, html .kryLapis .kbGrid { grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:14px; }
+  html .ktlLapis .ktlKartu, html .kryLapis .kbKartu { cursor:pointer; transition:transform .15s, box-shadow .15s; }
+  html .ktlLapis .ktlKartu:hover, html .kryLapis .kbKartu:hover { transform:translateY(-2px); }
+  html .ksnIsi :is(div, section):has(> .notaKartu + .notaKartu),
+  html .kbLapis .ksnIsi :is(div, section):has(> .kbKartu + .kbKartu),
+  html .ksnIsi :is(div, section):has(> .gjiKartu + .gjiKartu),
+  html .ksnIsi :is(div, section):has(> .dkKartu + .dkKartu),
+  html .ksnIsi :is(div, section):has(> .lbKartu + .lbKartu) { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:12px; align-items:start; }
+  html .ksnIsi :is(div, section):has(> .notaKartu + .notaKartu) > :not(.notaKartu),
+  html .kbLapis .ksnIsi :is(div, section):has(> .kbKartu + .kbKartu) > :not(.kbKartu),
+  html .ksnIsi :is(div, section):has(> .gjiKartu + .gjiKartu) > :not(.gjiKartu),
+  html .ksnIsi :is(div, section):has(> .dkKartu + .dkKartu) > :not(.dkKartu),
+  html .ksnIsi :is(div, section):has(> .lbKartu + .lbKartu) > :not(.lbKartu) { grid-column:1 / -1; }
+  html .ksnIsi :is(.notaKartu, .kbKartu, .gjiKartu, .dkKartu, .lbKartu) { margin-top:0; margin-bottom:0; }
+
+  /* ---------- lembar bawah -> dialog di tengah ---------- */
+  .tirai { align-items:center; padding:24px; }
+  .tirai .lembar { max-width:600px; max-height:86vh; border-radius:24px; padding-bottom:20px; }
+  .tirai .lembar .pegangan { display:none; }
+
+  /* ---------- rasa PC ---------- */
+  #layarApp button, .lapis button, .tirai button { cursor:pointer; }
+  * { scrollbar-width:thin; scrollbar-color:var(--garis) transparent; }
+  #layarLogin .wrap { padding-top:8vh; }
+}

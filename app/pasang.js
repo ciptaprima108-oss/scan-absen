@@ -10,6 +10,8 @@
   var ua = navigator.userAgent || '';
   var iOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
   var safari = iOS && !/CriOS|FxiOS|EdgiOS|OPiOS|Instagram|FBAN|FBAV|Line\/|WhatsApp/.test(ua);
+  var pc = !iOS && !/Android|Mobile/.test(ua); /* v3.48 laptop/PC Windows (Chrome/Edge) */
+  var edge = /Edg\//.test(ua);
   var berdiri = false; try { berdiri = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; } catch (e) { /* */ }
   document.documentElement.classList.toggle('pwa', berdiri);
 
@@ -52,13 +54,21 @@
       return;
     }
     if (tunda) { var e = tunda; tunda = null; e.prompt(); return; }
+    if (pc) {
+      lembar('<h3>Pasang WHL di laptop</h3><div class="kecil" style="font-size:14px;margin:4px 0 12px">Supaya terbuka sebagai aplikasi sendiri (jendela sendiri, ikon WHL di Start Menu / desktop):</div>'
+        + langkah(1, IKON_TAMBAH, 'Klik ikon pasang di kolom alamat', 'Ikon layar kecil dengan panah, di ujung kanan kolom alamat ' + (edge ? 'Edge' : 'Chrome') + '.')
+        + langkah(2, IKON_BAGI, 'Atau lewat menu', edge ? 'Menu ⋯ &gt; Aplikasi &gt; Instal situs ini sebagai aplikasi.' : 'Menu ⋮ &gt; Transmisikan, simpan, dan bagikan &gt; Instal halaman sebagai aplikasi.')
+        + langkah(3, '<img src="ikon/ikon-192.png" alt="" class="ikP" style="border-radius:9px">', 'Klik "Instal"', 'WHL terbuka di jendela sendiri. Berikutnya buka dari Start Menu / ikon desktop, lalu masuk dengan PIN.')
+        + '<button type="button" class="tUtama" data-tutup="1">Mengerti</button>');
+      return;
+    }
     lembar('<h3>Pasang WHL di layar utama</h3><div class="kecil" style="font-size:14px;margin:4px 0 12px">Di Chrome Android: ketuk <b>titik tiga</b> di kanan atas, lalu pilih <b>Instal aplikasi</b> / <b>Tambahkan ke layar utama</b>.</div><button type="button" class="tUtama" style="margin-top:0" data-tutup="1">Mengerti</button>');
   }
   function pita() {
     if (berdiri || document.getElementById('pitaPasang')) return;
     var sudah = ''; try { sudah = localStorage.getItem('whlPwaPetunjuk') || ''; } catch (e) { /* */ }
     var p = document.createElement('div'); p.id = 'pitaPasang'; p.className = 'pitaPasang' + (sudah ? ' kecilP' : '');
-    p.innerHTML = '<img src="ikon/ikon-192.png" alt=""><div><b>Pasang WHL di HP</b><span>' + esc(iOS ? 'Buka seperti aplikasi, tanpa App Store.' : 'Buka seperti aplikasi, tanpa Play Store.') + '</span></div><button type="button" class="tKecil" data-p="pasang">' + (iOS ? 'Caranya' : 'Pasang') + '</button><button type="button" class="tutupP" data-p="tutup" aria-label="Tutup">×</button>';
+    p.innerHTML = '<img src="ikon/ikon-192.png" alt=""><div><b>' + (pc ? 'Pasang WHL di laptop' : 'Pasang WHL di HP') + '</b><span>' + esc(pc ? 'Jadi aplikasi sendiri, ada ikon di Start Menu.' : iOS ? 'Buka seperti aplikasi, tanpa App Store.' : 'Buka seperti aplikasi, tanpa Play Store.') + '</span></div><button type="button" class="tKecil" data-p="pasang">' + (iOS ? 'Caranya' : 'Pasang') + '</button><button type="button" class="tutupP" data-p="tutup" aria-label="Tutup">×</button>';
     document.body.appendChild(p);
     p.addEventListener('click', function (ev) {
       var b = ev.target.closest('[data-p]'); if (!b) return;
@@ -74,5 +84,5 @@
     var sudah = ''; try { sudah = localStorage.getItem('whlPwaPetunjuk') || ''; } catch (e) { /* */ }
     if (iOS && !berdiri && !sudah) setTimeout(pita, 1200);
   });
-  window.WHL_PASANG = { tampil: tampil, bisa: function () { return !berdiri; }, berdiri: function () { return berdiri; } };
+  window.WHL_PASANG = { pc: pc, tampil: tampil, bisa: function () { return !berdiri; }, berdiri: function () { return berdiri; } };
 })();
