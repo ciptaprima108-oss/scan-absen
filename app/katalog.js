@@ -8,6 +8,8 @@
  * Menu muncul kalau peran cocok DAN pusatPing server sudah memuat pusatKatalogDaftar. Layar asli app, ikut tema terang/gelap (variabel CSS app).
  * Foto unit disimpan di folder Drive PRIVAT; gambarnya diambil lewat server (bukan link Drive). Data cuma di memori selama app terbuka.
  * Tidak memakai alert/confirm: hapus foto = ketuk 2x.
+ * v3.46 unit-nonaktif-23nov (Pak Fanza): detail unit -> "Nonaktifkan unit" (alasan Dijual / Tidak dipakai / Lainnya + catatan, ketuk 2x) &
+ *   "Aktifkan lagi"; chip filter "Nonaktif". Khusus Fanza/Reza/Rike (server: bolehNonaktif). RPC pusatUnaNonaktif / pusatUnaAktifkan (UnitNonaktif.gs).
  */
 (function () {
   'use strict';
@@ -134,7 +136,7 @@
 
   /* ---------- DAFTAR ---------- */
   function cocok(u) {
-    if (!F.keluar && u.st !== 'AKTIF') return false;
+    if (F.na) { if (u.st !== 'NONAKTIF') return false; } else if (!F.keluar && u.st !== 'AKTIF') return false; /* unit-nonaktif-23nov */
     if (F.armada !== 'SEMUA' && u.a !== F.armada) return false;
     if (F.merk && u.merk !== F.merk) return false;
     if (F.dok === 'habis' && u.dokBuruk !== 'habis') return false;
@@ -146,17 +148,17 @@
   }
   function kartu(u) {
     var w = WARNA_DOK[u.dokBuruk] || 'abu', persen = Math.round(100 * (u.lengkap || 0) / (u.dari || 10));
-    return '<button type="button" class="ktlKartu" data-l="unit:' + esc(u.l) + '"><div class="fo">'
+    return '<button type="button" class="ktlKartu' + (u.st === 'NONAKTIF' ? ' na' : '') + '" data-l="unit:' + esc(u.l) + '"><div class="fo">'
       + (u.mini ? '<img src="' + esc(u.mini) + '" alt="Foto ' + esc(u.l) + '" loading="lazy">' : '<span class="kos">' + TRUK + 'Belum ada foto</span>')
       + '<span class="ar ' + (u.a === 'TRONTON' ? 'tron' : 'trin') + '">' + namaArmada(u.a).toUpperCase() + '</span>'
-      + '<span class="td ktlD-' + w + '" title="Dokumen"></span>' + (u.nSisi != null ? '<span class="ns' + (Number(u.nSisi) >= 4 ? ' ok' : '') + '">' + Number(u.nSisi) + '/4 sisi</span>' : '') + (u.st !== 'AKTIF' ? '<span class="kl">' + esc(u.st) + '</span>' : '') + '</div>'
+      + '<span class="td ktlD-' + w + '" title="Dokumen"></span>' + (u.nSisi != null ? '<span class="ns' + (Number(u.nSisi) >= 4 ? ' ok' : '') + '">' + Number(u.nSisi) + '/4 sisi</span>' : '') + (u.st !== 'AKTIF' ? '<span class="kl' + (u.st === 'NONAKTIF' ? ' na' : '') + '">' + esc(u.st === 'NONAKTIF' && u.na && u.na.alasan ? 'NONAKTIF · ' + u.na.alasan : u.st) + '</span>' : '') + '</div>'
       + '<div class="bw"><div class="lb">' + esc(u.l) + '</div><div class="mk">' + esc([u.merk || 'Merk belum diisi', u.nopol].filter(Boolean).join(' · ')) + '</div>'
       + '<div class="dr">' + (u.driver && u.driver.length ? '👤 ' + esc(u.driver.join(', ')) : '<span style="opacity:.7">Driver tetap belum ada</span>') + '</div>'
       + '<div class="bar" title="Kelengkapan data ' + persen + '%"><i style="width:' + persen + '%"></i></div></div></button>';
   }
   function htmlGrid() {
     if (!D) return '';
-    var L = D.unit.filter(cocok);
+    var L = D.unit.filter(cocok); gayaNa(); /* unit-nonaktif-23nov */
     return '<div class="ktlJml">' + L.length + ' unit' + (F.cari || F.merk || F.dok || F.armada !== 'SEMUA' ? ' cocok' : '') + '</div>'
       + (L.length ? '<div class="ktlGrid">' + L.map(kartu).join('') + '</div>' : '<div class="ktlKosong">Tidak ada unit yang cocok.</div>');
   }
@@ -171,7 +173,7 @@
       + '<button type="button" class="ktlChip' + (!F.merk && !F.dok ? ' on' : '') + '" data-l="merk:">Semua merk</button>'
       + merk.map(function (m) { return '<button type="button" class="ktlChip' + (F.merk === m ? ' on' : '') + '" data-l="merk:' + esc(m) + '">' + esc(m) + ' · ' + Rg.merk[m] + '</button>'; }).join('')
       + (F.dok ? '<button type="button" class="ktlChip on" data-l="dok:">' + (F.dok === 'habis' ? 'Dokumen habis' : 'Segera habis') + ' ✕</button>' : '')
-      + '<button type="button" class="ktlChip' + (F.keluar ? ' on' : '') + '" data-l="keluar">' + (F.keluar ? '✓ ' : '') + 'Unit keluar</button></div>';
+      + '<button type="button" class="ktlChip' + (F.keluar ? ' on' : '') + '" data-l="keluar">' + (F.keluar ? '✓ ' : '') + 'Unit keluar</button>' + chipNa() + '</div>'; /* unit-nonaktif-23nov */
     h += eksporHtml(); /* v3.31 Excel (dibuat di HP) + PDF (server) */
     return h + '<div id="ktlGrid">' + htmlGrid() + '</div>' + (D.galat && D.galat.length ? '<div class="ktlJml" style="margin-top:12px">⚠️ Sebagian data otomatis belum terbaca: ' + esc(D.galat.join(' · ')) + '</div>' : '');
   }
@@ -215,6 +217,7 @@
     h += '<div class="ktlJudul"><div style="flex:1;min-width:0"><h1>' + esc(u.l) + '</h1><div class="sub">' + esc([u.merk, u.tipe, u.tahun].filter(Boolean).join(' · ') || 'Merk / tipe belum diisi') + '</div>'
       + '<div class="chs"><span class="ktlTag ' + (u.a === 'TRONTON' ? 'tron' : 'trin') + '">' + namaArmada(u.a) + '</span>' + (u.st !== 'AKTIF' ? '<span class="ktlTag kel">' + esc(u.st) + '</span>' : '<span class="ktlTag">Aktif</span>')
       + (u.nopol ? '<span class="ktlTag">' + esc(u.nopol) + '</span>' : '') + (u.lama ? '<span class="ktlTag">Dulu ' + esc(u.lama) + '</span>' : '') + '</div></div></div>';
+    h += naHtml(); /* unit-nonaktif-23nov */
     h += '<div class="ktlH2">Dokumen' + (ub ? '<button type="button" data-l="unggah:STNK">＋ Foto dokumen</button>' : '') + '</div><div class="ktlDok">' + U.dok.map(function (d) {
       return '<button type="button" class="dk ' + d.s + '" data-l="' + (d.fotoId ? 'lihat:' + esc(d.fotoId) : ub && !d.tgl ? 'isi' : 'x') + '"><small>' + esc(d.label) + '</small><b>' + (d.tgl ? esc(tglID(d.tgl)) : '—') + '</b><span>' + sisaTeks(d) + '</span>'
         + (d.fotoId ? '<i>Lihat dokumen ›</i>' : ub && !d.tgl ? '<i>Isi tanggal ›</i>' : '') + '</button>';
@@ -230,6 +233,7 @@
       + '<div class="ktlRow"><span>P2H kelengkapan terakhir</span>' + (U.p2h ? '<b>' + esc(U.p2h.tgl || '-') + '<small>' + esc(U.p2h.oleh ? 'oleh ' + U.p2h.oleh : '') + '</small></b>' : '<b class="kosong">belum ada</b>') + '</div></div>';
     if (bolehPdf() && window.WHL_EKSPOR) h += '<div class="ktlEks" style="margin-top:12px"><button type="button" data-l="pdfUnit">📄 PDF unit ini (foto 4 sisi + data)</button></div>'; /* v3.31 */
     if (ub) h += '<div class="ktlAksi"><button type="button" class="tUtama" data-l="unggah:UNIT">📷 Tambah foto</button><button type="button" class="ktlBtn2" data-l="isi">✏️ Ubah / lengkapi</button></div>';
+    h += naAksiHtml(); /* unit-nonaktif-23nov */
     return h;
   }
   function muatFotoGaleri() {
@@ -244,6 +248,7 @@
   /* ---------- lembar: isi data ---------- */
   function htmlLembar() {
     if (!lembar || !U) return '';
+    if (lembar.jenis === 'na' || lembar.jenis === 'ak') return naLembarHtml(); /* unit-nonaktif-23nov */
     if (lembar.jenis === 'isi') {
       var kolom = U.data.filter(function (x) { return x.bisaIsi; });
       return '<div class="ktlLmb" data-l="tutupLembar"><div class="in" data-l="x"><h3>Ubah / lengkapi ' + esc(U.unit.l) + '</h3><div class="kc">Isi yang kosong, atau koreksi data otomatis. Nilai asli di sheet sumber tetap tersimpan dan tiap koreksi dicatat. Kosongkan koreksi untuk kembali ke nilai otomatis.</div>'
@@ -408,7 +413,7 @@
     if (!window.WHL_EKSPOR || !D) return ''; gayaV331();
     return '<div class="ktlEks"><button type="button" data-l="excel">📊 Excel</button>' + (bolehPdf() ? '<button type="button" data-l="pdf">📄 PDF ringkas</button><button type="button" data-l="pdf4">📄 PDF + foto</button>' : '') + '</div>';
   }
-  function saringSrv() { var s = {}; if (F.armada !== 'SEMUA') s.armada = F.armada; if (!F.keluar) s.status = 'AKTIF'; return s; }
+  function saringSrv() { var s = {}; if (F.armada !== 'SEMUA') s.armada = F.armada; if (F.na) s.status = 'NONAKTIF'; else if (!F.keluar) s.status = 'AKTIF'; return s; } /* unit-nonaktif-23nov */
   function dokTeks(s) { return s === 'habis' ? 'Ada yang habis' : s === 'segera' ? 'Segera habis' : s === 'kosong' ? 'Belum diisi' : 'Aman'; }
   function excel() {
     if (!window.WHL_EKSPOR) return;
@@ -416,7 +421,7 @@
     if (!D) return;
     var L = D.unit.filter(cocok);
     var rows = L.map(function (u) { return [u.l, namaArmada(u.a), u.st || '', u.nopol || '', u.merk || '', u.tipe || '', u.tahun || '', (u.driver || []).join(', '), dokTeks(u.dokBuruk), Math.round(100 * (u.lengkap || 0) / (u.dari || 10)), u.lama || '']; });
-    var saring = [F.armada !== 'SEMUA' ? namaArmada(F.armada) : 'Semua armada', F.merk || '', F.dok === 'habis' ? 'dokumen habis' : F.dok === 'segera' ? 'segera habis' : '', F.keluar ? 'termasuk unit keluar' : 'unit aktif', F.cari ? 'cari "' + F.cari + '"' : ''].filter(Boolean).join(' · ');
+    var saring = [F.armada !== 'SEMUA' ? namaArmada(F.armada) : 'Semua armada', F.merk || '', F.dok === 'habis' ? 'dokumen habis' : F.dok === 'segera' ? 'segera habis' : '', F.na ? 'unit nonaktif' : F.keluar ? 'termasuk unit keluar' : 'unit aktif', F.cari ? 'cari "' + F.cari + '"' : ''].filter(Boolean).join(' · ');
     window.WHL_EKSPOR.excel('Katalog Unit WHL - ' + window.WHL_EKSPOR.tgl(), [
       ['Unit', [['Lambung', 'Armada', 'Status', 'Nopol', 'Merk', 'Tipe', 'Tahun', 'Driver tetap', 'Dokumen', 'Kelengkapan data (%)', 'Lambung lama']].concat(rows)],
       ['Ringkas', [['Katalog unit WHL', ''], ['Saringan', saring], ['Jumlah unit', L.length], ['Dibuat', new Date().toLocaleString('id-ID')]]]
@@ -453,6 +458,71 @@
     panggil('pusatKatalogKembalikan', [l, id], 45000).then(function (h) { kirim = false; roti((h && h.pesan) || 'Belum berhasil.'); RW.semua = null; muatUnit(l); if (h && h.ok) muat(false); }).catch(function () { kirim = false; roti('Sinyal putus. Coba lagi.'); lapis(); });
   }
 
+  /* ---------- unit-nonaktif-23nov (Pak Fanza): NONAKTIFKAN UNIT (soft delete) — khusus Fanza/Reza/Rike (server: bolehNonaktif) ---------- */
+  function bolehNa() { return !!(U && U.bolehNonaktif === true && srvPunya('pusatUnaNonaktif')); }
+  function gayaNa() {
+    if (document.getElementById('ktlGayaNa')) return; var st = document.createElement('style'); st.id = 'ktlGayaNa';
+    st.textContent = '.ktlNa{border-radius:14px;padding:12px 14px;margin:0 0 12px;background:rgba(220,76,76,.10);border:1px solid rgba(220,76,76,.35);color:var(--teks);font-size:13.5px;line-height:1.4}'
+      + '.ktlNa b{display:block;font-size:15px;font-weight:900;color:var(--tMerah)}.ktlNa span{display:block;font-weight:700;margin-top:3px}.ktlNa small{display:block;color:var(--redup);font-size:12px;margin-top:3px}'
+      + '.ktlBtnNa{color:var(--tMerah);border-color:rgba(220,76,76,.55)}.ktlNaAksi{margin-top:10px}.ktlNaAksi button{width:100%;min-height:48px;margin:0}'
+      + '.ktlNaDr{margin-top:12px;font-size:13px;line-height:1.45;padding:10px 12px;border-radius:12px;background:var(--panel2);color:var(--teks)}.ktlNaDr small{color:var(--redup)}'
+      + '.ktlKartu .kl.na{background:rgba(220,76,76,.92)}.ktlKartu.na .fo img{filter:grayscale(1);opacity:.75}.ktlLmb button[disabled]{opacity:.5}';
+    document.head.appendChild(st);
+  }
+  function chipNa() {
+    if (!D) return ''; gayaNa();
+    var n = D.unit.filter(function (u) { return u.st === 'NONAKTIF'; }).length; if (!n && !D.bolehNonaktif) return '';
+    return '<button type="button" class="ktlChip' + (F.na ? ' on' : '') + '" data-l="naFilter">' + (F.na ? '✓ ' : '') + '⛔ Nonaktif · ' + n + '</button>';
+  }
+  function naHtml() {
+    if (!U || !U.unit || U.unit.st !== 'NONAKTIF') return ''; gayaNa();
+    var a = U.na || {}, dr = a.driver || [];
+    return '<div class="ktlNa"><b>⛔ Unit nonaktif</b><span>' + esc(a.alasan || 'Nonaktif') + (a.catatan ? ' · ' + esc(a.catatan) : '') + '</span>'
+      + '<small>sejak ' + esc(tglID(a.tgl || '')) + (a.oleh ? ' · oleh ' + esc(a.oleh) : '') + '</small>'
+      + (dr.length ? '<small>Driver tetap yang dilepas: ' + esc(dr.join(', ')) + '</small>' : '')
+      + '<small>Unit tidak muncul di daftar & pilihan unit mana pun. Riwayat lama tetap utuh.</small></div>';
+  }
+  function naAksiHtml() {
+    if (!bolehNa()) return ''; gayaNa();
+    return U.unit.st === 'NONAKTIF'
+      ? '<div class="ktlNaAksi"><button type="button" class="tUtama" data-l="akBuka">✅ Aktifkan lagi</button></div>'
+      : '<div class="ktlNaAksi"><button type="button" class="ktlBtn2 ktlBtnNa" data-l="naBuka">⛔ Nonaktifkan unit (dijual / tidak dipakai)</button></div>';
+  }
+  function naLembarHtml() {
+    var u = U.unit, yk = !!lembar.yakin;
+    var tombol = function (aksi, teks, teksYakin) { return '<div class="dua"><button type="button" class="ktlBtn2" data-l="tutupLembar">Batal</button><button type="button" class="ktlBtn2 ' + (yk ? 'ktlBtnMerah' : 'ktlBtnNa') + '" data-l="' + aksi + '"' + (kirim || (aksi === 'naKirim' && !lembar.alasan) ? ' disabled' : '') + '>' + (kirim ? 'Menyimpan…' : yk ? teksYakin : teks) + '</button></div>'; };
+    if (lembar.jenis === 'na') {
+      var dr = U.driver || [], al = lembar.alasan || '';
+      return '<div class="ktlLmb" data-l="tutupLembar"><div class="in" data-l="x"><h3>Nonaktifkan ' + esc(u.l) + '?</h3>'
+        + '<div class="kc">Unit hilang dari semua daftar & pilihan unit (P2H, Pos Kontrol, Ban, GASPOL, Input DO, GPS, briefing, laporan). Riwayat lama (ritase, tiket, laporan) tetap utuh. Bisa diaktifkan lagi kapan saja.</div>'
+        + '<label>Alasan</label><div class="ktlChips" style="flex-wrap:wrap">' + [['DIJUAL', '💰 Dijual'], ['TIDAK DIPAKAI', '💤 Tidak dipakai'], ['LAINNYA', '✏️ Lainnya']].map(function (x) { return '<button type="button" class="ktlChip' + (al === x[0] ? ' on' : '') + '" data-l="naAlasan:' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>'
+        + '<label for="ktlNaCat">Catatan' + (al === 'LAINNYA' ? ' (wajib)' : ' (boleh kosong)') + '</label><textarea id="ktlNaCat" class="isian" rows="2" maxlength="200" placeholder="mis. dijual ke …, tanggal serah terima">' + esc(lembar.catatan || '') + '</textarea>'
+        + '<div class="ktlNaDr">' + (dr.length ? '👤 Driver tetap yang dilepas dari unit ini: <b>' + esc(dr.map(function (d) { return d.n; }).join(', ')) + '</b><br><small>Driver TIDAK dinonaktifkan, cuma lambung utamanya dikosongkan.</small>' : 'Unit ini tidak punya driver tetap.') + '</div>'
+        + tombol('naKirim', 'Nonaktifkan', 'Ketuk lagi: Ya, nonaktifkan ' + esc(u.l)) + '</div></div>';
+    }
+    var dl = (U.na && U.na.driver) || [];
+    return '<div class="ktlLmb" data-l="tutupLembar"><div class="in" data-l="x"><h3>Aktifkan lagi ' + esc(u.l) + '?</h3><div class="kc">Unit muncul lagi di semua daftar & pilihan unit.</div>'
+      + (dl.length ? '<label class="cent"><input type="checkbox" id="ktlAkDr"' + (lembar.drv !== false ? ' checked' : '') + '> Kembalikan driver tetap: ' + esc(dl.join(', ')) + '</label><div class="kc" style="margin-top:6px">Hanya kalau driver itu belum pegang unit lain.</div>' : '')
+      + tombol('akKirim', 'Aktifkan lagi', 'Ketuk lagi: Ya, aktifkan ' + esc(u.l)) + '</div></div>';
+  }
+  function naSimpanKetik() { if (!lembar || !lapisEl) return; var t = lapisEl.querySelector('#ktlNaCat'), c = lapisEl.querySelector('#ktlAkDr'); if (t) lembar.catatan = t.value; if (c) lembar.drv = c.checked; }
+  function naKirim(jenis) {
+    naSimpanKetik(); if (!lembar || kirim || !U || !bolehNa()) return;
+    if (jenis === 'na') {
+      if (!lembar.alasan) { roti('Pilih alasan dulu.'); return; }
+      if (lembar.alasan === 'LAINNYA' && !String(lembar.catatan || '').trim()) { roti('Alasan Lainnya: tulis catatannya dulu.'); return; }
+    }
+    if (!lembar.yakin) { var lb0 = lembar; lb0.yakin = true; lapis(); setTimeout(function () { if (lembar === lb0 && lb0.yakin && !kirim) { naSimpanKetik(); lb0.yakin = false; if (lapisEl) lapis(); } }, 5000); return; } /* pola ketuk 2x (tanpa confirm) */
+    kirim = true; lapis(); var l = U.unit.l; if (!lembar.cid) lembar.cid = cid();
+    var fn = jenis === 'na' ? 'pusatUnaNonaktif' : 'pusatUnaAktifkan';
+    var arg = jenis === 'na' ? { lambung: l, alasan: lembar.alasan, catatan: String(lembar.catatan || '').trim().slice(0, 200), cid: lembar.cid } : { lambung: l, kembalikanDriver: lembar.drv !== false, cid: lembar.cid };
+    panggil(fn, [arg], 60000).then(function (h) {
+      kirim = false;
+      if (!h || !h.ok) { if (lembar) lembar.yakin = false; roti((h && h.pesan) || 'Belum berhasil.'); lapis(); return; }
+      lembar = null; roti(h.pesan || 'Tersimpan.'); getar(); D = null; muatUnit(l); muat(false);
+    }).catch(function (e) { kirim = false; if (lembar) lembar.yakin = false; roti(((e && e.message) || 'Sinyal putus') + '. Ketuk lagi (tidak akan dobel).'); lapis(); });
+  }
+
   /* ---------- klik ---------- */
   function klik(ev) {
     var b = ev.target.closest('[data-l]'); if (!b || !lapisEl || !lapisEl.contains(b)) return;
@@ -463,7 +533,7 @@
     if (n.indexOf('armada:') === 0) { F.armada = n.slice(7); lapis(); getar(); return; }
     if (n.indexOf('merk:') === 0) { F.merk = n.slice(5); if (!F.merk) F.dok = ''; lapis(); return; }
     if (n.indexOf('dok:') === 0) { F.dok = n.slice(4); lapis(); return; }
-    if (n === 'keluar') { F.keluar = !F.keluar; lapis(); return; }
+    if (n === 'keluar') { F.keluar = !F.keluar; if (F.keluar) F.na = false; lapis(); return; }
     if (n.indexOf('unit:') === 0) { bukaUnit(n.slice(5)); return; }
     if (n.indexOf('lihat:') === 0) { bukaLihat(n.slice(6)); return; }
     if (n === 'tutupLihat') { lihat = null; hapusSiap = ''; lapis(); return; }
@@ -482,6 +552,12 @@
     if (n === 'pdf4') { pdf('4sisi'); return; }
     if (n === 'pdfUnit') { pdf('unit'); return; }
     if (n === 'simpan') { simpanIsian(); return; }
+    if (n === 'naFilter') { F.na = !F.na; if (F.na) F.keluar = false; lapis(); getar(); return; } /* unit-nonaktif-23nov */
+    if (n === 'naBuka') { if (bolehNa()) { lembar = { jenis: 'na', alasan: '' }; lapis(); } return; }
+    if (n === 'akBuka') { if (bolehNa()) { lembar = { jenis: 'ak', drv: true }; lapis(); } return; }
+    if (n.indexOf('naAlasan:') === 0) { if (lembar) { naSimpanKetik(); lembar.alasan = n.slice(9); lembar.yakin = false; lapis(); } return; }
+    if (n === 'naKirim') { naKirim('na'); return; }
+    if (n === 'akKirim') { naKirim('ak'); return; }
   }
   /* tombol Back HP: penampil -> lembar -> detail -> daftar -> tutup */
   function kembali() {
