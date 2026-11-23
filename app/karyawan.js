@@ -37,11 +37,12 @@
     if (document.getElementById('kbGaya')) return;
     var st = document.createElement('style'); st.id = 'kbGaya';
     st.textContent = [
-      '.kbLapis .ksnKp .sp{flex:1}.kbLapis .ksnKp .kb.segar.putar{animation:kbPutar 1s linear infinite}@keyframes kbPutar{to{transform:rotate(360deg)}}',
+      '.kryLapis .ksnKp .sp{flex:1}.kryLapis .ksnKp .kb.segar.putar{animation:kbPutar 1s linear infinite}@keyframes kbPutar{to{transform:rotate(360deg)}}',
       '.kbProg{background:var(--panel);border:1px solid var(--garis);border-radius:16px;padding:12px 14px;margin-bottom:10px;box-shadow:var(--bayang)}',
       '.kbProg .ag{font-size:26px;font-weight:900;letter-spacing:-.4px}.kbProg small{color:var(--redup);font-weight:700;font-size:12.5px}',
       '.kbProg .bar{height:9px;border-radius:9px;background:var(--panel2);margin-top:8px;overflow:hidden}.kbProg .bar i{display:block;height:100%;background:var(--hijau);border-radius:9px}',
       '.kbProg .ket{font-size:12px;color:var(--redup);margin-top:6px;line-height:1.45}',
+      '.kbProg .kbRk{font-size:12.5px;margin-top:8px;line-height:1.55}.kbProg .kbRk i{font-style:normal;font-weight:900;color:var(--tKuning)}',
       '.kbBaru{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:50px;border-radius:14px;margin:0 0 10px;font-size:15.5px;font-weight:800}',
       '.kbCari{position:relative;margin:2px 0 8px}.kbCari input{width:100%;box-sizing:border-box;font-size:16px;min-height:46px;padding:11px 14px;border-radius:14px}',
       '.kbSeg{display:flex;gap:4px;background:var(--panel2);border-radius:999px;padding:3px;margin-bottom:8px}.kbSeg button{flex:1;font-size:13px;font-weight:800;padding:8px 6px;border-radius:999px;color:var(--redup);min-height:36px}',
@@ -59,7 +60,7 @@
       '.kbKartu .br{position:absolute;left:7px;bottom:7px;font-size:10.5px;font-weight:800;padding:3px 7px;border-radius:999px;background:#dc4c4c;color:#fff}',
       '.kbKartu .bw{padding:9px 10px 10px}.kbKartu .nm{font-size:14.5px;font-weight:900;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}',
       '.kbKartu .id{font-size:12px;color:var(--redup);font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.kbKartu .kr{font-size:11px;color:var(--tKuning);font-weight:700;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kbKartu .kr.ok{color:var(--tHijau)}',
+      '.kbKartu .kr{font-size:11.5px;color:var(--tKuning);font-weight:700;margin-top:4px;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}.kbKartu .kr.ok{color:var(--tHijau)}',
       '.kbKartu .bar{height:4px;border-radius:9px;background:var(--panel2);margin-top:6px;overflow:hidden}.kbKartu .bar i{display:block;height:100%;background:var(--hijau);border-radius:9px}',
       '.kbKosong{text-align:center;color:var(--redup);padding:36px 12px;font-size:14px}',
       '.kbAtas{display:flex;gap:12px;align-items:center;margin-bottom:12px}.kbAtas .pp{width:92px;height:92px;border-radius:18px;overflow:hidden;background:var(--panel2);flex:none;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:900;color:var(--samar)}',
@@ -68,7 +69,7 @@
       '.kbKurang{background:rgba(245,158,11,.11);border:1px solid rgba(245,158,11,.4);border-radius:14px;padding:10px 12px;font-size:13px;margin-bottom:10px;line-height:1.5}',
       '.kbH2{font-size:12px;text-transform:uppercase;letter-spacing:1.3px;color:var(--redup);margin:16px 4px 8px;font-weight:700}',
       '.kbRow{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--garis);font-size:14px}.kbRow:first-child{border-top:0}.kbRow span{color:var(--redup)}.kbRow b{text-align:right;word-break:break-word}.kbRow b.kos{color:var(--samar);font-weight:600}',
-      '.kbLapis .kartu{padding:4px 16px;display:block}',
+      '.kryLapis .kartu{padding:4px 16px;display:block}',
       '.kbDok{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.kbDok button{border-radius:14px;overflow:hidden;background:var(--panel2);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--redup);border:1px dashed var(--garis);padding:0;position:relative}',
       '.kbDok button img{width:100%;height:100%;object-fit:cover}.kbDok button i{position:absolute;left:6px;bottom:6px;font-style:normal;font-size:10.5px;padding:2px 7px;border-radius:999px;background:rgba(0,0,0,.6);color:#fff}',
       '.kbAksi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.kbAksi button{min-height:50px;margin:0;font-size:15px;border-radius:14px}',
@@ -105,7 +106,7 @@
     if (lapisEl && !document.body.contains(lapisEl)) lapisEl = null;
     if (!lapisEl) {
       pasangGaya();
-      lapisEl = document.createElement('div'); lapisEl.className = 'lapis ksnLapis kbLapis'; document.body.appendChild(lapisEl);
+      lapisEl = document.createElement('div'); lapisEl.className = 'lapis ksnLapis kryLapis'; /* 23 Nov: dulu kbLapis = kelas Kasbon -> hub.js menempel tab Gaji/Kasbon/Dokumen */ document.body.appendChild(lapisEl);
       requestAnimationFrame(function () { lapisEl.classList.add('tampil'); });
       lapisEl.addEventListener('click', klik); lapisEl.addEventListener('input', ketik); lapisEl.addEventListener('change', ubah); lapisEl.addEventListener('focusout', kapitalkan, true);
     }
@@ -158,9 +159,9 @@
     var persen = Math.round(100 * (p.dari - p.nKurang) / (p.dari || 1));
     return '<button type="button" class="kbKartu" data-l="orang:' + esc(p.id) + '"><div class="fo">' + (p.mini ? '<img src="' + esc(p.mini) + '" alt="" loading="lazy">' : '<span class="ini">' + esc(inisial(p.nama)) + '</span>')
       + '<span class="jn' + (p.jenis === 'DRIVER' ? ' drv' : '') + '">' + (p.jenis === 'DRIVER' ? 'DRIVER' : esc(p.divisi || 'STAF')) + '</span>'
-      + '<span class="lc' + (p.nKurang ? ' blm' : '') + '">' + (p.nKurang ? 'Kurang ' + p.nKurang : '✓ Lengkap') + '</span>' + (p.baru ? '<span class="br">BARU</span>' : '') + '</div>'
+      + '<span class="lc' + (p.nKurang ? ' blm' : '') + '">' + (p.nKurang ? 'Kurang ' + p.nKurang + ' data' : '✓ Lengkap') + '</span>' + (p.baru ? '<span class="br">BARU</span>' : '') + '</div>'
       + '<div class="bw"><div class="nm">' + esc(p.nama) + '</div><div class="id">' + esc(p.id + (p.lambung ? ' · ' + p.lambung : '') + ' · ' + p.jabatan) + '</div>'
-      + '<div class="kr' + (p.nKurang ? '' : ' ok') + '">' + (p.nKurang ? esc(p.kurang.slice(0, 3).join(', ') + (p.kurang.length > 3 ? ' +' + (p.kurang.length - 3) : '')) : 'Data lengkap') + '</div>'
+      + '<div class="kr' + (p.nKurang ? '' : ' ok') + '">' + (p.nKurang ? 'Belum ada: ' + esc(p.kurang.join(', ')) : 'Data lengkap') + '</div>'
       + '<div class="bar"><i style="width:' + persen + '%"></i></div></div></button>';
   }
   function htmlGrid() {
@@ -169,11 +170,19 @@
     return '<div class="kbJml">' + L.length + ' orang' + (F.cari || F.divisi || F.kurang || F.jenis !== 'SEMUA' ? ' cocok' : '') + '</div>'
       + (L.length ? '<div class="kbGrid">' + L.map(kartu).join('') + '</div>' : '<div class="kbKosong">Tidak ada yang cocok.</div>');
   }
+  /* 23 Nov: isian yang paling banyak belum ada (dihitung dari daftar yang sudah dimuat) */
+  function ringkasKurang() {
+    if (!D || !D.orang) return '';
+    var n = {}; D.orang.forEach(function (p) { (p.kurang || []).forEach(function (k) { n[k] = (n[k] || 0) + 1; }); });
+    var L = Object.keys(n).sort(function (a, b) { return n[b] - n[a]; });
+    return L.length ? '<div class="kbRk"><b>Yang belum ada:</b> ' + L.map(function (k) { return esc(k) + ' <i>' + n[k] + '</i>'; }).join(' · ') + '</div>' : '';
+  }
   function isiDaftar() {
     if (!D) return memuat ? '<div class="kbKosong"><span class="putar"></span> Memuat data karyawan…</div>' : '<div class="kbKosong">' + esc(galat || 'Belum termuat.') + '<br><br><button type="button" class="tUtama" data-l="segar">Coba lagi</button></div>';
     var Rg = D.ringkas, persen = Math.round(100 * Rg.lengkap / (Rg.total || 1)), div = Object.keys(Rg.divisi || {}).sort();
     var h = '<div class="kbProg"><small>Kelengkapan data</small><div><b class="ag">' + Rg.lengkap + '/' + Rg.total + '</b> <small>lengkap (' + persen + '%)</small></div><div class="bar"><i style="width:' + persen + '%"></i></div>'
-      + '<div class="ket">Ayo dilengkapi bareng-bareng: buka orangnya → <b>Lengkapi</b> → foto KTP/SIM, AI isi otomatis, cek, simpan.</div></div>'
+      + ringkasKurang()
+      + '<div class="ket">Daftar = karyawan aktif (staf + kartu driver aktif). Data Kimper sudah masuk; alamat, No HP, jenis kelamin & foto KTP/SIM/ID card memang belum pernah dicatat. Lengkapi bareng-bareng: buka orangnya → <b>Lengkapi</b> → foto KTP/SIM, AI isi otomatis, cek, simpan.</div></div>'
       + '<button type="button" class="tUtama kbBaru" data-l="baru">＋ Karyawan baru</button>'
       + '<div class="kbCari"><input id="kbCari" class="isian" type="search" placeholder="Cari nama, ID, jabatan, lambung…" value="' + esc(F.cari) + '" autocomplete="off"></div>'
       + '<div class="kbSeg">' + [['SEMUA', 'Semua ' + Rg.total], ['STAF', 'Staf ' + Rg.staf], ['DRIVER', 'Driver ' + Rg.driver]].map(function (x) { return '<button type="button" data-l="jenis:' + x[0] + '" class="' + (F.jenis === x[0] ? 'on' : '') + '">' + esc(x[1]) + '</button>'; }).join('') + '</div>'
