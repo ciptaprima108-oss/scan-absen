@@ -147,6 +147,7 @@
     layar = 'daftar'; lapis(); muat(false);
     if (!OPSI) muatOpsi();
     if (awal === 'baru') setTimeout(bukaBaru, 50);
+    if (window.WHL_SIDIK) setTimeout(function () { window.WHL_SIDIK.otomatis(sesi(), roti); }, 1500); /* absen-foto-karyawan-baru-24nov */
   }
   function muatOpsi() { return panggil('pusatKbOpsi', [], 40000).then(function (h) { if (h && h.ok) OPSI = h; return OPSI; }).catch(function () { return null; }); }
   function muat(paksa) {
@@ -429,6 +430,7 @@
       if (!h || !h.ok) { form.galat = (h && h.pesan) || 'Gagal simpan.'; if (h && h.namaSama) form.namaSama = true; if (h && h.login === false && CTX && CTX.sesiHabis) CTX.sesiHabis(); if (lapisEl && FORM === form) lapis(); return; }
       if (R.bunyi) R.bunyi('sukses'); roti(h.pesan + (h.kurang && h.kurang.length ? ' Masih kurang: ' + h.kurang.join(', ') + '.' : ''));
       Object.keys(FOTO).forEach(function (k) { if (k.indexOf(h.id + '|') === 0) delete FOTO[k]; });
+      if (window.WHL_SIDIK && form.foto && form.foto.id && form.prev && form.prev.ID) window.WHL_SIDIK.setelahSimpan(sesi(), h.id, form.prev.ID, form.foto.id, roti); /* absen-foto-karyawan-baru-24nov */
       FORM = null; OPSI = null; muatOpsi(); muat(false); bukaOrang(h.id);
     }).catch(function (e) { form.kirim = false; form.galat = (e && e.message) || 'Sinyal putus. Data belum tersimpan, coba lagi.'; if (lapisEl && FORM === form) lapis(); });
   }
@@ -503,7 +505,7 @@
     if (n === 'salin') { var t = lapisEl.querySelector('#kbTsv'); if (!t) return; var ok = function () { roti('Disalin. Tempel di sel A baris kosong DATA KIMPER.'); }; if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(ok, function () { t.select(); document.execCommand('copy'); ok(); }); else { t.select(); document.execCommand('copy'); ok(); } return; }
   }
   /** Keluar / ganti akun: buang semua data pribadi dari memori. */
-  function lupakan() { D = null; OPSI = null; U = null; FORM = null; EK = null; FOTO = {}; LIHAT = null; ATUR = null; KARTU = {}; if (lapisEl) { try { lapisEl.remove(); } catch (e) { /* */ } lapisEl = null; } }
+  function lupakan() { if (window.WHL_SIDIK) window.WHL_SIDIK.lupakan(); D = null; OPSI = null; U = null; FORM = null; EK = null; FOTO = {}; LIHAT = null; ATUR = null; KARTU = {}; if (lapisEl) { try { lapisEl.remove(); } catch (e) { /* */ } lapisEl = null; } }
 
   window.WHL_KARYAWAN = { boleh: boleh, buka: buka, kembali: kembali, lupakan: lupakan, _uji: { sayaBoleh: sayaBoleh, cocok: cocok, F: F } };
 })();
