@@ -41,7 +41,7 @@
   function bersihModul() {
     HI = null; /* angka Hari ini */
     try { if (API.Pusat.lupakanSimpanan) API.Pusat.lupakanSimpanan(); } catch (e) { /* */ }
-    ['WHL_DRIVER', 'WHL_GAJI', 'WHL_KASBON', 'WHL_DOKKAS', 'WHL_LEMBUR', 'WHL_LABA', 'WHL_KATALOG', 'WHL_POIN', 'WHL_PERINGKAT', 'WHL_IZIN', 'WHL_ASISTEN', 'WHL_NOTA', 'WHL_ROSTER', 'WHL_KUIS', 'WHL_POIN_STAF', 'WHL_KSD', 'WHL_KARYAWAN', 'WHL_KU'].forEach(function (n) {
+    ['WHL_DRIVER', 'WHL_GAJI', 'WHL_KASBON', 'WHL_DOKKAS', 'WHL_LEMBUR', 'WHL_LABA', 'WHL_KATALOG', 'WHL_POIN', 'WHL_PERINGKAT', 'WHL_IZIN', 'WHL_ASISTEN', 'WHL_NOTA', 'WHL_ROSTER', 'WHL_KUIS', 'WHL_KUIS_STAF', 'WHL_POIN_STAF', 'WHL_KSD', 'WHL_KARYAWAN', 'WHL_KU'].forEach(function (n) {
       try { var m = window[n]; if (m && typeof m.lupakan === 'function') m.lupakan(); } catch (e) { /* satu modul gagal, yang lain tetap dibersihkan */ }
     });
   }
@@ -534,7 +534,7 @@
     PN.addListener('pushNotificationReceived', function (n) {
       var d = n.data || {}; catatKotak(d.jenis === 'tiket' ? 'tiket' : /^📌/.test(n.title || '') ? 'pengumuman' : /menyebutmu/.test(n.title || '') ? 'sebut' : d.jenis === 'forum' ? 'forum' : d.jenis === 'lembur' ? 'lembur' : 'info', n.title, n.body, d);
       if (d.jenis === 'forum' && window.WHL_FORUM && window.WHL_FORUM.siap()) return; // forum tersambung sudah membunyikan sendiri
-      R.bunyi(d.jenis === 'tiket' ? 'tiketWhl' : 'pesanWhl'); R.getar('awas'); roti((n.title ? n.title + ' — ' : '') + (n.body || ''));
+      if (d.jenis === 'kuis' && d.pra && window.WHL_KUIS_STAF) window.WHL_KUIS_STAF.pra(d); else R.bunyi(d.jenis === 'tiket' ? 'tiketWhl' : 'pesanWhl'); /* kuis-karyawan-24nov */ R.getar('awas'); roti((n.title ? n.title + ' — ' : '') + (n.body || ''));
       if (d.jenis === 'tiket') muatRingkasan(false);
       if (d.jenis === 'lembur' || d.jenis === 'izin') muatLembur(); /* v3.19: + izin */ /* v3.16: badge ACC lembur / status lembur langsung diperbarui */
     });
@@ -567,7 +567,7 @@
         return navigator.serviceWorker.ready.then(function (reg) { return webPesan.getToken({ vapidKey: KF.vapid, serviceWorkerRegistration: reg }); }).then(function (tok) {
           if (!tok) throw new Error('token kosong');
           PUSH.token = tok; pushSet('mendaftar', 'Token didapat, mendaftarkan ke server...');
-          if (!webPesan._dengar) { webPesan._dengar = true; webPesan.onMessage(function (m) { var n = m.notification || {}, d = m.data || {}; catatKotak(d.jenis === 'tiket' ? 'tiket' : d.jenis === 'forum' ? 'forum' : d.jenis === 'lembur' ? 'lembur' : 'info', n.title, n.body, d); R.bunyi(d.jenis === 'tiket' ? 'tiketWhl' : 'pesanWhl'); roti((n.title ? n.title + ' — ' : '') + (n.body || '')); }); }
+          if (!webPesan._dengar) { webPesan._dengar = true; webPesan.onMessage(function (m) { var n = m.notification || {}, d = m.data || {}; catatKotak(d.jenis === 'tiket' ? 'tiket' : d.jenis === 'forum' ? 'forum' : d.jenis === 'lembur' ? 'lembur' : 'info', n.title, n.body, d); if (d.jenis === 'kuis' && d.pra && window.WHL_KUIS_STAF) window.WHL_KUIS_STAF.pra(d); else R.bunyi(d.jenis === 'tiket' ? 'tiketWhl' : 'pesanWhl'); /* kuis-karyawan-24nov */ roti((n.title ? n.title + ' — ' : '') + (n.body || '')); }); }
           return API.Pusat.daftarPerangkat(SESI, tok, 'web').then(function (h) {
             if (h && h.ok) pushSet('aktif'); else if (h && h.login === false) pushSet('gagal', 'Server menolak: sesi habis. Keluar lalu masuk lagi.'); else pushSet('gagal', 'Server menolak: ' + ((h && h.pesan) || 'tanpa keterangan'));
           });

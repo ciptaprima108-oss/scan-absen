@@ -62,10 +62,13 @@
     achievement: function () { [523, 659, 784, 1047].forEach(function (f, i) { nada(f, f, 0.2, 'sine', 0.045, i * 0.09); }); nada(1568, 2093, 0.3, 'sine', 0.025, 0.38); } /* khas app: "aman" + satu nada lebih tinggi & kilau */
   };
   /* v3.6 suara khas WHL (perempuan "Pesan WHL" / "Tiket WHL" / "Pengumuman WHL" + jingle, -1 dBFS): file di suara/ */
-  var BERKAS = { pesanWhl: 'suara/whl_pesan.mp3', tiketWhl: 'suara/whl_tiket.mp3', pengumumanWhl: 'suara/whl_pengumuman.mp3' }, PUTAR = {};
+  var BERKAS = { pesanWhl: 'suara/whl_pesan.mp3', tiketWhl: 'suara/whl_tiket.mp3', pengumumanWhl: 'suara/whl_pengumuman.mp3', kuisWhl: 'suara/whl_kuis.mp3' /* kuis-karyawan-24nov: perempuan "Saatnya kuis, We Ha El!" */ }, PUTAR = {};
+  /* kuis-karyawan-24nov: berkas gagal diputar -> kuis diucapkan speechSynthesis id-ID (suara perempuan kalau ada), lainnya pop */
+  function ucap(teks) { try { var s = window.speechSynthesis; if (!s || !window.SpeechSynthesisUtterance) return false; var u = new window.SpeechSynthesisUtterance(teks); u.lang = 'id-ID'; u.rate = 0.95; u.pitch = 1.15; var v = (s.getVoices() || []).filter(function (x) { return /^id/i.test(x.lang); }); var p = v.filter(function (x) { return /female|wanita|perempuan|gadis|damayanti|ardiningrum/i.test(x.name); })[0] || v[0]; if (p) u.voice = p; s.cancel(); s.speak(u); return true; } catch (e) { return false; } }
+  function cadangan(nm) { if (nm === 'kuisWhl' && ucap('Saatnya kuis, We, Ha, El!')) return; WEB.pop(); }
   function suaraBerkas(nm) {
     if (setel.keras === false) { (nm === 'tiketWhl' ? WEB.alarm : WEB.pop)(); return; }
-    try { var a = PUTAR[nm] || (PUTAR[nm] = new Audio(BERKAS[nm])); a.volume = 1; a.currentTime = 0; var p = a.play(); if (p && p.catch) p.catch(function () { WEB.pop(); }); } catch (e) { WEB.pop(); }
+    try { var a = PUTAR[nm] || (PUTAR[nm] = new Audio(BERKAS[nm])); a.volume = 1; a.currentTime = 0; var p = a.play(); if (p && p.catch) p.catch(function () { cadangan(nm); }); } catch (e) { cadangan(nm); } /* kuis-karyawan-24nov */
   }
   function bunyi(nm) {
     if (BERKAS[nm]) { if (setel.suara && !document.hidden && !senyap()) suaraBerkas(nm); return; }

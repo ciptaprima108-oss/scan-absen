@@ -15,7 +15,8 @@
   function punya(fn) { return API.Pusat.asli() && API.Pusat.punya(fn); }
   function driver(S) { S = S || sesi(); return !!(S && S.user && S.user.peran === 'driver'); }
   function aktif(S) {
-    if (!driver(S) || !punya('pusatKuisStatus')) return false;
+    if (!punya('pusatKuisStatus')) return false;
+    if (!driver(S) && !(window.WHL_KUIS_STAF && window.WHL_KUIS_STAF.boleh(S || sesi()))) return false; /* kuis-karyawan-24nov: karyawan ikut (kuis-staf.js) */
     var d = KG() && KG().data(); if (d && d.fitur && d.fitur.kuis === false) return false;
     return true;
   }
@@ -38,7 +39,7 @@
   }
   function dariStatus(h) {
     var s = h.sekarang;
-    return { terbuka: !!(s && s.terbuka), sesi: s ? { id: s.id, jam: s.jam, tutup: s.tutup } : null, sudahJawab: !!(s && s.saya && s.saya.sudahJawab), sudahBuka: !!(s && s.saya && s.saya.sudahBuka), berikut: h.berikut || null, jadwal: h.jadwal };
+    return { staf: !!h.staf, jumlahSoal: h.jumlahSoal, poinPerBenar: h.poinPerBenar, poin: h.poin /* kuis-karyawan-24nov */, terbuka: !!(s && s.terbuka), sesi: s ? { id: s.id, jam: s.jam, tutup: s.tutup } : null, sudahJawab: !!(s && s.saya && s.saya.sudahJawab), sudahBuka: !!(s && s.saya && s.saya.sudahBuka), berikut: h.berikut || null, jadwal: h.jadwal };
   }
   function muatStatus() {
     if (ST_JALAN) return ST_JALAN; /* panggilan yang sedang jalan dipakai bersama (dulu: langsung null -> layar "Belum bisa dimuat") */
@@ -65,10 +66,10 @@
     var ik = '<span class="kgKuisIk">' + (KG() ? KG().ikon('kuis') : '') + '</span>';
     if (r.terbuka && r.sesi && !r.sudahJawab) {
       var sisa = msWib(r.sesi.tutup) - kini();
-      return '<button type="button" class="kartu kgKuisK buka" data-kg="kuis">' + ik + '<span class="tx"><b>Kuis safety ' + esc(jamT(r.sesi.jam)) + ' DIBUKA</b><small>1 soal · 30 detik · 10 benar tercepat +' + esc(r.poin || (r.sesi && r.sesi.poin) || 5) + ' poin' + (sisa > 0 ? ' · tutup ' + esc(lagi(sisa)) : '') + '</small></span><span class="kgChip">Jawab ›</span></button>';
+      return '<button type="button" class="kartu kgKuisK buka" data-kg="kuis">' + ik + '<span class="tx"><b>Kuis safety ' + esc(jamT(r.sesi.jam)) + ' DIBUKA</b><small>' + (r.staf ? esc(r.jumlahSoal || 5) + ' soal · +' + esc(r.poinPerBenar || 1) + ' tiap benar · sempurna tercepat +' : '1 soal · 30 detik · 10 benar tercepat +') /* kuis-karyawan-24nov */ + esc(r.poin || (r.sesi && r.sesi.poin) || 5) + ' poin' + (sisa > 0 ? ' · tutup ' + esc(lagi(sisa)) : '') + '</small></span><span class="kgChip">Jawab ›</span></button>';
     }
     if (r.terbuka && r.sesi && r.sudahJawab) return '<button type="button" class="kartu kgKuisK" data-kg="kuis">' + ik + '<span class="tx"><b>Kuis ' + esc(jamT(r.sesi.jam)) + ' sudah kamu jawab ✓</b><small>Kunci & penjelasan muncul jam ' + esc(jamT(String(r.sesi.tutup || '').slice(11, 16))) + '. ' + (r.berikut ? 'Sesi berikut ' + esc(jamT(r.berikut.jam)) + '.' : '') + '</small></span><span class="kgChip abu">Hasil ›</span></button>';
-    if (r.berikut) return '<button type="button" class="kartu kgKuisK" data-kg="kuis">' + ik + '<span class="tx"><b>Kuis sesi ' + esc(jamT(r.berikut.jam)) + ' dibuka ' + esc(lagi(msWib(r.berikut.mulai) - kini())) + '</b><small>10 benar tercepat dapat +' + esc(r.poin || (r.berikut && r.berikut.poin) || 5) + ' poin · jadwal ' + esc((r.jadwal || ['09:00', '16:00']).map(jamT).join(' & ')) + '</small></span><span class="kgChip abu">Lihat ›</span></button>';
+    if (r.berikut) return '<button type="button" class="kartu kgKuisK" data-kg="kuis">' + ik + '<span class="tx"><b>Kuis sesi ' + esc(jamT(r.berikut.jam)) + ' dibuka ' + esc(lagi(msWib(r.berikut.mulai) - kini())) + '</b><small>' + (r.staf ? esc(r.jumlahSoal || 5) + ' soal · bonus sempurna +' : '10 benar tercepat dapat +') /* kuis-karyawan-24nov */ + esc(r.poin || (r.berikut && r.berikut.poin) || 5) + ' poin · jadwal ' + esc((r.jadwal || ['09:00', '16:00']).map(jamT).join(' & ')) + '</small></span><span class="kgChip abu">Lihat ›</span></button>';
     return '';
   }
 
@@ -86,7 +87,7 @@
   function gagalHtml(p) { return '<div class="kartu kosongKm"><b>Belum bisa dimuat</b><small>' + esc(p) + '</small><button type="button" class="tKecil" data-kq="ulang" style="margin-top:10px">Coba lagi</button></div>'; }
   function buka(ctx) {
     if (ctx) CTX = ctx; if (!sesi()) return;
-    if (!driver()) { if (CTX && CTX.roti) CTX.roti('Kuis safety khusus driver.'); return; }
+    if (!driver()) { if (window.WHL_KUIS_STAF && window.WHL_KUIS_STAF.boleh(sesi())) { window.WHL_KUIS_STAF.buka(CTX); return; } if (CTX && CTX.roti) CTX.roti('Kuis safety khusus driver.'); return; } /* kuis-karyawan-24nov */
     if (!punya('pusatKuisStatus')) { if (CTX && CTX.roti) CTX.roti('Kuis safety belum dibuka di server.'); return; }
     SOAL = null; JAWAB = null; berhentiTik();
     lapis(R.kerangka ? R.kerangka('daftar') : '<span class="putar"></span>');
