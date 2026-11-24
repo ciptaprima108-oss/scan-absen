@@ -430,9 +430,48 @@
   }
   function pdf(jenis) {
     if (!window.WHL_EKSPOR) return;
-    var s = jenis === 'unit' && U ? { lambung: U.unit.l } : saringSrv(); if (jenis === '4sisi') s.foto = '4sisi'; else if (jenis !== 'unit') s.foto = 'sampul';
+    if (jenis === '4sisi') return pdf4(); /* katalog-pdf-foto-24nov */
+    var s = jenis === 'unit' && U ? { lambung: U.unit.l } : saringSrv(); if (jenis !== 'unit') { s.foto = 'sampul'; var dk = daftarKunci(); if (dk) s.daftar = dk; } /* katalog-pdf-foto-24nov: saringan merk/cari ikut */
     window.WHL_EKSPOR.pdf(panggil(FN_PDF, [s], 120000), 'Katalog Unit WHL' + (s.lambung ? ' - ' + s.lambung : ''), roti);
   }
+  /* katalog-pdf-foto-24nov MULAI (Pak Fanza 24 Nov: "PDF + foto" di iPhone cuma "Menyiapkan PDF…" lalu tidak jadi).
+   * Dulu: 1 panggilan untuk SEMUA unit (saringan merk tidak terkirim) + foto asli -> lewat batas 2 menit, pesan hilang.
+   * Sekarang bertahap: (1) tiap unit: server memperkecil foto 4 sisi (800 px, > 20 unit 600 px) & menyimpannya, progres "Foto unit 5/13…";
+   * (2) PDF disusun dari foto kecil itu; (3) dibuka lewat WHL_BERKAS (iPhone: lembar pratinjau + Bagikan / Simpan). Gagal = pesan jelas. */
+  var P4 = { jalan: false, teks: '' }, PDF4_MAKS = 40, PDF4_KECIL = 20, PDF4_PARALEL = 2;
+  function daftarKunci() { if (!D || !Array.isArray(D.unit)) return null; var L = D.unit.filter(cocok); return L.length && L.length < D.unit.length ? L.map(function (u) { return String(u.k || u.l); }) : null; }
+  function pdf4() {
+    if (P4.jalan) { roti('PDF + foto masih disiapkan… ' + P4.teks); return; }
+    var L = D && Array.isArray(D.unit) ? D.unit.filter(cocok) : [];
+    if (!L.length) { roti('Tidak ada unit yang cocok dengan saringan.'); return; }
+    if (L.length > PDF4_MAKS) { roti('PDF + foto maksimal ' + PDF4_MAKS + ' unit (sekarang ' + L.length + '). Saring dulu per merk / armada, atau pakai PDF ringkas.'); return; }
+    var px = L.length > PDF4_KECIL ? 600 : 800, kk = L.map(function (u) { return String(u.k || u.l); }), i = 0, selesai = 0, unitGagal = 0, fotoGagal = 0, lama = false;
+    P4.jalan = true;
+    var kabar = function () { P4.teks = 'Foto unit ' + selesai + '/' + kk.length + '…'; roti('Menyiapkan ' + P4.teks); };
+    var satu = function (k, ke) {
+      return panggil(FN_PDF, [{ siap: k, armada: '-', px: px }], 60000).then(function (h) {
+        if (h && h.siap === true) { if (h.ok === false) unitGagal++; else fotoGagal += Number(h.gagal) || 0; return; }
+        lama = true; /* server lama tidak kenal tahap siap -> {ok:false} "tidak ada unit" (armada '-') */
+      }, function () { if (!ke) return satu(k, 1); unitGagal++; }); /* sinyal putus: ulang 1x */
+    };
+    var kerja = function () { if (lama || i >= kk.length) return Promise.resolve(); var k = kk[i++]; return satu(k, 0).then(function () { selesai++; kabar(); return kerja(); }); };
+    var akhir = function (t) { P4.jalan = false; P4.teks = ''; if (t) roti(t); };
+    kabar();
+    var pekerja = []; for (var p = 0; p < PDF4_PARALEL; p++) pekerja.push(kerja());
+    return Promise.all(pekerja).then(function () {
+      if (lama) { akhir('PDF + foto butuh server terbaru (belum dipasang). Sementara: buka unitnya lalu "PDF unit ini".'); return; }
+      P4.teks = 'menyusun PDF ' + kk.length + ' unit…'; roti('Menyusun PDF ' + kk.length + ' unit (foto ikut)…');
+      var s = saringSrv(); s.foto = '4sisi'; s.daftar = kk; s.px = px;
+      return panggil(FN_PDF, [s], 170000).then(function (h) {
+        if (!h || h.ok === false || !h.b64) { akhir('PDF + foto gagal: ' + ((h && h.pesan) || 'server tidak mengirim PDF.')); return; }
+        var ket = (h.jumlah || kk.length) + ' unit, ' + (h.fotoTertanam || 0) + ' foto', kurang = (Number(h.fotoDilewati) || 0) + (Number(h.fotoWaktu) || 0) + fotoGagal;
+        return window.WHL_EKSPOR.buka(h.nama || ('Katalog Unit WHL - ' + window.WHL_EKSPOR.tgl() + '.pdf'), h.b64, 'application/pdf', roti).then(function () {
+          akhir('PDF siap: ' + ket + (kurang ? ' (' + kurang + ' foto tidak bisa dimuat)' : '') + (unitGagal ? ', ' + unitGagal + ' unit fotonya gagal disiapkan' : '') + '.');
+        });
+      }, function (e) { akhir('PDF + foto gagal: ' + String((e && e.message) || 'sinyal putus') + ' Coba lagi (foto yang sudah siap disimpan 1 jam).'); });
+    }).catch(function (e) { akhir('PDF + foto gagal: ' + String((e && e.message) || e)); });
+  }
+  /* katalog-pdf-foto-24nov SELESAI */
 
   /* ---------- v3.31 EDIT SEMUA (kontrak Upgrade\katalog-lengkap-17nov\edit-semua\KONTRAK-APP.md, V526): diubah per kolom, riwayat, Kembalikan (admin) ---------- */
   var RW = { buka: false, semua: null, yakin: '' };
