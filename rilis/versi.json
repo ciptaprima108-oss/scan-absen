@@ -1,13 +1,14 @@
 {
- "versi": "3.47",
- "versionCode": 348,
- "wajib": false,
+ "versi": "3.53",
+ "versionCode": 354,
+ "minVersionCode": 354,
+ "wajib": true,
  "catatan": [
-  "Foto di Data karyawan & Katalog unit bisa di-zoom (cubit 2 jari, ketuk 2x, tombol + -)",
-  "Data karyawan: cukup foto wajah, ID card resmi jadi otomatis (latar diputihkan, QR profil)"
+  "Update wajib: App WHL kini sama dengan versi web terbaru (kuis karyawan, Kelola user, katalog PDF + foto, sidik wajah, tampilan laptop)",
+  "Pengingat & layar Update wajib otomatis kalau app ketinggalan versi"
  ],
- "apk": "WHL-App-v3.47.apk",
- "ukuran": 8818822,
- "sha256": "45f8a5a8fac2ea33743f075b240dc693c6f71ae6a16d735f8f15bba6b8d5f5f6",
- "dibuat": "2026-11-23 05:28"
+ "apk": "WHL-App-v3.53.apk",
+ "ukuran": 8897812,
+ "sha256": "fe6b98f566512b474995010349c152b3ea0c345d74bc5df32b4421df6a5d9312",
+ "dibuat": "2026-11-25 02:39"
 }
