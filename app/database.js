@@ -156,22 +156,30 @@
     return '<div class="pdbLv">' + (lv === 'penuh' ? '🔓 <span><b>Akses penuh</b> · semua kolom tampil · tidak bisa mengubah data</span>' : '🔒 <span><b>Akses lihat</b> · kolom pribadi (NIK KTP, alamat, rekening, gaji, no HP) disamarkan</span>') + '</div>';
   }
   function chipSt(x) {
+    if (x.st === 'arsip') return '<span class="pdbC">Arsip · diubah ' + esc(x.diubah || '-') + '</span>'; /* app-database-visual-25nov */
     if (x.st === 'belum') return '<span class="pdbC">Belum terhubung</span>';
     if (x.st === 'kunci') return '<span class="pdbC mrh">🔒 Khusus akses penuh</span>';
     if (x.st === 'file') return '<span class="pdbC kng">Excel · buka di Drive</span>';
-    return (x.sens ? '<span class="pdbC mrh">Sensitif</span>' : '') + (x.cari ? '<span class="pdbC ok">Ikut dicari</span>' : '<span class="pdbC">Buka saja</span>');
+    return (x.sens ? '<span class="pdbC mrh">Sensitif</span>' : '') + (x.cari ? '<span class="pdbC ok">Ikut dicari</span>' : '<span class="pdbC">Buka saja</span>') + (x.diubah ? '<span class="pdbC">diubah ' + esc(x.diubah) + '</span>' : '');
   }
   function isiDaftar() {
     if (!D) return galat ? '<div class="pdbInfo mrh">' + esc(galat) + '</div><button type="button" class="pdbBtn utama" data-p="segar">Coba lagi</button>' : '<div class="pdbKosong">Memuat daftar database…</div>';
-    var ok = (D.db || []).filter(function (x) { return x.st === 'ok'; }).length;
-    return '<div class="pdbKet">' + (D.db || []).length + ' database · ' + ok + ' bisa dibuka di app. Ketuk kelompok untuk melihat isinya.</div>'
+    var nArsip = (D.db || []).filter(function (x) { return x.st === 'arsip'; }).length; /* app-database-visual-25nov: aktif saja, arsip terlipat */
+    return '<div class="pdbKet">' + ((D.db || []).length - nArsip) + ' database aktif (diubah ≤ 30 hari)' + (nArsip ? ' · ' + nArsip + ' arsip di bawah' : '') + '. Ketuk kelompok untuk melihat isinya.</div>'
       + (D.grup || []).map(function (g) {
-        var L = (D.db || []).filter(function (x) { return x.g === g.k; }); if (!L.length) return '';
+        var L = (D.db || []).filter(function (x) { return x.g === g.k && x.st !== 'arsip'; }); if (!L.length) return '';
         var b = !!BUKA[g.k];
         return '<div class="pdbGrup' + (b ? ' buka' : '') + '"><button type="button" data-p="grup:' + esc(g.k) + '" aria-expanded="' + b + '"><span class="ik">' + esc(g.ik) + '</span><span class="nm">' + esc(g.n) + '</span><span class="jm">' + L.length + '</span><span class="pn">›</span></button>'
           + (b ? L.map(function (x) { return '<button type="button" class="pdbDb" data-p="db:' + esc(x.k) + '"><b>' + esc(x.n) + '</b><small>' + esc(x.ket) + (x.pm ? ' · ' + esc(x.pm) : '') + '</small><span class="pdbChips">' + chipSt(x) + '</span></button>'; }).join('') : '') + '</div>';
       }).join('')
+      + grupArsip() /* app-database-visual-25nov */
       + '<div class="pdbKet" style="margin-top:12px">Semua data dibaca langsung dari Google Sheet aslinya (baca saja). Menambah / mengubah data tetap lewat aplikasi masing-masing.</div>';
+  }
+  function grupArsip() { /* app-database-visual-25nov: database lama / tidak diubah > 30 hari */
+    var A = (D && D.db || []).filter(function (x) { return x.st === 'arsip'; }); if (!A.length) return '';
+    var b = !!BUKA._arsip;
+    return '<div class="pdbGrup' + (b ? ' buka' : '') + '"><button type="button" data-p="grup:_arsip" aria-expanded="' + b + '"><span class="ik">🗃️</span><span class="nm">Arsip (tidak aktif)</span><span class="jm">' + A.length + '</span><span class="pn">›</span></button>'
+      + (b ? A.map(function (x) { return '<button type="button" class="pdbDb" data-p="db:' + esc(x.k) + '"><b>' + esc(x.n) + '</b><small>' + esc(x.ket) + (x.pm ? ' · ' + esc(x.pm) : '') + '</small><span class="pdbChips">' + chipSt(x) + '</span></button>'; }).join('') : '') + '</div>';
   }
   function isiUtama() {
     return htmlLevel()
@@ -228,8 +236,10 @@
     var d = DB.db, L = DB.tabs || [];
     return '<div class="pdbKotak"><h1>' + esc(d.n) + '</h1><p>' + esc(d.ket) + (d.pm ? ' · pemilik ' + esc(d.pm) : '') + '</p></div>'
       + '<button type="button" class="pdbBtn utama" data-p="dbSheet">📄 Buka sheet asli</button>'
-      + '<div class="pdbH2">' + L.length + ' tab</div>'
-      + (L.length ? L.map(function (t, i) { return '<button type="button" class="pdbTab" data-p="tab:' + i + '"><span class="tx"><b>' + esc(t.n) + '</b><small>' + angka(t.baris) + ' baris · ' + angka(t.kolom) + ' kolom</small></span><span class="pn">›</span></button>'; }).join('') : '<div class="pdbKosong">Tidak ada tab yang bisa dibuka.</div>');
+      + '<div class="pdbH2">' + L.length + ' tab aktif</div>'
+      + (L.length ? L.map(function (t, i) { return '<button type="button" class="pdbTab" data-p="tab:' + i + '"><span class="tx"><b>' + esc(t.n) + '</b><small>' + angka(t.baris) + ' baris · ' + angka(t.kolom) + ' kolom</small></span><span class="pn">›</span></button>'; }).join('') : '<div class="pdbKosong">Tidak ada tab aktif.</div>')
+      + (DB.arsip && DB.arsip.length ? '<div class="pdbGrup' + (BUKA._tabArsip ? ' buka' : '') + '"><button type="button" data-p="grup:_tabArsip"><span class="ik">🗃️</span><span class="nm">Tab arsip / kosong / bulan lalu</span><span class="jm">' + DB.arsip.length + '</span><span class="pn">›</span></button>'
+        + (BUKA._tabArsip ? DB.arsip.map(function (t, i) { return '<button type="button" class="pdbDb" data-p="tabA:' + i + '"><b>' + esc(t.n) + '</b><small>' + angka(t.baris) + ' baris</small></button>'; }).join('') : '') + '</div>' : ''); /* app-database-visual-25nov */
   }
   function bukaDb(k) {
     var x = cariDb(k); if (!x) return;
@@ -240,16 +250,34 @@
     panggil('tab', { k: k }, 45000).then(function (h) {
       if (!DB || DB.x !== x) return;
       if (!h || !h.ok) { DB = { galat: (h && h.pesan) || 'Tab belum bisa dimuat.', x: x }; if (h && h.login === false && CTX && CTX.sesiHabis) CTX.sesiHabis(); }
-      else DB = { x: x, db: h.db, tabs: h.tabs || [] };
+      else DB = { x: x, db: h.db, tabs: h.tabs || [], arsip: h.arsip || [] }; /* app-database-visual-25nov */
       if (lapisEl && layar === 'db') lapis();
     }).catch(function (e) { if (DB && DB.x === x) { DB = { galat: (e && e.message) || 'Sinyal putus.', x: x }; if (lapisEl) lapis(); } });
   }
 
   /* ---------- TAB: isi tabel (saring, halaman) ---------- */
   function bukaTab(k, tab, dbn, cari, dariCari) {
-    T = { k: k, tab: tab, dbn: dbn, cari: cari || '', ketik: cari || '', hal: 0, lama: false, data: null, memuat: true, galat: '', dariCari: !!dariCari, urut: 0 };
+    T = { k: k, tab: tab, dbn: dbn, cari: cari || '', ketik: cari || '', hal: 0, lama: false, data: null, memuat: true, galat: '', dariCari: !!dariCari, urut: 0, vis: null, visMemuat: false, vb: null, vSaring: '', vCap: null, sorot: 0 }; /* app-database-visual-25nov */
     if (!MODE) MODE = sempit() ? 'kartu' : 'tabel';
-    layar = 'tab'; lapis(); keAtas(); muatTab();
+    layar = 'tab'; lapis(); keAtas(); muatVis();
+  }
+  /* app-database-visual-25nov: baca tab seperti sheet (aksi 'lihat'); daftar panjang / server lama -> 'isi' berhalaman */
+  function muatVis() {
+    var t = T; if (!t) return; if (!window.WHL_PDB_VIS) { muatTab(); return; }
+    t.visMemuat = true; t.galat = ''; if (lapisEl) lapis();
+    panggil('lihat', { k: t.k, tab: t.tab }, 60000).then(function (h) {
+      if (T !== t) return; t.visMemuat = false;
+      if (h && h.ok) {
+        t.vis = h; if (t.cari) t.vSaring = t.cari;
+        var bi = -1; (h.blok || []).forEach(function (b, i) { if (bi < 0 && b.pakaiIsi) bi = i; });
+        if (bi >= 0) { t.vb = bi; muatTab(); return; }
+        if (!(h.blok || []).some(function (b) { return b.kol && b.kol.length; })) { t.vis = null; muatTab(); return; }
+        t.memuat = false;
+      } else if (h && h.login === false) { if (CTX && CTX.sesiHabis) CTX.sesiHabis(); return; }
+      else if (!h || /belum dipasang|Aksi tidak dikenal/.test(h.pesan || '')) { muatTab(); return; }
+      else t.galat = h.pesan || 'Tab belum bisa dimuat.';
+      if (lapisEl && layar === 'tab') lapis();
+    }).catch(function () { if (T !== t) return; t.visMemuat = false; muatTab(); });
   }
   function muatTab() {
     if (!T) return; var t = T, saya = ++t.urut; t.memuat = true; t.galat = ''; if (lapisEl) lapis();
@@ -263,6 +291,12 @@
   function kolomTerisi(d) { var ada = d.kolom.map(function () { return false; }); d.baris.forEach(function (b) { b.v.forEach(function (s, i) { if (String(s || '').trim()) ada[i] = true; }); }); return ada; }
   function isiTab() {
     var t = T; if (!t) return '';
+    if (window.WHL_PDB_VIS && (t.visMemuat || (t.vis && t.vis.ok))) { /* app-database-visual-25nov */
+      if (t.visMemuat) return '<div class="pdbKosong">Membaca tab seperti di sheet…</div>';
+      var V = window.WHL_PDB_VIS, bV = t.vis.blok[t.vb || 0], atasV = V.atas(t.vis, t);
+      if (!(bV && bV.pakaiIsi)) return atasV + V.bawah(t.vis, t) + '<button type="button" class="pdbBtn" data-p="tabSheet">📄 Buka tab ini di sheet</button>';
+      t._atasV = atasV;
+    }
     var d = t.data;
     var alat = '<form class="pdbCari" id="pdbFormTab" autocomplete="off"><input type="search" class="isian" id="pdbQTab" placeholder="Saring di tab ini…" value="' + esc(t.ketik) + '" enterkeyhint="search" aria-label="Saring isi tab"><button type="submit">Saring</button></form>'
       + '<div class="pdbAlat"><div class="pdbSeg"><button type="button" data-p="urut:baru" class="' + (!t.lama ? 'on' : '') + '">Terbaru</button><button type="button" data-p="urut:lama" class="' + (t.lama ? 'on' : '') + '">Terlama</button></div>'
@@ -284,47 +318,59 @@
       }).join('');
     }
     var pager = d.jmlHal > 1 ? '<div class="pdbHal"><button type="button" data-p="hal:-1"' + (d.hal <= 0 || t.memuat ? ' disabled' : '') + '>‹ Sebelumnya</button><span>Hal ' + (d.hal + 1) + ' / ' + angka(d.jmlHal) + '</span><button type="button" data-p="hal:1"' + (d.hal >= d.jmlHal - 1 || t.memuat ? ' disabled' : '') + '>Berikutnya ›</button></div>' : '';
-    return alat + info + isi + pager + '<button type="button" class="pdbBtn" data-p="tabSheet">📄 Buka tab ini di sheet</button>';
+    return (t._atasV || '') + alat + info + isi + pager + '<button type="button" class="pdbBtn" data-p="tabSheet">📄 Buka tab ini di sheet</button>';
   }
 
   /* ---------- MODAL detail baris ---------- */
   function htmlModal() {
-    var m = MODAL, d = T && T.data, b = d && d.baris[m.j]; if (!b) return '';
+    var m = MODAL; if (m.vis) return htmlModalVis(m.vis); /* app-database-visual-25nov */
+    var d = T && T.data, b = d && d.baris[m.j]; if (!b) return '';
     return '<div class="pdbModal" data-p="latarModal"><div class="kt" role="dialog" aria-modal="true"><h3>Baris ' + esc(b.r) + '</h3><div class="sb">' + esc(T.dbn) + ' · ' + esc(T.tab) + '</div>'
       + d.kolom.map(function (k, i) { var s = String(b.v[i] || ''); return s.trim() ? '<div class="pdbRow"><span>' + esc(k.n) + '</span><b' + (k.s ? ' class="pdbS"' : '') + '>' + esc(s) + '</b></div>' : ''; }).join('')
       + '<div class="tb"><button type="button" class="batal" data-p="tutupModal">Tutup</button><button type="button" class="ya" data-p="barisSheet">📄 Buka di sheet</button></div></div></div>';
   }
-  function urlBaris(r) { var d = T && T.data; return d && d.url ? d.url + '&range=A' + r : ''; }
+  function urlBaris(r) { var d = T && (T.data || T.vis); return d && d.url ? d.url + '&range=A' + r : ''; }
+  function htmlModalVis(x) { /* app-database-visual-25nov: rincian 1 baris tabel visual, nama kolom = header asli bertingkat */
+    return '<div class="pdbModal" data-p="latarModal"><div class="kt" role="dialog" aria-modal="true"><h3>' + esc(x.v[0] || ('Baris ' + x.r)) + '</h3><div class="sb">' + esc(T.dbn) + ' · ' + esc(T.tab) + ' · baris ' + esc(x.r) + '</div>'
+      + x.kol.map(function (k, i) { var s = String(x.v[i] || ''); return s.trim() ? '<div class="pdbRow"><span>' + esc(k.n) + '</span><b' + (k.s ? ' class="pdbS"' : '') + '>' + esc(s) + '</b></div>' : ''; }).join('')
+      + '<div class="tb"><button type="button" class="batal" data-p="tutupModal">Tutup</button><button type="button" class="ya" data-p="barisSheet">📄 Buka di sheet</button></div></div></div>';
+  }
 
   /* ---------- event ---------- */
   function kirimForm(ev) {
     ev.preventDefault();
     var f = ev.target;
     if (f.id === 'pdbForm') { var i = f.querySelector('#pdbQ'); cari(i ? i.value : Q); return; }
+    if (f.id === 'pdbFormVis' && T && T.vis) { var iv = f.querySelector('#pdbQVis'); T.vSaring = iv ? iv.value.trim() : ''; if (iv) iv.blur(); var ev2 = lapisEl.querySelector('#pdbVisTbl'); if (ev2) ev2.innerHTML = window.WHL_PDB_VIS.tabel(T.vis, T); return; } /* app-database-visual-25nov */
     if (f.id === 'pdbFormTab' && T) { var j = f.querySelector('#pdbQTab'); T.cari = String(j ? j.value : T.ketik).trim(); T.ketik = T.cari; T.hal = 0; if (j) j.blur(); muatTab(); }
   }
-  function ketik(ev) { var t = ev.target; if (t.id === 'pdbQ') Q = t.value; else if (t.id === 'pdbQTab' && T) T.ketik = t.value; } /* nilai kolom tidak diubah saat mengetik (aman di keyboard HP) */
+  function ketik(ev) { var t = ev.target; if (t.id === 'pdbQ') Q = t.value; else if (t.id === 'pdbQTab' && T) T.ketik = t.value; else if (t.id === 'pdbQVis' && T && T.vis) { T.vSaring = t.value; var el = lapisEl.querySelector('#pdbVisTbl'); if (el) el.innerHTML = window.WHL_PDB_VIS.tabel(T.vis, T); } } /* nilai kolom tidak diubah saat mengetik (aman di keyboard HP) */
   function klik(ev) {
     var b = ev.target.closest('[data-p]'); if (!b || !lapisEl || !lapisEl.contains(b)) return;
     var d = b.getAttribute('data-p'), i = d.indexOf(':'), n = i < 0 ? d : d.slice(0, i), v = i < 0 ? '' : d.slice(i + 1);
     if (n === 'latarModal') { if (ev.target === b) { MODAL = null; lapis(); } return; }
     if (n === 'kembali') { kembali(); return; }
+    if (n.charAt(0) === 'v' && window.WHL_PDB_VIS && T && T.vis) { /* app-database-visual-25nov */
+      if (n === 'vbaris') { var pv = v.split(':'), rv = window.WHL_PDB_VIS.rincian(T.vis, Number(pv[0]), Number(pv[1])); if (rv) { MODAL = { vis: rv }; lapis(); } return; }
+      var hv = window.WHL_PDB_VIS.klik(n, v, T); if (hv === 'diam') return; if (hv) { lapis(); return; }
+    }
+    if (n === 'tabA') { var ta = DB && DB.arsip && DB.arsip[Number(v)]; if (ta) bukaTab(DB.db.k, ta.n, DB.db.n, '', false); return; } /* app-database-visual-25nov */
     if (n === 'segar') { muat(true); return; }
     if (n === 'grup') { BUKA[v] = !BUKA[v]; lapis(); return; }
     if (n === 'db') { bukaDb(v); return; }
     if (n === 'dbSheet') { bukaSheet((DB && DB.db && DB.db.url) || (DB && DB.x && DB.x.url)); return; }
     if (n === 'tab') { var tb = DB && DB.tabs && DB.tabs[Number(v)]; if (tb) bukaTab(DB.db.k, tb.n, DB.db.n, '', false); return; }
     if (n === 'tutupHasil' || n === 'batalCari') { urutanCari++; if (n === 'tutupHasil') H = null; else if (H) { H.selesai = true; H.galat = H.galat || 'Pencarian dihentikan. Hasil belum lengkap.'; } lapis(); return; }
-    if (n === 'hTab') { var x = H && H.list[Number(v)]; if (x) bukaTab(x.db, x.tab, x.dbn, H.q, true); return; }
+    if (n === 'hTab') { var x = H && H.list[Number(v)]; if (x) { bukaTab(x.db, x.tab, x.dbn, H.q, true); if (T) T.sorot = x.r; } return; }
     if (n === 'hSheet') { var y = H && H.list[Number(v)]; if (y) bukaSheet(y.url); return; }
     if (n === 'urut' && T) { T.lama = v === 'lama'; T.hal = 0; muatTab(); return; }
     if (n === 'mode') { MODE = v === 'tabel' ? 'tabel' : 'kartu'; lapis(); return; }
     if (n === 'hal' && T && T.data && !T.memuat) { T.hal = Math.max(0, Math.min(T.data.jmlHal - 1, T.data.hal + Number(v))); muatTab(); return; }
-    if (n === 'ulangTab') { muatTab(); return; }
-    if (n === 'tabSheet') { bukaSheet(T && T.data && T.data.url); return; }
+    if (n === 'ulangTab') { if (T && !T.data && !T.vis) muatVis(); else muatTab(); return; }
+    if (n === 'tabSheet') { bukaSheet(T && ((T.data && T.data.url) || (T.vis && T.vis.url))); return; }
     if (n === 'baris') { MODAL = { j: Number(v) }; lapis(); return; }
     if (n === 'tutupModal') { MODAL = null; lapis(); return; }
-    if (n === 'barisSheet') { var bb = T && T.data && T.data.baris[MODAL ? MODAL.j : -1]; if (bb) bukaSheet(urlBaris(bb.r)); return; }
+    if (n === 'barisSheet') { var bb = T && T.data && T.data.baris[MODAL ? MODAL.j : -1]; if (MODAL && MODAL.vis) bb = { r: MODAL.vis.r }; if (bb) bukaSheet(urlBaris(bb.r)); return; }
   }
   /** Keluar / ganti akun: buang semua data dari memori. */
   function lupakan() { urutan++; urutanCari++; D = null; H = null; DB = null; T = null; MODAL = null; Q = ''; galat = ''; BUKA = {}; if (lapisEl) { try { lapisEl.remove(); } catch (e) { /* */ } lapisEl = null; } }
