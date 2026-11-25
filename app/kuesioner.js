@@ -23,7 +23,18 @@
   }
   function token() { return (CTX && CTX.sesi && (CTX.sesi.tokenKsn || CTX.sesi.tokenAbm)) || ''; }
   function kunciIsi() { return 'whlKsnIsi_' + ST.periode + '_' + String(ST.nik || '').replace(/[^A-Za-z0-9]/g, ''); }
-  function simpanIsi() { return Simpan.taruh(kunciIsi(), JSON.stringify(ISI)); }
+  function simpanIsi() { kabar(); return Simpan.taruh(kunciIsi(), JSON.stringify(ISI)); }
+  /* kuesioner-wajib-25nov: kabari gerbang wajib (ksn-wajib.js) tiap ada perubahan; tanpa RPC */
+  function kabar() { setTimeout(function () { try { document.dispatchEvent(new CustomEvent('whl-ksn-berubah', { detail: { jenis: 'staf' } })); } catch (e) { /* */ } }, 0); }
+  /* kuesioner-wajib-25nov: "Tidak tahu" dicatat juga di server (tanpa nilai) -> dihitung tuntas walau ganti HP. Server lama (tanpa ST.wajib) = lokal saja. */
+  function ttServer(nik) {
+    if (!ST || !ST.wajib || !ST.buka || !nik) return Promise.resolve(false);
+    return rahasia().then(function (rhs) { return rpc('ksnKirim', [token(), rhs, { nik: nik, tt: true }]); }).then(function (h) {
+      if (h && h.ok && h.tt) { ST.tt = ST.tt || []; if (ST.tt.indexOf(nik) < 0) ST.tt.push(nik); kabar(); return true; }
+      return false;
+    }, function () { return false; });
+  }
+  function sinkronTt() { if (!ST || !ST.wajib || !ST.buka) return; Object.keys(ISI).forEach(function (nik) { var x = ISI[nik]; if (x && x.tt && !x.kirim && (ST.tt || []).indexOf(nik) < 0 && (ST.sudah || []).indexOf(nik) < 0) ttServer(nik); }); }
   /* v3.6 (audit S6): rahasia penilai PER AKUN, bukan per HP — 2 staf di 1 HP tidak saling menimpa penilaian.
      Rahasia lama (per HP) dipakai akun pertama yang membuka kuesioner sesudah update, supaya jawabannya tetap tersambung. */
   function kunciRhs() { return K_RHS + '_' + String((CTX && CTX.sesi && (CTX.sesi.idProfil || CTX.sesi.idKetik)) || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
@@ -43,7 +54,9 @@
     });
   }
   function rekan() { return ST ? (ST.staf || []).filter(function (o) { return o.nik !== ST.nik; }) : []; }
-  function statusOrang(nik) { var x = ISI[nik]; if ((!x || !x.kirim) && ST && (ST.sudah || []).indexOf(nik) >= 0) return 'ok'; /* v3.6: server mencatat sudah dinilai */ return !x ? 'belum' : x.kirim ? 'ok' : x.tt ? 'tt' : (Object.keys(x.v || {}).length || x.alasan ? 'draf' : 'belum'); }
+  function wajibAktif() { return !!(ST && ST.wajib && ST.wajib.aktif); } /* kuesioner-wajib-25nov: selama wajib, "Tidak tahu" tidak dihitung & tombolnya disembunyikan (Fanza: pokoknya harus isi) */
+  function statusOrang(nik) { var s0 = statusOrang0(nik); return s0 === 'tt' && wajibAktif() ? 'belum' : s0; }
+  function statusOrang0(nik) { var x = ISI[nik]; if ((!x || !x.kirim) && ST && (ST.sudah || []).indexOf(nik) >= 0) return 'ok'; /* v3.6: server mencatat sudah dinilai */ if ((!x || (!x.kirim && !x.tt)) && ST && (ST.tt || []).indexOf(nik) >= 0) return 'tt'; /* kuesioner-wajib-25nov: tidak tahu tercatat di server */ return !x ? 'belum' : x.kirim ? 'ok' : x.tt ? 'tt' : (Object.keys(x.v || {}).length || x.alasan ? 'draf' : 'belum'); }
   function sisa() { return rekan().filter(function (o) { var s = statusOrang(o.nik); return s !== 'ok' && s !== 'tt'; }).length; }
 
   /** Muat status kuesioner untuk kartu Beranda. -> {ada, buka, alasan, sisa, jumlah, k3, perluPin, galat} */
@@ -54,15 +67,15 @@
       if (h.login === false) return { ada: false, perluPin: true };
       if (!h.ok) return { ada: false, galat: h.pesan || 'Kuesioner belum bisa dimuat.' };
       ST = h;
-      return Simpan.ambil(kunciIsi()).then(function (v) { try { ISI = JSON.parse(v || '{}') || {}; } catch (e) { ISI = {}; } return ringkas(); });
+      return Simpan.ambil(kunciIsi()).then(function (v) { try { ISI = JSON.parse(v || '{}') || {}; } catch (e) { ISI = {}; } sinkronTt(); kabar(); return ringkas(); }); /* kuesioner-wajib-25nov: tidak tahu lama dikirim ulang */
     }, function (e) { return { ada: false, galat: e.message }; });
   }
-  function ringkas() { return ST ? { ada: true, buka: !!ST.buka, alasan: ST.alasan || '', sisa: sisa(), jumlah: rekan().length, k3: !!ST.k3, periode: ST.periode } : { ada: false }; }
+  function ringkas() { return ST ? { ada: true, buka: !!ST.buka, alasan: ST.alasan || '', sisa: sisa(), jumlah: rekan().length, k3: !!ST.k3, periode: ST.periode, wajib: ST.wajib || null, ikut: ST.ikut !== false } : { ada: false }; } /* kuesioner-wajib-25nov: + wajib (dari server) */
 
   /* ---------- lapis penuh ---------- */
   function lapis(html) {
     if (lapisEl) { lapisEl.innerHTML = html; return lapisEl; } // sudah terbuka: ganti isi saja (tanpa kedip)
-    var d = document.createElement('div'); d.className = 'lapis ksnLapis'; d.innerHTML = html; document.body.appendChild(d); lapisEl = d;
+    var d = document.createElement('div'); d.className = 'lapis ksnLapis ksnStafLapis'; d.innerHTML = html; /* kuesioner-wajib-25nov: kelas khusus supaya tampil di atas gerbang */ document.body.appendChild(d); lapisEl = d;
     requestAnimationFrame(function () { d.classList.add('tampil'); });
     d.addEventListener('click', klik); d.addEventListener('input', ketik);
     return d;
@@ -120,7 +133,7 @@
     var nilai = B.map(function (b) { return Number(x.v[b.id]) || 0; }).filter(function (n) { return n > 0; }), wajib = nilai.some(function (n) { return n <= 2 || n === 5; });
     h += '<div class="kartu"><label class="lb" for="ksnAlasan" style="margin-top:0">Alasan / contoh kejadian' + (wajib ? ' <b style="color:var(--tMerah)">(wajib, karena ada nilai 1–2 atau 5)</b>' : ' (boleh kosong)') + '</label><textarea id="ksnAlasan" class="isian" rows="3" maxlength="300" placeholder="Tulis kejadiannya saja, singkat.">' + esc(x.alasan || '') + '</textarea>'
       + '<div class="ksnInfo kuning" style="margin:10px 0 0">✍️ Tulis kejadiannya saja. Gaya tulisan atau cerita yang terlalu khas bisa membuat orang menebak penulisnya.</div></div>';
-    h += '<div class="pesan" id="ksnPesan" role="alert"></div><div class="duaTombol"><button type="button" class="tKecil" data-k="tt">Tidak tahu / tidak pernah kerja bareng</button><button type="button" class="tUtama" style="margin-top:0" data-k="kirim"' + (ST.buka ? '' : ' disabled') + '>' + (x.kirim ? 'Simpan perubahan' : 'Simpan') + '</button></div>';
+    h += '<div class="pesan" id="ksnPesan" role="alert"></div><div class="duaTombol">' + (wajibAktif() ? '' : '<button type="button" class="tKecil" data-k="tt">Tidak tahu / tidak pernah kerja bareng</button>') + '<button type="button" class="tUtama" style="margin-top:0" data-k="kirim"' + (ST.buka ? '' : ' disabled') + '>' + (x.kirim ? 'Simpan perubahan' : 'Simpan') + '</button></div>';
     var y = lapisEl ? lapisEl.querySelector('.ksnIsi') : null, gulung = y && lapisEl.getAttribute('data-nik') === o.nik ? y.scrollTop : 0;
     lapis(h + '</div>').setAttribute('data-nik', o.nik);
     if (gulung) lapisEl.querySelector('.ksnIsi').scrollTop = gulung;
@@ -185,7 +198,7 @@
     if (a === 'tutup') tutup();
     else if (a === 'daftar') { bukaNik = ''; gambarDaftar(); }
     else if (a === 'k3simpan') simpanK3();
-    else if (a === 'tt') { ISI[bukaNik] = { v: {}, alasan: '', tt: true, kirim: false }; simpanIsi(); bukaNik = ''; gambarDaftar(); CTX.roti('Ditandai tidak tahu (tidak dikirim, tidak dihitung).'); if (!sisa()) R.sukses({ judul: 'Kuesioner selesai', sub: 'Terima kasih. Semua rekan sudah kamu nilai atau tandai tidak tahu.', rinci: [['Periode', ST.periode]] }); }
+    else if (a === 'tt') { ISI[bukaNik] = { v: {}, alasan: '', tt: true, kirim: false }; simpanIsi(); ttServer(bukaNik); bukaNik = ''; /* kuesioner-wajib-25nov */ gambarDaftar(); CTX.roti('Ditandai tidak tahu (tidak dikirim, tidak dihitung).'); if (!sisa()) R.sukses({ judul: 'Kuesioner selesai', sub: 'Terima kasih. Semua rekan sudah kamu nilai atau tandai tidak tahu.', rinci: [['Periode', ST.periode]] }); }
     else if (a === 'kirim') {
       var o = rekan().filter(function (z) { return z.nik === bukaNik; })[0], y = ISI[bukaNik], ps = document.getElementById('ksnPesan');
       var nilai = (ST.butir || []).map(function (bt) { return y.v[bt.id] || ''; }), isi = nilai.filter(function (n2) { return n2 !== ''; });
@@ -201,5 +214,5 @@
     if (ev.target.id === 'ksnCari') { cari = ev.target.value; gambarDaftar(); }
   }
   function lupa() { ST = null; ISI = {}; K3 = null; if (lapisEl) { lapisEl.remove(); lapisEl = null; } } // dipanggil saat keluar akun (rahasia perangkat TIDAK dihapus supaya jawaban lama tetap bisa diubah)
-  window.WHL_KSN = { muat: muat, ringkas: ringkas, buka: buka, bukaK3: bukaK3, lupa: lupa, _form: function (nik) { bukaNik = nik || (rekan()[0] || {}).nik; if (!ISI[bukaNik]) ISI[bukaNik] = { v: {}, alasan: '', tt: false, kirim: false }; gambarForm(); } };
+  window.WHL_KSN = { muat: muat, ringkas: ringkas, buka: buka, bukaK3: bukaK3, lupa: lupa, ctx: function () { return CTX; }, terbuka: function () { return !!lapisEl; }, /* kuesioner-wajib-25nov */ _form: function (nik) { bukaNik = nik || (rekan()[0] || {}).nik; if (!ISI[bukaNik]) ISI[bukaNik] = { v: {}, alasan: '', tt: false, kirim: false }; gambarForm(); } };
 })();

@@ -6,7 +6,7 @@
 (function () {
   var S = 'https://script.google.com/macros/s/';
   var K = {
-    VERSI: '3.57', KODE: 358, /* KODE = versionCode APK (dipakai cek pembaruan di browser; di APK dibaca dari Android) */
+    VERSI: '3.58', KODE: 359, /* KODE = versionCode APK (dipakai cek pembaruan di browser; di APK dibaca dari Android) */
     RILIS: 'https:' + '/' + '/ciptaprima108-oss.github.io/scan-absen/rilis/', /* v3.3 pembaruan dari dalam app: versi.json + APK */
     DASH: S + 'AKfycbzqJ0nKotpl-TjuTHLTMcOZpYZSeWdE9VWHFw0h712aoMagPDZJMQ--7W-kDtCxPvw/exec',     /* DASHBOARD: Pusat WHL */
     ABSEN: S + 'AKfycbyJBXvN79b4y9eunDSRigMXmDOS4kW3K5ZF0ZEbGCKT1-WPqi-zEica0r7M__-dqwqhDQ/exec',  /* Absensi Tambang: api abm */
@@ -17,6 +17,7 @@
     TANPA_KOTAK_ABSEN: ['WHL-01001'], /* Pak FANZA DWIYAN PRASETYA (pimpinan, full time) */
     /* tahap1-16nov: label "Baru" = 7 hari sejak tanggal rilis (06.00 WIB) DAN belum pernah dibuka di HP ini (localStorage whlBaruDibuka).
        Fitur tanpa tanggal di sini tidak pernah dapat label. id = id ikon Atur Beranda (kehadiran, nota, laba, gaji, kasbon, dokkas, kotak, proyeksi, kelolaBanner, app:<nama>). */
+    KSN_WAJIB: true, /* kuesioner-wajib-25nov: false = gerbang kuesioner wajib mati dari app (sakelar utama tetap di server: KSN_WAJIB / KSD_WAJIB) */
     RILIS_FITUR: {
       nota: '2026-11-14', laba: '2026-11-15', gaji: '2026-11-15', kasbon: '2026-11-15', dokkas: '2026-11-15', kehadiran: '2026-11-15',
       kuis: '2026-11-24', /* kuis-karyawan-24nov: Kuis safety kini juga karyawan -> label "Baru" 7 hari; ganti ke tanggal rilis */

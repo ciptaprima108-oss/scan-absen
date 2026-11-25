@@ -41,7 +41,7 @@
   function bersihModul() {
     HI = null; /* angka Hari ini */
     try { if (API.Pusat.lupakanSimpanan) API.Pusat.lupakanSimpanan(); } catch (e) { /* */ }
-    ['WHL_DRIVER', 'WHL_GAJI', 'WHL_KASBON', 'WHL_DOKKAS', 'WHL_LEMBUR', 'WHL_LABA', 'WHL_KATALOG', 'WHL_POIN', 'WHL_PERINGKAT', 'WHL_IZIN', 'WHL_ASISTEN', 'WHL_NOTA', 'WHL_ROSTER', 'WHL_KUIS', 'WHL_KUIS_STAF', 'WHL_POIN_STAF', 'WHL_KSD', 'WHL_KARYAWAN', 'WHL_KU', 'WHL_PDB', 'WHL_PK'].forEach(function (n) {
+    ['WHL_DRIVER', 'WHL_GAJI', 'WHL_KASBON', 'WHL_DOKKAS', 'WHL_LEMBUR', 'WHL_LABA', 'WHL_KATALOG', 'WHL_POIN', 'WHL_PERINGKAT', 'WHL_IZIN', 'WHL_ASISTEN', 'WHL_NOTA', 'WHL_ROSTER', 'WHL_KUIS', 'WHL_KUIS_STAF', 'WHL_POIN_STAF', 'WHL_KSD', 'WHL_KARYAWAN', 'WHL_KU', 'WHL_PDB', 'WHL_PK', 'WHL_KSNW'].forEach(function (n) {
       try { var m = window[n]; if (m && typeof m.lupakan === 'function') m.lupakan(); } catch (e) { /* satu modul gagal, yang lain tetap dibersihkan */ }
     });
   }
@@ -277,7 +277,7 @@
     keTab(/^(beranda|unit|absen|apps|akun|kotak|aktivitas)$/.test(t0) ? t0 : 'beranda');
     muatIkonPilih().then(function () { if (tab === 'beranda' && IKON_PILIH) gambar(); }); /* v3.14 ikon Beranda pilihan sendiri */
     API.Pusat.beranda(SESI); /* v3.20 perf-dashboard-16nov: 1 RPC gabungan (kalau server punya) mengisi simpanan gajiAkses/izin/lembur/KPI; tanpa itu panggilan baca tetap dibagi-pakai (api.js) */
-    muatCacheRingkas().then(function () { muatRingkasan(false); }); muatAbsen(); muatProfil(false); muatKsn(); setTimeout(muatForum, 1200);
+    muatCacheRingkas().then(function () { muatRingkasan(false); }); muatAbsen(); muatProfil(false); muatKsn(); if (window.WHL_KSNW) window.WHL_KSNW.mulai({ sesi: function () { return SESI; }, ctxKsn: ctxKsn, ctxDriver: ctxDriver, roti: roti }); /* kuesioner-wajib-25nov */ setTimeout(muatForum, 1200);
     setTimeout(function () { if (NOTIF.tiket && bolehUnit()) aturNotif(true); }, 1500); // pastikan jadwal cek latar terpasang
     setTimeout(function () { if (SESI && API.Pusat.asli()) pasangPush(); }, 2500); // notif-push-13nov
     setTimeout(function () { if (window.WHL_RILIS) window.WHL_RILIS.cekOtomatis(); }, 4000);
@@ -451,7 +451,7 @@
   function ctxKsn() { return { sesi: SESI, simpanSesi: simpanSesi, roti: roti, selesai: function (r) { if (r && r.ada) KSN = r; gambar(); } }; }
   function muatKsn() {
     if (!SESI || !window.WHL_KSN || SESI.user.peran === 'driver') { KSN = null; return; } // driver: server menolak (bukan staf) -> pintunya disembunyikan
-    window.WHL_KSN.muat(ctxKsn()).then(function (r) { KSN = r; gambar(); });
+    window.WHL_KSN.muat(ctxKsn()).then(function (r) { KSN = r; gambar(); if (window.WHL_KSNW) window.WHL_KSNW.staf(r); }); /* kuesioner-wajib-25nov */
   }
   function kartuKsn() {
     if (!KSN || SESI.user.peran === 'driver') return '';

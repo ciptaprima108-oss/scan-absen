@@ -67,13 +67,13 @@
     var staf = (Array.isArray(d.staf) ? d.staf : []).map(function (x) {
       var p = x.pernah, nik = String(x.nik || x.id || '');
       return { nik: nik, nama: x.nama || '', jabatan: x.jabatan || x.peran || '', pernah: !!p, ketPernah: typeof p === 'string' ? p : (x.ketPernah || ''),
-        sudah: x.sudah === true || daftarTerisi.indexOf(nik) >= 0 };
+        sudah: x.sudah === true || daftarTerisi.indexOf(nik) >= 0, tt: x.tt === true }; /* kuesioner-wajib-25nov: tidak kenal (server) */
     });
     var jml = Array.isArray(T) ? T.length : Number(T) || staf.filter(function (x) { return x.sudah; }).length;
     return { ok: d.ok !== false, aktif: d.aktif !== false, pesan: d.pesan || '', periode: bulanTeks(d.periode), buka: d.buka !== false, ketBuka: d.alasan || d.ketBuka || d.jadwal || '',
       staf: staf, butir: Array.isArray(d.butir) && d.butir.length ? d.butir : BUTIR_DEF, terisi: jml, maks: Number(d.maksStaf || d.maks) || MAKS, minPoin: Number((d.poin && d.poin.minStaf) || d.minPoin) || MIN_POIN, minPenilai: Number(d.minPenilai) || 10,
       /* API-APP.md §4b (Hesti) */ tampil: d.tampil !== false, boleh: d.boleh !== false, pesanBoleh: d.pesanBoleh || '', catatan: d.catatan || '', poinBesar: Number(d.poin && d.poin.poin) || 5, dapatPoin: !!(d.poin && d.poin.dapat),
-      alasanPilihan: Array.isArray(d.alasanPilihan) && d.alasanPilihan.length ? d.alasanPilihan : ALS };
+      alasanPilihan: Array.isArray(d.alasanPilihan) && d.alasanPilihan.length ? d.alasanPilihan : ALS, wajib: d.wajib && typeof d.wajib === 'object' ? d.wajib : null };
   }
   function muat() {
     return panggil(FN.status, [], 45000).then(function (h) { if (habis(h)) return null; ST = norm(h); return ST; });
@@ -100,6 +100,7 @@
   }
   function gambar() {
     if (!ST) return;
+    kabar(); /* kuesioner-wajib-25nov */
     if (ST.aktif === false || ST.ok === false) { lapis('Kuesioner anonim', kosong(ST.aktif === false ? 'Kuesioner belum dibuka' : 'Belum bisa dimuat', ST.pesan, ST.ok === false)); return; }
     if (ST.tampil === false) { lapis('Kuesioner anonim', kosong('Khusus driver', 'Kuesioner ini untuk driver menilai pelayanan staf.')); return; }
     if (PILIH) { gambarForm(); return; }
@@ -110,9 +111,10 @@
       + (ST.buka ? '<div class="ksdProg"><i style="width:' + Math.min(100, ST.terisi / ST.maks * 100).toFixed(0) + '%"></i></div>' : '') + '</div>';
     var P = ST.staf.filter(function (x) { return x.pernah; }), L = ST.staf.filter(function (x) { return !x.pernah; });
     h += '<div class="kartu"><div class="ksdJd"><b>Pernah menangani kamu bulan ini</b><span>dari tiket & DO</span></div>' + (P.length ? P.map(function (x) { return org(x, sisa); }).join('') : '<div class="kecil">Belum ada data staf yang menangani kamu bulan ini.</div>');
-    if (L.length && !CARI) h += '<button type="button" class="ksdLain" data-ksd="cari">Cari staf lain (' + L.length + ')</button>';
+    var wjb = !!(ST.wajib && ST.wajib.aktif); /* kuesioner-wajib-25nov */
+    if (L.length && !CARI && !wjb) h += '<button type="button" class="ksdLain" data-ksd="cari">Cari staf lain (' + L.length + ')</button>';
     h += '</div>';
-    if (L.length && CARI) h += '<div class="kartu"><div class="ksdJd"><b>Staf lain</b><span>' + L.length + ' orang</span></div><input class="ksdIn" type="search" placeholder="Cari nama / jabatan" aria-label="Cari staf" data-ksd="saring" style="margin:0 0 6px">'
+    if (L.length && (CARI || wjb)) h += '<div class="kartu"><div class="ksdJd"><b>Staf lain</b><span>' + L.length + ' orang</span></div><input class="ksdIn" type="search" placeholder="Cari nama / jabatan" aria-label="Cari staf" data-ksd="saring" style="margin:0 0 6px">'
       + '<div id="ksdLain">' + L.map(function (x) { return org(x, sisa); }).join('') + '</div></div>';
     h += '<div class="kecil" style="margin:12px 6px;text-align:center;line-height:1.5">Hasil staf baru tampil kalau minimal ' + ST.minPenilai + ' driver menilai. Siapa yang menilai tidak pernah ditampilkan ke siapa pun.</div>';
     lapis('Kuesioner anonim', h);
@@ -163,6 +165,13 @@
       gambar();
     }, function (e) { KIRIM = false; gambarForm(); pesan(e.message); });
   }
+  /* kuesioner-wajib-25nov: kabar ke gerbang wajib (tanpa RPC) */
+  function kabar() { setTimeout(function () { try { document.dispatchEvent(new CustomEvent('whl-ksn-berubah', { detail: { jenis: 'driver' } })); } catch (e) { /* */ } }, 0); }
+  /** status wajib dari data terakhir: {aktif, selesai, beres, jumlah, periode} atau null (server lama) */
+  function wajib() {
+    if (!ST || !ST.wajib) return null; var W = ST.wajib, beres = ST.staf.filter(function (s) { return s.sudah; }).length, target = Number(W.target || W.jumlah) || ST.staf.length; /* hanya yang DINILAI */
+    return { aktif: !!W.aktif && ST.buka && ST.boleh, selesai: beres >= target, beres: Math.min(beres, target), jumlah: target, periode: ST.periode };
+  }
   function klik(ev) {
     var b = ev.target.closest('[data-ksd]'); if (!b || !lapisEl || !lapisEl.contains(b)) return; var n = b.getAttribute('data-ksd');
     if (n === 'saring') return;
@@ -187,5 +196,5 @@
   function menu(S) { return boleh(S) ? [['kuesioner', 'Nilai staf', 'ksd', 0, 'ksd']] : []; }
   function bukaKe(ke, ctx) { if (ke !== 'ksd') return false; buka(ctx); return true; }
   function lupakan() { ST = null; PILIH = null; JWB = {}; ALASAN = []; CARI = false; tutup(); }
-  window.WHL_KSD = { buka: buka, bukaKe: bukaKe, boleh: boleh, menu: menu, tutup: tutup, lupakan: lupakan, FN: FN, _uji: { norm: norm, st: function () { return ST; } } };
+  window.WHL_KSD = { buka: buka, bukaKe: bukaKe, boleh: boleh, menu: menu, tutup: tutup, lupakan: lupakan, FN: FN, /* kuesioner-wajib-25nov: */ muatStatus: function (ctx) { CTX = ctx || CTX; return muat(); }, wajib: wajib, terbuka: function () { return !!lapisEl; }, _uji: { norm: norm, st: function () { return ST; } } };
 })();
