@@ -173,7 +173,7 @@
     login: function (id, pin) { return rpc(K.DASH, 'pusat', 'pusatLogin', [id, pin]); },
     forumToken: function (sesi) { return rpc(K.DASH, 'pusat', 'pusatForumToken', [sesi.tokenPusat], 20000); }, /* forum-12nov: custom token Firebase */
     /* notif-push-13nov: daftarkan token FCM HP ini + minta server kirim notifikasi forum (server memeriksa pesan di Firestore dulu) */
-    daftarPerangkat: function (sesi, fcm, platform) { return rpc(K.DASH, 'pusat', 'pusatDaftarPerangkat', [sesi.tokenPusat, fcm, platform]); },
+    daftarPerangkat: function (sesi, fcm, platform, versi) { return rpc(K.DASH, 'pusat', 'pusatDaftarPerangkat', [sesi.tokenPusat, fcm, platform, String(versi || '')]); }, /* apk-paksa-update-25nov: + versi APK (server lama mengabaikan argumen ke-4) */
     lepasPerangkat: function (sesi, fcm) { return rpc(K.DASH, 'pusat', 'pusatLepasPerangkat', [sesi.tokenPusat, fcm]); }, /* v3.6 (audit T5): spesifikasi server di ENDPOINT-DIBUTUHKAN.txt H */
     forumNotif: function (sesi, ruang, pesanId, jenis) { return rpc(K.DASH, 'pusat', 'pusatForumNotif', [sesi.tokenPusat, ruang, pesanId, jenis || 'pesan']); },
     /* v3.10 NOTA bengkel pengawas (kontrak Dodi 14 Nov, DASHBOARD api pusat) */

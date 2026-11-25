@@ -321,6 +321,7 @@
   function tanyaKeluar() { if (Date.now() - tekanKeluar < 2000) return 'keluar'; tekanKeluar = Date.now(); roti('Tekan sekali lagi untuk keluar'); return 'ok'; }
   window.WHL_KEMBALI = function () {
     try {
+      if (window.WHL_RILIS && window.WHL_RILIS.wajib && window.WHL_RILIS.wajib()) return 'keluar'; /* apk-paksa-update-25nov: layar Update wajib tidak bisa ditutup, Back cuma keluar app */
       if (window.WHL_PEMILIH && window.WHL_PEMILIH.tutup()) return 'ok'; /* v3.24 pemilih cari */
       if (window.WHL_ONLINE && window.WHL_ONLINE.tutupRinci && window.WHL_ONLINE.tutupRinci()) return 'ok'; /* v3.29 lembar siapa online */
       if (window.WHL_BERKAS && window.WHL_BERKAS.tutup()) return 'ok'; /* v3.20: lembar pratinjau PDF */
@@ -503,7 +504,9 @@
     { id: 'whl_tiket', name: 'Tiket Pos Kontrol', description: 'Storing, tiket gantung, tunggu mekanik', sound: 'whl_alarm' }
   ];
   function bukaDariNotif(d) {
-    d = d || {}; if (!SESI) return;
+    d = d || {};
+    if (d.jenis === 'rilis' && window.WHL_RILIS) { window.WHL_RILIS.cekManual(roti); return; } /* apk-paksa-update-25nov: notif "Update App WHL wajib" -> langsung cek & tampilkan layar pasang */
+    if (!SESI) return;
     if (d.jenis === 'forum' && window.WHL_FORUM) window.WHL_FORUM.bukaKe(ctxForum(), String(d.ruang || 'umum'));
     else if (d.jenis === 'kuis' && window.WHL_KUIS) window.WHL_KUIS.buka(ctxDriver()); /* tahap5 Andro-A */
     else if (d.jenis === 'tiket' && d.l) window.WHL_TINDAK(String(d.l));
@@ -523,7 +526,7 @@
     PN.addListener('registration', function (t) {
       clearTimeout(pushTunggu); PUSH.token = t.value; if (!SESI) return;
       pushSet('mendaftar', 'Token HP didapat, mendaftarkan ke server...');
-      API.Pusat.daftarPerangkat(SESI, t.value, platformPush()).then(function (h) {
+      API.Pusat.daftarPerangkat(SESI, t.value, platformPush(), versiApk()).then(function (h) {
         if (h && h.ok) { pushSet('aktif'); if (NOTIF.tiket) aturNotif(false); /* server sudah kirim notifikasi tiket -> cek berkala dimatikan supaya tidak dobel */ }
         else if (h && h.login === false) pushSet('gagal', 'Server menolak: sesi habis. Keluar lalu masuk lagi.');
         else pushSet('gagal', 'Server menolak: ' + ((h && h.pesan) || 'tanpa keterangan'));
@@ -536,6 +539,7 @@
       if (d.jenis === 'forum' && window.WHL_FORUM && window.WHL_FORUM.siap()) return; // forum tersambung sudah membunyikan sendiri
       if (d.jenis === 'kuis' && d.pra && window.WHL_KUIS_STAF) window.WHL_KUIS_STAF.pra(d); else R.bunyi(d.jenis === 'tiket' ? 'tiketWhl' : 'pesanWhl'); /* kuis-karyawan-24nov */ R.getar('awas'); roti((n.title ? n.title + ' — ' : '') + (n.body || ''));
       if (d.jenis === 'tiket') muatRingkasan(false);
+      if (d.jenis === 'rilis' && window.WHL_RILIS) window.WHL_RILIS.cekManual(roti); /* apk-paksa-update-25nov */
       if (d.jenis === 'lembur' || d.jenis === 'izin') muatLembur(); /* v3.19: + izin */ /* v3.16: badge ACC lembur / status lembur langsung diperbarui */
     });
     PN.addListener('pushNotificationActionPerformed', function (a) { var d = (a.notification && a.notification.data) || {}; catatKotak(d.jenis === 'tiket' ? 'tiket' : d.jenis === 'forum' ? 'forum' : d.jenis === 'lembur' ? 'lembur' : 'info', a.notification && a.notification.title, a.notification && a.notification.body, d); if (KOTAK[0]) KOTAK[0].b = true; setTimeout(function () { bukaDariNotif(d); }, 400); });
@@ -568,7 +572,7 @@
           if (!tok) throw new Error('token kosong');
           PUSH.token = tok; pushSet('mendaftar', 'Token didapat, mendaftarkan ke server...');
           if (!webPesan._dengar) { webPesan._dengar = true; webPesan.onMessage(function (m) { var n = m.notification || {}, d = m.data || {}; catatKotak(d.jenis === 'tiket' ? 'tiket' : d.jenis === 'forum' ? 'forum' : d.jenis === 'lembur' ? 'lembur' : 'info', n.title, n.body, d); if (d.jenis === 'kuis' && d.pra && window.WHL_KUIS_STAF) window.WHL_KUIS_STAF.pra(d); else R.bunyi(d.jenis === 'tiket' ? 'tiketWhl' : 'pesanWhl'); /* kuis-karyawan-24nov */ roti((n.title ? n.title + ' — ' : '') + (n.body || '')); }); }
-          return API.Pusat.daftarPerangkat(SESI, tok, 'web').then(function (h) {
+          return API.Pusat.daftarPerangkat(SESI, tok, 'web', versiApk()).then(function (h) {
             if (h && h.ok) pushSet('aktif'); else if (h && h.login === false) pushSet('gagal', 'Server menolak: sesi habis. Keluar lalu masuk lagi.'); else pushSet('gagal', 'Server menolak: ' + ((h && h.pesan) || 'tanpa keterangan'));
           });
         });
@@ -606,6 +610,8 @@
   /* app kembali dari latar -> ping ulang + coba lagi kalau belum aktif */
   document.addEventListener('visibilitychange', function () { if (!document.hidden && SESI && API.Pusat.asli() && !PUSH.aktif) pasangPush(false); if (!document.hidden && SESI && window.WHL_RILIS) window.WHL_RILIS.cekOtomatis(); });
   function suaraKeras() { return R.setel.keras !== false; }
+  /* apk-paksa-update-25nov: versi APK ikut dikirim saat daftar HP -> server tahu siapa yang masih APK lama. APK = versionCode Android (angka), web/PWA = "w" + KODE. */
+  function versiApk() { try { var a = window.AndroidDownloader; if (a && typeof a.kodeVersi === 'function') return String(Number(a.kodeVersi()) || K.KODE); } catch (e) { /* */ } return 'w' + K.KODE; }
   function platformPush() { return suaraKeras() ? 'andr-whl4' : 'andr-biasa'; } /* v3.7: andr-whl4 = saluran whl4_* (suara "We Ha El") */
   function barisSuaraKeras() {
     return '<div class="baris" style="align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--garis)"><div style="flex:1"><b>Suara notifikasi keras</b><div class="kecil">Suara WHL: perempuan berkata "Pesan, We Ha El" / "Tiket, We Ha El" + jingle, keras & jelas, getar panjang. Juga di dalam app.</div></div><button type="button" class="saklar' + (suaraKeras() ? ' on' : '') + '" data-aksi="suaraKeras" role="switch" aria-checked="' + suaraKeras() + '" aria-label="Suara notifikasi keras"><i></i></button></div>'
