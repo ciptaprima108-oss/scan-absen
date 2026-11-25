@@ -129,7 +129,7 @@
     el.querySelector('.ksnIsi').innerHTML = isiPapan();
     var g2 = el.querySelector('.ksnIsi'); if (g2) g2.scrollTop = y;
   }
-  function namaGrup(g) { return { pimpinan: 'pimpinan', pengawas: 'pengawas', mekanik: 'mekanik', admin: 'admin', lain: 'HSE' }[g] || ''; }
+  function namaGrup(g) { return { pimpinan: 'pimpinan', pengawas: 'pengawas', mekanik: 'mekanik', tyreman: 'tyreman', admin: 'admin', lain: 'HSE' }[g] || ''; } /* + tyreman */
   function tutup() {
     if (!el) return; var d = el; el = null; M = null; d.classList.remove('tampil'); setTimeout(function () { d.remove(); }, 200);
     berhentiPoll(); urut++; if (CTX && CTX.perbarui) CTX.perbarui();
@@ -192,6 +192,7 @@
     var s = saya(), h = '';
     h += '<div class="pkaSaya"><span class="tt' + (s.aktif ? '' : ' mati') + '"></span><div class="tx"><b>' + esc(s.nama) + '</b> · ' + esc(namaGrup(s.g)) + ' · ' + esc(s.ket || '') + '<br>'
       + (s.proses ? 'Kamu bisa tunjuk mekanik, selesaikan, pending & batalkan tiket.' : s.mekanik ? 'Tampil tiket yang ditunjuk ke kamu. Kamu bisa selesaikan / pending tiket milikmu.' : s.g === 'pengawas' ? 'Absen masuk dulu di menu Kehadiran supaya bisa memproses tiket.' : 'Lihat saja.') + '</div></div>';
+    if (ban()) h += ban().atas(); /* poskontrol-ganti-ban-25nov */
     if (galat) h += '<div class="pkaPita mrh">⚠️ ' + esc(galat) + ' · data terakhir ditampilkan.</div>';
     if (D.galat) h += '<div class="pkaPita">Sebagian data server: ' + esc(D.galat) + '</div>';
     if (!s.semua && D.jml && D.jml.menunggu) h += '<div class="pkaPita br">👷 ' + D.jml.menunggu + ' unit menunggu ditunjuk pengawas.</div>';
@@ -202,6 +203,7 @@
       return '<button type="button" data-p="tab:' + x[0] + '" style="--c:' + x[3] + '" class="' + (TAB === x[0] ? 'on' : '') + (n ? '' : ' kosong') + '">' + (lama && TAB !== x[0] ? '<i class="lm"></i>' : '') + '<b>' + n + '</b><span><i>' + x[2] + ' </i>' + x[1] + '</span></button>';
     }).join('') + '</div>';
     var T = TABS.filter(function (x) { return x[0] === TAB; })[0], l = tiketDi(TAB);
+    if (ban()) { h += ban().saringHtml(l); l = ban().saring(l); } /* poskontrol-ganti-ban-25nov: saring Semua / Perbaikan / Ganti ban */
     if (TAB === 'pending') l.sort(function (a, b) { return (a.jamUpdateEpoch || 0) - (b.jamUpdateEpoch || 0); });
     var ket = { menunggu: 'tunjuk mekanik', dikerjakan: 'selesaikan / pending', pending: 'lanjutkan / selesaikan', standby: 'tunjuk & ready lewat halaman lama', selesai: 'selesai hari ini (06.00–06.00)' }[TAB];
     h += '<div class="pkaJd" style="--c:' + T[3] + '"><b>' + T[2] + ' ' + T[1].toUpperCase() + '</b>' + esc(ket) + '</div>';
@@ -218,6 +220,7 @@
     return b + '</div>';
   }
   function kartu(t) {
+    if (t.gb && ban()) return ban().kartu(t); /* poskontrol-ganti-ban-25nov */
     var T = TABS.filter(function (x) { return x[0] === t.g; })[0] || TABS[0], c = T[3], tr = t.ar === 'TRONTON';
     var bd = { menunggu: 'MENUNGGU', dikerjakan: 'DIKERJAKAN', pending: 'PENDING', standby: /^\s*TAHAN/i.test(t.ker || '') ? 'DITAHAN' : 'STANDBY', selesai: 'SELESAI' }[t.g];
     var tm = t.g === 'standby' ? 'sejak ' + jamPendek(t.jamMasuk) : t.g === 'selesai' ? '✓ ' + String(t.jamSelesai || '').slice(11) : '⏱ ' + umur(t.mnt);
@@ -264,6 +267,7 @@
     w.innerHTML = '<div class="kt">' + htmlModal() + '</div>';
     el.appendChild(w);
     if (jenis === 'selesai') pasangSelesai(w);
+    if (ban() && /^gb/.test(jenis)) ban().sesudahModal(w, jenis); /* poskontrol-ganti-ban-25nov */
   }
   function tutupModal() { M = null; var w = el && el.querySelector('.pkaModal'); if (w) w.remove(); if (el) lapis(); }
   function gambarModal() { var w = el && el.querySelector('.pkaModal .kt'); if (w) { var y = w.scrollTop; w.innerHTML = htmlModal(); w.scrollTop = y; } }
@@ -274,6 +278,7 @@
   }
   function htmlModal() {
     var t = M.t, j = M.jenis;
+    if (ban() && (/^gb/.test(j) || (j === 'detail' && t && t.gb))) return ban().html(j, t); /* poskontrol-ganti-ban-25nov */
     if (j === 'detail') return htmlDetail(t);
     if (j === 'tunjuk') return htmlTunjuk(t);
     if (j === 'selesai') return htmlSelesai(t);
@@ -505,7 +510,7 @@
 
   /* ---------- ketukan ---------- */
   function ubah(ev) {
-    var x = ev.target; if (!M) return;
+    var x = ev.target; if (ban() && ban().ubah(ev)) return; if (!M) return; /* poskontrol-ganti-ban-25nov */
     if (x.id === 'pkaBk' && ev.type === 'change') { M.bk = x.value; var w = el.querySelector('#pkaBkW'); if (w) { w.innerHTML = htmlBengkel(); var i = el.querySelector('#pkaBkTulis'); if (i) i.focus(); } }
     if (x.id === 'pkaBkTulis') M.bkTulis = x.value;
   }
@@ -521,6 +526,7 @@
     if (n === 'lama') { bukaLama(); return; }
     if (n === 'lamaKws') { bukaLama(); return; }
     if (n === 'kwitansi') { bukaKwitansi(); return; }
+    if (ban() && ban().klik(n, v, b, ev)) return; /* poskontrol-ganti-ban-25nov */
     var bi = ev.target.closest('.pkaK button[data-p]');
     if (n === 'det') { if (bi && bi !== b) return; var td = cariT(v); if (td) bukaModal('detail', td); return; }
     if (bi || /^(tunjuk|selesai|pending|ganti|batal|revisi|cetak|lamaT|lanjut|lanjutYa)$/.test(n) && v) {
@@ -566,8 +572,19 @@
   function lepasSiap() { if (!el) return; Array.prototype.slice.call(el.querySelectorAll('.pkaSiap')).forEach(function (b) { b.removeAttribute('data-siap'); b.classList.remove('pkaSiap'); if (b.getAttribute('data-asli')) b.textContent = b.getAttribute('data-asli'); }); }
 
   /** Keluar / ganti akun: buang semua data dari memori. */
-  function lupakan() { urut++; berhentiPoll(); D = null; M = null; TAB = ''; galat = ''; BENGKEL = null; KWS = null; TTD = {}; if (el) { try { el.remove(); } catch (e) { /* */ } el = null; } }
+  function lupakan() { if (BAN && BAN.lupakan) BAN.lupakan(); urut++; berhentiPoll(); D = null; M = null; TAB = ''; galat = ''; BENGKEL = null; KWS = null; TTD = {}; if (el) { try { el.remove(); } catch (e) { /* */ } el = null; } }
 
+  /* poskontrol-ganti-ban-25nov: jembatan ke poskontrol-ban.js (tiket GANTI BAN). Tanpa berkas itu = layar seperti sebelumnya. */
+  var BAN = null;
+  function ban() {
+    if (!BAN && window.WHL_PK_BAN && window.WHL_PK_BAN.pasang) {
+      BAN = window.WHL_PK_BAN;
+      BAN.pasang({ esc: esc, panggil: panggil, roti: roti, umur: umur, lbPendek: lbPendek, saya: saya, data: function () { return D; }, modal: function () { return M; }, el: function () { return el; },
+        bukaModal: bukaModal, tutupModal: tutupModal, gambarModal: gambarModal, msg: msg, kunci: kunci, muat: muat, duaKali: duaKali, lepasSiap: lepasSiap, kepalaModal: kepalaModal, baris: baris,
+        cariT: cariT, jamKiniLokal: jamKiniLokal, setTab: function (x) { TAB = x; }, gambarPapan: function () { lapis(); } });
+    }
+    return BAN;
+  }
   window.WHL_PK = { boleh: boleh, buka: buka, kembali: kembali, lupakan: lupakan, urlLama: urlLama,
     _uji: { isi: function (d) { D = d; TAB = ''; }, papan: function () { return isiPapan(); }, kartu: kartu, tab: function (t) { TAB = t; }, modal: function () { return M; }, nama: function () { return M ? namaTerpilih() : ''; } } };
 })();
