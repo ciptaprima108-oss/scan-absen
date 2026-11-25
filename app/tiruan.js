@@ -49,17 +49,18 @@
   /* Hak per peran: salinan tabel di pusat.html / Pusat.gs (PUSAT_KARTU, PUSAT_APPS_PERAN, PUSAT_RINCI) */
   var KARTU_UMUM = ['ritase', 'subcon', 'insiden'];
   var KARTU_PERAN = { pimpinan: ['pos', 'gps', 'do', 'solar', 'gudang', 'input', 'kreatif', 'absensi', 'apps'], penuh: ['pos', 'gps', 'do', 'solar', 'gudang', 'input', 'kreatif', 'absensi', 'apps'],
-    pengawas: ['pos', 'input', 'apps'], admin: ['do', 'input', 'apps'], adminhse: ['absensi', 'input', 'apps'], mekanik: ['pos', 'input', 'apps'], hse: ['pos', 'input', 'apps'],
+    pengawas: ['pos', 'input', 'apps'], admin: ['do', 'input', 'apps'], adminhse: ['absensi', 'input', 'apps'], mekanik: ['pos', 'input', 'apps'], tyreman: ['input', 'apps'], hse: ['pos', 'input', 'apps'],
     logistik: ['gudang', 'apps'], fuelman: ['solar', 'apps'], kreatif: ['kreatif'], driver: [] };
-  var APPS_PERAN = { pimpinan: ['*'], penuh: ['*'], pengawas: ['pos', 'dash'], admin: ['inputdo'], adminhse: ['absensi', 'insiden', 'dash', 'generator'], mekanik: ['pos'], hse: ['pos', 'dash', 'analisa'], logistik: ['gudang'], fuelman: ['solar'], kreatif: [], driver: [] };
-  var UNIT_PERAN = ['pimpinan', 'penuh', 'pengawas', 'admin', 'adminhse', 'mekanik', 'hse'];
-  var NAMA_PERAN = { pimpinan: 'Pimpinan', penuh: 'Akses penuh', pengawas: 'Pengawas', mekanik: 'Mekanik', admin: 'Admin', adminhse: 'Admin HR & HSE', hse: 'HSE', logistik: 'Logistik', fuelman: 'Fuelman', kreatif: 'Kreatif', driver: 'Driver' };
+  var APPS_PERAN = { pimpinan: ['*'], penuh: ['*'], pengawas: ['pos', 'dash'], admin: ['inputdo'], adminhse: ['absensi', 'insiden', 'dash', 'generator'], mekanik: ['pos'], tyreman: ['pos'], hse: ['pos', 'dash', 'analisa'], logistik: ['gudang'], fuelman: ['solar'], kreatif: [], driver: [] };
+  var UNIT_PERAN = ['pimpinan', 'penuh', 'pengawas', 'admin', 'adminhse', 'mekanik', 'tyreman', 'hse'];
+  var NAMA_PERAN = { pimpinan: 'Pimpinan', penuh: 'Akses penuh', pengawas: 'Pengawas', mekanik: 'Mekanik', tyreman: 'Tyreman', karyawan: 'Karyawan', admin: 'Admin', adminhse: 'Admin HR & HSE', hse: 'HSE', logistik: 'Logistik', fuelman: 'Fuelman', kreatif: 'Kreatif', driver: 'Driver' };
 
   function tebakPeran(jabatan) {
     var j = String(jabatan || '').toUpperCase();
     if (/MANAGER|DIRECTOR|DIREKTUR|PJO|OWNER/.test(j)) return 'pimpinan';
     if (/SUPERVISOR|PENGAWAS|FOREMAN/.test(j)) return 'pengawas';
-    if (/MECHANIC|MEKANIK|WELDER|TYRE|ELECTRIC/.test(j)) return 'mekanik';
+    if (/TYRE|TIREMAN|TIRE MAN/.test(j)) return 'tyreman'; /* user-tyreman-25nov */
+    if (/MECHANIC|MEKANIK|WELDER|ELECTRIC/.test(j)) return 'mekanik';
     if (/HR/.test(j)) return 'adminhse';
     if (/HSE|SAFETY/.test(j)) return 'hse';
     if (/LOGISTI|WAREHOUSE|GUDANG/.test(j)) return 'logistik';
