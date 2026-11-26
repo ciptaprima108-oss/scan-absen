@@ -1,14 +1,14 @@
 {
- "versi": "3.53",
- "versionCode": 354,
- "minVersionCode": 354,
+ "versi": "3.59",
+ "versionCode": 360,
+ "minVersionCode": 360,
  "wajib": true,
  "catatan": [
-  "Update wajib: App WHL kini sama dengan versi web terbaru (kuis karyawan, Kelola user, katalog PDF + foto, sidik wajah, tampilan laptop)",
-  "Pengingat & layar Update wajib otomatis kalau app ketinggalan versi"
+  "Update wajib: kuesioner bulanan wajib diisi LENGKAP (semua pertanyaan) sebelum App WHL bisa dipakai",
+  "Menu Pos Kontrol + Ganti Ban kini juga ada di APK"
  ],
- "apk": "WHL-App-v3.53.apk",
- "ukuran": 8897812,
- "sha256": "fe6b98f566512b474995010349c152b3ea0c345d74bc5df32b4421df6a5d9312",
- "dibuat": "2026-11-25 02:39"
+ "apk": "WHL-App-v3.59.apk",
+ "ukuran": 8958744,
+ "sha256": "93517e0b62c3cc83ab0c17c96b4e8ab0652b926a2fe5ddf7c444a1126b4cd0be",
+ "dibuat": "2026-11-26 03:31"
 }
