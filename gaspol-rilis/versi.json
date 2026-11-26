@@ -1,0 +1,16 @@
+{
+ "versi": "1.2.1",
+ "versionCode": 4,
+ "minVersionCode": 1,
+ "wajib": false,
+ "catatan": [
+  "GASPOL WHL 1.2.1: sekarang bisa update langsung dari dalam app (tidak perlu buka Google Drive lagi)",
+  "Ada versi baru: tombol hijau 'Pembaruan GASPOL tersedia' muncul di layar depan, ketuk lalu Perbarui",
+  "Unduhan yang putus karena sinyal dilanjutkan, tidak mengulang dari awal",
+  "Tablet yang sudah terdaftar tidak perlu daftar ulang"
+ ],
+ "apk": "GASPOL-WHL-v1.2.1.apk",
+ "ukuran": 19689806,
+ "sha256": "8ca99fd22fe93905fe46ca23a372323cff67d9a12acbb09c3a11a4c2a0b01b1c",
+ "dibuat": "2026-11-26 06:23"
+}
