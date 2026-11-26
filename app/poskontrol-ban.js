@@ -183,16 +183,18 @@
     var g = t.gb || {}, h = kepala('🛞', t), s = S();
     h += '<div class="pkaBox">' + A.baris('Jenis', 'GANTI BAN · ' + (g.lokasi || 'POOL')) + A.baris('Posisi', g.belumPasti ? 'ditentukan tyreman (' + (g.n || 1) + ' ban)' : (g.pos || []).join(', ')) + A.baris('Lokasi', g.lokasiKm ? g.lokasiKm + (g.zona ? ' · zona ' + g.zona : '') : '')
       + A.baris('Driver', t.drv) + A.baris('Dibuat', t.lapor) + A.baris('Tyreman', t.mek) + A.baris('Ditunjuk oleh', t.oleh) + A.baris('Jam tunjuk', t.jamTunjuk) + A.baris('Target', g.target != null ? A.umur(g.target) : '')
-      + A.baris('Jam selesai', t.jamSelesai) + A.baris('Pekerjaan', t.ks) + '</div>';
+      + A.baris('Pilihan pengawas', t.g === 'selesai' ? '' : renTeks(t)) /* pk-4-jenis-petugas-26nov */ + A.baris('Jam selesai', t.jamSelesai) + A.baris('Pekerjaan', t.ks) + '</div>';
     var k = e(t.ar + '|' + t.id), b = function (cls, n, txt, penuh) { return '<button type="button" class="pkaTombol ' + cls + (penuh ? ' penuh' : '') + '" data-p="' + n + ':' + k + '">' + txt + '</button>'; }, X = '';
     if (t.g === 'menunggu' && s.proses) X += b('', 'gbTunjukBuka', '🛞 Tunjuk tyreman', true);
     if (t.g === 'dikerjakan' && bisaKerja()) X += b('hj', 'gbSelesaiBuka', '✅ Selesaikan ganti ban') + b('ung', 'gbPendingBuka', '⏸ Tunggu ban');
     if (t.g === 'pending' && bisaKerja()) X += b('', 'gbLanjut', '▶ Lanjutkan', true) + b('hj', 'gbSelesaiBuka', '✅ Selesaikan', true);
+    if ((t.g === 'dikerjakan' || t.g === 'pending') && renAktif()) X += b('abu', 'gbTunjukBuka', '📝 Pilih ban yang diganti (no seri)', true); /* pk-4-jenis-petugas-26nov */
     X += b('abu', 'cetak', '🖨️ Cetak tiket (halaman lama)', true);
     if (s.proses && t.g !== 'selesai') X += b('abu', 'batal', '❌ Batalkan tiket', true);
     return h + '<div class="pkaAksiD">' + X + '</div><div class="pkaMsg"></div>';
   }
   function chipsOrang(pilih) {
+    var kj = A.chipsJenis ? A.chipsJenis(pilih, 'GANTI BAN', 'gbOrang') : null; if (kj) return kj; /* pk-4-jenis-petugas-26nov */
     var mk = function (l, ik) { return (l || []).map(function (x) { return '<button type="button" data-p="gbOrang:' + e(x.nama) + '"' + (x.aktif ? '' : ' disabled') + ' class="' + (pilih.indexOf(x.nama) >= 0 ? 'on' : '') + '">' + ik + ' ' + e(x.nama) + '<small>' + e(x.ket || '') + '</small></button>'; }).join(''); };
     var ty = P ? P.tyreman : [], mek = P ? P.mekanik : [];
     return '<div class="pkaChips" id="gbOrang">' + (ty.length ? mk(ty, '🛞') : '<span class="gbCat">Belum ada tyreman di daftar (peran tyreman).</span>') + '</div>'
@@ -237,7 +239,33 @@
   function htmlTunjuk(t) {
     var m = M();
     if (!P) return kepala('🛞 Tunjuk', t) + '<div class="pkaKosong"><span class="putar"></span> Memuat…</div><div class="pkaMsg"></div>';
-    return kepala('🛞 Tunjuk', t) + '<div class="pkaLbl">Ketuk tyreman <small>boleh lebih dari 1</small></div>' + chipsOrang(m.peng) + '<button type="button" class="pkaTombol" style="background:#0f766e" data-p="gbTunjukYa">🛞 TUNJUK</button><div class="pkaMsg"></div>';
+    var tj = t.g === 'menunggu'; /* pk-4-jenis-petugas-26nov */
+    return kepala(tj ? '🛞 Tunjuk' : '📝 Pilih ban', t) + (tj ? '<div class="pkaLbl">Ketuk tyreman <small>boleh lebih dari 1</small></div>' + chipsOrang(m.peng) : '') + (renAktif() ? rencanaHtml() : '')
+      + (tj ? '<button type="button" class="pkaTombol" style="background:#0f766e" data-p="gbTunjukYa">🛞 TUNJUK</button>' : '<button type="button" class="pkaTombol" style="background:#0f766e" data-p="gbRencanaYa">💾 Simpan pilihan ban</button>') + '<div class="pkaMsg"></div>';
+  }
+  /* pk-4-jenis-petugas-26nov (Pak Fanza): pengawas ketuk posisi roda di skema -> no seri terpasang (yang dilepas) terisi dari Data Ban; no seri yang dipasang DIKETIK (stok ban belum ada datanya). Semua opsional. */
+  function renAktif() { return !!(D().urutPetugas && S().proses); }
+  function renSlot(p) { var m = M(); return (((m.ch || {}).slots) || []).filter(function (s) { return s.posisi === p; })[0] || {}; }
+  function renDaftar() {
+    var m = M();
+    if (!m.rpos.length) return '<div class="gbCat" style="margin-top:8px">Belum ada posisi dipilih → tyreman menentukan sendiri di lokasi.</div>';
+    return m.rpos.map(function (p, i) {
+      var s = renSlot(p);
+      return '<div class="gbKp"><div class="hd"><span class="no">' + (i + 1) + '</span><b>' + e(p) + '</b></div>'
+        + (s.ada ? '<div class="gbCek ok">⬇️ dilepas: <b>' + e(s.seri) + '</b>' + (s.km ? ' · ' + Math.round(s.km).toLocaleString('id-ID') + ' km' : '') + (s.status ? ' · ' + e(s.status) : '') + '</div>' : '<div class="gbCek">Posisi ini kosong di Data Ban (tidak ada ban lama tercatat).</div>')
+        + '<input class="pkaIn gbSeri" data-gbr="' + i + '" style="margin-top:6px" value="' + e(m.rseri[p] || '') + '" placeholder="⬆️ no seri ban yang DIPASANG (opsional, ketik)" autocomplete="off"></div>';
+    }).join('') + '<div class="gbCat">No seri yang dipasang boleh dikosongkan; tyreman mengisi / mengoreksi saat selesai. Pilihan dari stok ban belum ada (menunggu data stok ban).</div>';
+  }
+  function rencanaHtml() {
+    var m = M(), h = '<div class="pkaLbl" style="margin-top:14px">🛞 Ban yang diganti <small>opsional · ketuk posisi roda → no seri terisi dari Data Ban</small></div>';
+    if (!m.ch) return h + '<div class="pkaKosong"><span class="putar"></span> Membaca ban unit dari Data Ban…</div>';
+    if (!m.ch.ok) return h + '<div class="pkaPita mrh">⚠️ ' + e(m.ch.pesan) + ' — lanjut tanpa pilihan ban.</div>';
+    return h + '<div id="gbPetaT">' + petaHtml(m.ch, m.rpos, { klik: 'gbPosT' }) + '</div><div id="gbRenL">' + renDaftar() + '</div>';
+  }
+  function renData() { var m = M(); return renAktif() && m.rsentuh && m.ch && m.ch.ok ? { posisi: m.rpos.map(function (p) { return { posisi: p, seriBaru: baku(m.rseri[p] || '') }; }) } : {}; }
+  function renTeks(t) {
+    var g = t.gb || {}, r = g.rencana || {}, l = g.seriLama || {};
+    return (g.posPanjang || []).filter(function (p) { return l[p] || r[p]; }).map(function (p) { return singkat(p) + (l[p] ? ' lepas ' + l[p] : '') + (r[p] ? ' → pasang ' + r[p] : ''); }).join(' · ');
   }
   function htmlPending(t) {
     var m = M();
@@ -250,7 +278,7 @@
   /* ---------- form SELESAIKAN ---------- */
   function itemBaru(p, ch) {
     var s = ((ch && ch.slots) || []).filter(function (x) { return x.posisi === p; })[0] || {};
-    return { posisi: p, aksi: 'GANTI', tukar: '', seriData: s.ada ? s.seri : '', kmLama: s.ada ? s.km : '', seriLama: s.ada ? s.seri : '', lamaBeda: '', alasan: (M().t.gb || {}).alasan || '', fl: {}, seriBaru: '', cb: null, fb: {}, jenis: '', merk: '', merkLain: '' };
+    return { posisi: p, aksi: 'GANTI', tukar: '', seriData: s.ada ? s.seri : '', kmLama: s.ada ? s.km : '', seriLama: s.ada ? s.seri : '', lamaBeda: '', alasan: (M().t.gb || {}).alasan || '', fl: {}, seriBaru: (((M().t.gb || {}).rencana || {})[p] || '') /* pk-4-jenis-petugas-26nov */, cb: null, fb: {}, jenis: '', merk: '', merkLain: '' };
   }
   function htmlSelesai(t) {
     var m = M(), g = t.gb || {};
@@ -507,6 +535,7 @@
         m.ch = ch;
         if (ch.ok) (g.posPanjang || []).forEach(function (p) { if (m.urut.indexOf(p) < 0) { m.urut.push(p); m.item[p] = itemBaru(p, ch); } });
         var w = el().querySelector('.pkaModal .kt'); if (w) { w.innerHTML = htmlSelesai(t); pasangTtd(w); }
+        m.urut.forEach(function (p, i) { if (m.item[p] && m.item[p].seriBaru) cekSeriServer(i); }); /* pk-4-jenis-petugas-26nov */
       });
     });
   }
@@ -519,7 +548,7 @@
     if (/^(gbTunjukBuka|gbMulai|gbPendingBuka|gbLanjut|gbSelesaiBuka)$/.test(n) || (/^(tunjuk|selesai|pending|lanjut|lanjutYa|ganti)$/.test(n) && v && (A.cariT(v) || {}).gb)) {
       t = A.cariT(v);
       if (!t) { A.roti('Tiket sudah berubah. Papan dimuat ulang.'); A.muat(true); return true; }
-      if (n === 'gbTunjukBuka' || n === 'tunjuk' || n === 'ganti') { A.bukaModal('gbTunjuk', t, { peng: [] }); muatPilihan(function () { if (M() && M().jenis === 'gbTunjuk') A.gambarModal(); }); return true; }
+      if (n === 'gbTunjukBuka' || n === 'tunjuk' || n === 'ganti') { A.bukaModal('gbTunjuk', t, { peng: [], ch: null, rpos: ((t.gb || {}).posPanjang || []).slice(), rseri: Object.assign({}, (t.gb || {}).rencana || {}), rsentuh: false }); var mT = M(); muatPilihan(function () { if (M() === mT) A.gambarModal(); }); if (renAktif()) muatChassis(t.lb, function (ch) { if (M() !== mT) return; mT.ch = ch; A.gambarModal(); }); return true; } /* pk-4-jenis-petugas-26nov */
       if (n === 'gbMulai') { A.duaKali(b, function () { aksiKartu('gbMulai', t, '▶ Menyimpan jam mulai…'); }); return true; }
       if (n === 'gbLanjut' || n === 'lanjut' || n === 'lanjutYa') { A.duaKali(b, function () { aksiKartu('gbLanjut', t, '▶ Melanjutkan…'); }); return true; }
       if (n === 'gbPendingBuka' || n === 'pending') { A.bukaModal('gbPending', t, { alasan: '', catatan: '' }); return true; }
@@ -534,7 +563,9 @@
     if (n === 'gbLok') { m.lokasi = v; simpanIsianBuat(); A.gambarModal(); return true; }
     if (n === 'gbOrang') { var k = m.peng.indexOf(v); if (k >= 0) m.peng.splice(k, 1); else m.peng.push(v); b.classList.toggle('on', k < 0); var rb4 = q('#gbRingB'); if (rb4) rb4.innerHTML = ringkasBuat(); A.lepasSiap(); return true; }
     if (n === 'gbBuatYa') { A.duaKali(b, kirimBuat); return true; }
-    if (n === 'gbTunjukYa') { if (!m.peng.length) { A.msg('Ketuk tyreman dulu.', 'err'); return true; } A.duaKali(b, function () { kirim('gbTunjuk', { armada: m.t.ar, id: m.t.id, pengerja: m.peng.slice() }, 60000, function (h) { A.roti('✅ ' + h.pesan); A.tutupModal(); A.setTab('dikerjakan'); A.muat(true); }); }); return true; }
+    if (n === 'gbTunjukYa') { if (!m.peng.length) { A.msg('Ketuk tyreman dulu.', 'err'); return true; } A.duaKali(b, function () { kirim(renData().posisi ? 'pkjBanTunjuk' : 'gbTunjuk', Object.assign({ armada: m.t.ar, id: m.t.id, pengerja: m.peng.slice() }, renData()), 60000, function (h) { A.roti('✅ ' + h.pesan); A.tutupModal(); A.setTab('dikerjakan'); A.muat(true); }); }); return true; }
+    if (n === 'gbPosT') { var iT = m.rpos.indexOf(v); if (iT >= 0) { m.rpos.splice(iT, 1); delete m.rseri[v]; } else m.rpos.push(v); m.rsentuh = true; var pT = q('#gbPetaT'); if (pT) pT.innerHTML = petaHtml(m.ch, m.rpos, { klik: 'gbPosT' }); var lT = q('#gbRenL'); if (lT) lT.innerHTML = renDaftar(); A.lepasSiap(); return true; } /* pk-4-jenis-petugas-26nov */
+    if (n === 'gbRencanaYa') { for (var iR = 0; iR < m.rpos.length; iR++) { var sR = m.rseri[m.rpos[iR]]; if (sR && !cekSeri(sR).ok) { A.msg(singkat(m.rpos[iR]) + ': ' + cekSeri(sR).pesan, 'err'); return true; } } m.rsentuh = true; A.duaKali(b, function () { kirim('pkjBanRencana', Object.assign({ armada: m.t.ar, id: m.t.id }, renData()), 60000); }); return true; }
     if (n === 'gbAlP') { m.catatan = String((q('#gbCatP') || {}).value || ''); m.alasan = v; A.gambarModal(); return true; }
     if (n === 'gbPendingYa') { var c = String((q('#gbCatP') || {}).value || '').trim(); if (!m.alasan) { A.msg('Pilih alasan.', 'err'); return true; } if (m.alasan === 'Lainnya' && c.length < 3) { A.msg('Tulis alasannya.', 'err'); return true; } A.duaKali(b, function () { kirim('gbPending', { armada: m.t.ar, id: m.t.id, alasan: m.alasan, catatan: c }); }); return true; }
     /* selesaikan */
@@ -568,6 +599,8 @@
       return true;
     }
     if (x.id === 'gbJml') { m.jml = x.value; var rb = q('#gbRingB'); if (rb) rb.innerHTML = ringkasBuat(); return true; }
+    var aR = x.getAttribute && x.getAttribute('data-gbr'); /* pk-4-jenis-petugas-26nov */
+    if (aR != null && m.rpos) { var pR = m.rpos[parseInt(aR, 10)]; if (pR) { m.rseri[pR] = x.value; m.rsentuh = true; if (ev.type === 'change') { m.rseri[pR] = baku(x.value); x.value = m.rseri[pR]; } } return true; }
     var a = x.getAttribute && x.getAttribute('data-gb'); if (!a) return false;
     var pr = a.split(':'), i = parseInt(pr[1], 10), it = m.item && m.item[m.urut[i]]; if (!it) return true;
     if (pr[0] === 'lama') { it.seriLama = x.value; if (ev.type === 'change') { it.seriLama = baku(x.value); x.value = it.seriLama; } var w = q('#gbCekL' + i); if (w) w.innerHTML = cekLamaHtml(i); }

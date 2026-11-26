@@ -141,8 +141,15 @@
   }
 
   /* ---------- buka & muat ---------- */
-  function buka(ctx) {
-    CTX = ctx || CTX;
+  var CARI_LB = ''; /* pk-4-jenis-petugas-26nov */
+  function bukaLambung(lb) {
+    var n = String(lb || '').replace(/[^0-9]/g, ''), urutG = ['menunggu', 'dikerjakan', 'pending', 'standby'];
+    var l = ((D && D.tiket) || []).filter(function (t) { return n && String(t.lb || '').replace(/[^0-9]/g, '') === n && urutG.indexOf(t.g) >= 0; }).sort(function (a, b) { return urutG.indexOf(a.g) - urutG.indexOf(b.g); });
+    if (!l.length) { roti('Belum ada tiket terbuka untuk ' + lb + ' di papan ini.'); return false; }
+    TAB = l[0].g; lapis(); bukaModal('detail', l[0]); return true;
+  }
+  function buka(ctx, opsi) {
+    CTX = ctx || CTX; CARI_LB = String((opsi && opsi.lb) || '');
     var pk = info();
     if (pk && pk.mati) { roti('Pos Kontrol di app sedang dimatikan dari server — membuka halaman lama.'); bukaLama(); return; }
     if (!boleh()) { roti('Pos Kontrol khusus pengawas, mekanik, admin & pimpinan.'); return; }
@@ -157,6 +164,7 @@
         if (h && h.login === false && CTX && CTX.sesiHabis) { tutup(); CTX.sesiHabis(); return; }
         if (h && h.mati) { tutup(); roti(galat); bukaLama(); return; }
       } else { D = h; galat = ''; if (!TAB) TAB = tabAwal(); }
+      if (CARI_LB && D === h) { var cl = CARI_LB; CARI_LB = ''; if (bukaLambung(cl)) return; } /* pk-4-jenis-petugas-26nov */
       gambarPapan();
     }, function (e) {
       if (aku !== urut) return; memuat = false;
@@ -312,7 +320,36 @@
     var N = String(nama || '').toUpperCase();
     return ((D && D.tiket) || []).filter(function (t) { return (t.g === 'dikerjakan' || t.g === 'pending') && String(t.mek || '').toUpperCase().split(/[^A-Z]+/).indexOf(N) >= 0; }).map(function (t) { return lbPendek(t.lb); });
   }
+  /* pk-4-jenis-petugas-26nov: petugas utama jenis tiket paling atas (+ sedang kerja di unit mana), petugas lain selalu tampil di bawahnya. Tanpa data server (D.urutPetugas) = daftar lama. */
+  var JNS_PENDEK = { PERBAIKAN: 'perbaikan', STORING: 'storing', SERVICE: 'service', GREASE: 'greasing', 'GANTI BAN': 'ban' };
+  function kerjaOrang(nama) {
+    var N = String(nama || '').toUpperCase();
+    return ((D && D.tiket) || []).filter(function (t) { return (t.g === 'dikerjakan' || t.g === 'pending') && String(t.mek || '').toUpperCase().split(/[^A-Z]+/).indexOf(N) >= 0; }).map(function (t) { return lbPendek(t.lb) + (JNS_PENDEK[t.jenis] ? ' (' + JNS_PENDEK[t.jenis] + ')' : ''); });
+  }
+  function kelompokPetugas(jenis) {
+    var U = D && D.urutPetugas; if (!U || !U.jenis || !Array.isArray(D.ms)) return null;
+    var a = U.jenis[jenis] || U.jenis[U.bawaan] || { urut: ['mekanik', 'ms', 'tyreman'] }, ms = D.ms, mek = D.mekanik || [];
+    var isi = { mekanik: mek.filter(function (x) { return ms.indexOf(x.nama) < 0; }), ms: mek.filter(function (x) { return ms.indexOf(x.nama) >= 0; }), tyreman: D.tyreman || [] };
+    return a.urut.map(function (k, i) { var K = (U.kelompok || {})[k] || { label: k, ik: '' }; return { k: k, label: K.label, ik: K.ik, utama: i === 0, jenisLabel: a.label || jenis, l: isi[k] || [] }; });
+  }
+  function chipsJenis(pilih, jenis, aksi) {
+    var G = kelompokPetugas(jenis || (M && M.t && M.t.jenis) || ''); if (!G) return null;
+    aksi = aksi || 'mek';
+    var h = '<div id="' + (aksi === 'mek' ? 'pkaMek' : 'gbOrang') + '">';
+    G.forEach(function (g, i) {
+      if (i === 1) h += '<div style="margin-top:14px;padding-top:10px;border-top:1px dashed var(--garis,#cbd5e1);font-size:11px;font-weight:800;letter-spacing:.05em;color:var(--redup,#64748b)">PETUGAS LAIN · boleh ditunjuk juga</div>';
+      h += '<div class="pkaLbl" style="margin-top:' + (g.utama ? 2 : 8) + 'px">' + g.ik + ' ' + esc(g.label) + (g.utama ? ' <span style="background:#0f7a45;color:#fff;border-radius:999px;padding:1px 8px;font-size:10.5px;font-weight:800">UTAMA</span><small>petugas ' + esc(g.jenisLabel) + '</small>' : '') + '</div>';
+      if (!g.l.length) { h += '<div style="font-size:12.5px;color:#b45309">Belum ada ' + esc(g.label) + ' di daftar petugas.</div>'; return; }
+      h += '<div class="pkaChips">' + g.l.map(function (x) { return { x: x, u: kerjaOrang(x.nama) }; }).sort(function (p, q) { return (p.x.aktif ? (p.u.length ? 1 : 0) : 2) - (q.x.aktif ? (q.u.length ? 1 : 0) : 2); }).map(function (o) {
+        var x = o.x, ket = x.aktif ? (o.u.length ? '🔧 ' + o.u.join(', ') : 'siap') : (x.ket || 'belum absen');
+        return '<button type="button" data-p="' + aksi + ':' + esc(x.nama) + '"' + (x.aktif ? '' : ' disabled') + ' class="' + (pilih.indexOf(x.nama) >= 0 ? 'on' : '') + (o.u.length ? ' kerja' : '') + '">' + esc(x.nama) + '<small>' + esc(ket) + '</small></button>';
+      }).join('') + '</div>';
+    });
+    if (aksi === 'mek') h += '<div class="pkaChips" style="margin-top:10px"><button type="button" data-p="mek:__luar" class="' + (pilih.indexOf('__luar') >= 0 ? 'on' : '') + '">🏭 Bengkel luar…</button></div>';
+    return h + '</div>';
+  }
   function chipsMekanik(pilih) {
+    var kj = chipsJenis(pilih); if (kj) return kj; /* pk-4-jenis-petugas-26nov */
     var l = ((D && D.mekanik) || []).slice().sort(function (a, b) { return (b.aktif ? 1 : 0) - (a.aktif ? 1 : 0); });
     return '<div class="pkaChips" id="pkaMek">' + l.map(function (x) {
       var u = unitMekanik(x.nama), ket = x.aktif ? (u.length ? '🔧 ' + u.join(', ') : 'siap') : x.ket;
@@ -336,7 +373,7 @@
     return out.join(', ');
   }
   function htmlTunjuk(t) {
-    return kepalaModal('👷 Tunjuk', t) + '<div class="pkaLbl">Ketuk mekanik yang mengerjakan <small>boleh lebih dari 1 · ketuk lagi untuk lepas</small></div>' + chipsMekanik(M.pilih) + '<div id="pkaBkW">' + htmlBengkel() + '</div>'
+    return kepalaModal('👷 Tunjuk', t) + '<div class="pkaLbl">Ketuk petugas yang mengerjakan <small>boleh lebih dari 1 · ketuk lagi untuk lepas</small></div>' + chipsMekanik(M.pilih) + '<div id="pkaBkW">' + htmlBengkel() + '</div>'
       + '<div class="pkaMsg" id="pkaMekInfo">' + (M.pilih.length > 1 ? '👷 ' + M.pilih.length + ' mekanik dipilih — 1 tiket; siapa pun yang SELESAI, tiket selesai untuk semua.' : '') + '</div>'
       + '<button type="button" class="pkaTombol kn" data-p="tunjukYa">👷 TUNJUK MEKANIK</button>'
       + '<div class="pkaDua"><button type="button" class="pkaTombol hj" data-p="tunjukLanjut:selesai">✅ Langsung selesaikan</button><button type="button" class="pkaTombol ung" data-p="tunjukLanjut:pending">⏸ Langsung pending</button></div>'
@@ -535,7 +572,7 @@
       if (n === 'tunjuk') { bukaModal('tunjuk', t, { pilih: [], bk: '', bkTulis: '' }); return; }
       if (n === 'selesai') { bukaSelesai(t); return; }
       if (n === 'pending') { bukaModal('pending', t, { alasan: '', catatan: '', ganti: false, pilih: [] }); return; }
-      if (n === 'ganti') { var awal = String(t.mek || '').split(/\s*,\s*/).filter(String); var dikenal = ((D && D.mekanik) || []).map(function (x) { return x.nama; }); var luar = awal.filter(function (x) { return dikenal.indexOf(x) < 0; }); bukaModal('pending', t, { alasan: 'Ganti mekanik', catatan: '', ganti: true, pilih: awal.filter(function (x) { return dikenal.indexOf(x) >= 0; }).concat(luar.length ? ['__luar'] : []), bk: luar.length ? '__lain' : '', bkTulis: luar.join(', ').replace(/^Bengkel\s+/i, '') }); if (luar.length) muatBengkel(); return; }
+      if (n === 'ganti') { var awal = String(t.mek || '').split(/\s*,\s*/).filter(String); var dikenal = ((D && D.mekanik) || []).concat((D && D.tyreman) || []).map(function (x) { return x.nama; }); /* pk-4-jenis-petugas-26nov */ var luar = awal.filter(function (x) { return dikenal.indexOf(x) < 0; }); bukaModal('pending', t, { alasan: 'Ganti mekanik', catatan: '', ganti: true, pilih: awal.filter(function (x) { return dikenal.indexOf(x) >= 0; }).concat(luar.length ? ['__luar'] : []), bk: luar.length ? '__lain' : '', bkTulis: luar.join(', ').replace(/^Bengkel\s+/i, '') }); if (luar.length) muatBengkel(); return; }
       if (n === 'batal') { bukaModal('batal', t, { alasan: '', catatan: '' }); return; }
       if (n === 'revisi') { bukaModal('revisi', t); return; }
       if (n === 'cetak' || n === 'lamaT') { bukaLama(t.ar, t.id); return; }
@@ -581,10 +618,10 @@
       BAN = window.WHL_PK_BAN;
       BAN.pasang({ esc: esc, panggil: panggil, roti: roti, umur: umur, lbPendek: lbPendek, saya: saya, data: function () { return D; }, modal: function () { return M; }, el: function () { return el; },
         bukaModal: bukaModal, tutupModal: tutupModal, gambarModal: gambarModal, msg: msg, kunci: kunci, muat: muat, duaKali: duaKali, lepasSiap: lepasSiap, kepalaModal: kepalaModal, baris: baris,
-        cariT: cariT, jamKiniLokal: jamKiniLokal, setTab: function (x) { TAB = x; }, gambarPapan: function () { lapis(); } });
+        cariT: cariT, jamKiniLokal: jamKiniLokal, chipsJenis: chipsJenis /* pk-4-jenis-petugas-26nov */, setTab: function (x) { TAB = x; }, gambarPapan: function () { lapis(); } });
     }
     return BAN;
   }
   window.WHL_PK = { boleh: boleh, buka: buka, kembali: kembali, lupakan: lupakan, urlLama: urlLama,
-    _uji: { isi: function (d) { D = d; TAB = ''; }, papan: function () { return isiPapan(); }, kartu: kartu, tab: function (t) { TAB = t; }, modal: function () { return M; }, nama: function () { return M ? namaTerpilih() : ''; } } };
+    _uji: { isi: function (d) { D = d; TAB = ''; }, papan: function () { return isiPapan(); }, kartu: kartu, kelompok: kelompokPetugas, tab: function (t) { TAB = t; }, modal: function () { return M; }, nama: function () { return M ? namaTerpilih() : ''; } } };
 })();
