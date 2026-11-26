@@ -34,6 +34,11 @@
       return false;
     }, function () { return false; });
   }
+  /* kuesioner-semua-butir-25nov: tanya server rekan mana yang dulu terkirim belum lengkap (pakai rahasia HP, tanpa nilai) */
+  function periksaKurang() {
+    if (!ST || !ST.wajib || !ST.wajib.aktif || !ST.buka) return Promise.resolve();
+    return rahasia().then(function (rhs) { return rpc('ksnKirim', [token(), rhs, { periksa: true }]); }).then(function (h) { if (h && h.ok && h.periksa) ST.kurang = h.kurang || []; }, function () { /* server lama / sinyal: pakai data HP saja */ });
+  }
   function sinkronTt() { if (!ST || !ST.wajib || !ST.buka) return; Object.keys(ISI).forEach(function (nik) { var x = ISI[nik]; if (x && x.tt && !x.kirim && (ST.tt || []).indexOf(nik) < 0 && (ST.sudah || []).indexOf(nik) < 0) ttServer(nik); }); }
   /* v3.6 (audit S6): rahasia penilai PER AKUN, bukan per HP — 2 staf di 1 HP tidak saling menimpa penilaian.
      Rahasia lama (per HP) dipakai akun pertama yang membuka kuesioner sesudah update, supaya jawabannya tetap tersambung. */
@@ -55,7 +60,9 @@
   }
   function rekan() { return ST ? (ST.staf || []).filter(function (o) { return o.nik !== ST.nik; }) : []; }
   function wajibAktif() { return !!(ST && ST.wajib && ST.wajib.aktif); } /* kuesioner-wajib-25nov: selama wajib, "Tidak tahu" tidak dihitung & tombolnya disembunyikan (Fanza: pokoknya harus isi) */
-  function statusOrang(nik) { var s0 = statusOrang0(nik); return s0 === 'tt' && wajibAktif() ? 'belum' : s0; }
+  /* kuesioner-semua-butir-25nov: selama wajib, rekan yang terkirim belum lengkap = "kurang" (belum tuntas) */
+  function lengkapLokal(x) { return !!(x && ST && (ST.butir || []).every(function (b) { var n = Number(x.v && x.v[b.id]); return n >= 1 && n <= 5; })); }
+  function statusOrang(nik) { var s0 = statusOrang0(nik); if (!wajibAktif()) return s0; if (s0 === 'tt') return 'belum'; if (s0 === 'ok' && ((ST.kurang || []).indexOf(nik) >= 0 || (ISI[nik] && ISI[nik].kirim && !lengkapLokal(ISI[nik])))) return 'kurang'; return s0; }
   function statusOrang0(nik) { var x = ISI[nik]; if ((!x || !x.kirim) && ST && (ST.sudah || []).indexOf(nik) >= 0) return 'ok'; /* v3.6: server mencatat sudah dinilai */ if ((!x || (!x.kirim && !x.tt)) && ST && (ST.tt || []).indexOf(nik) >= 0) return 'tt'; /* kuesioner-wajib-25nov: tidak tahu tercatat di server */ return !x ? 'belum' : x.kirim ? 'ok' : x.tt ? 'tt' : (Object.keys(x.v || {}).length || x.alasan ? 'draf' : 'belum'); }
   function sisa() { return rekan().filter(function (o) { var s = statusOrang(o.nik); return s !== 'ok' && s !== 'tt'; }).length; }
 
@@ -67,7 +74,7 @@
       if (h.login === false) return { ada: false, perluPin: true };
       if (!h.ok) return { ada: false, galat: h.pesan || 'Kuesioner belum bisa dimuat.' };
       ST = h;
-      return Simpan.ambil(kunciIsi()).then(function (v) { try { ISI = JSON.parse(v || '{}') || {}; } catch (e) { ISI = {}; } sinkronTt(); kabar(); return ringkas(); }); /* kuesioner-wajib-25nov: tidak tahu lama dikirim ulang */
+      return Simpan.ambil(kunciIsi()).then(function (v) { try { ISI = JSON.parse(v || '{}') || {}; } catch (e) { ISI = {}; } return periksaKurang(); }).then(function () { sinkronTt(); kabar(); return ringkas(); }); /* kuesioner-semua-butir-25nov: + periksa belum lengkap */ /* kuesioner-wajib-25nov: tidak tahu lama dikirim ulang */
     }, function (e) { return { ada: false, galat: e.message }; });
   }
   function ringkas() { return ST ? { ada: true, buka: !!ST.buka, alasan: ST.alasan || '', sisa: sisa(), jumlah: rekan().length, k3: !!ST.k3, periode: ST.periode, wajib: ST.wajib || null, ikut: ST.ikut !== false } : { ada: false }; } /* kuesioner-wajib-25nov: + wajib (dari server) */
@@ -109,7 +116,7 @@
       var T = L.filter(function (o) { return !q || (o.nama + ' ' + o.jabatan).toLowerCase().indexOf(q) >= 0; });
       h += T.length ? T.map(function (o) {
         var s = statusOrang(o.nik);
-        return '<button type="button" class="app ksnOrg" data-nik="' + esc(o.nik) + '"><span class="bulat">' + esc(inisial(o.nama)) + '</span><span class="tx"><b>' + esc(o.nama) + '</b><small>' + esc(o.jabatan || '') + '</small></span><span class="chip ' + (s === 'ok' ? 'hijau' : s === 'tt' ? '' : s === 'draf' ? 'kuning' : 'biru') + '">' + (s === 'ok' ? '✓ Terkirim' : s === 'tt' ? 'Tidak tahu' : s === 'draf' ? 'Draf' : 'Isi') + '</span></button>';
+        return '<button type="button" class="app ksnOrg" data-nik="' + esc(o.nik) + '"><span class="bulat">' + esc(inisial(o.nama)) + '</span><span class="tx"><b>' + esc(o.nama) + '</b><small>' + esc(o.jabatan || '') + '</small></span><span class="chip ' + (s === 'ok' ? 'hijau' : s === 'tt' ? '' : s === 'draf' || s === 'kurang' ? 'kuning' : 'biru') + '">' + (s === 'ok' ? '✓ Terkirim' : s === 'tt' ? 'Tidak tahu' : s === 'kurang' ? 'Lengkapi' : s === 'draf' ? 'Draf' : 'Isi') + '</span></button>';
       }).join('') : R.kosong('Tidak ketemu', 'Coba kata lain.');
     }
     if (ST.catatan) h += '<div class="kecil" style="margin-top:10px">' + esc(ST.catatan) + '</div>';
@@ -123,17 +130,19 @@
     var o = rekan().filter(function (x) { return x.nik === bukaNik; })[0]; if (!o) { gambarDaftar(); return; }
     var x = ISI[o.nik] || (ISI[o.nik] = { v: {}, alasan: '', tt: false, kirim: false }), B = ST.butir || [];
     var h = kepala(o.nama, o.jabatan || 'Rekan kerja', 'daftar') + '<div class="ksnIsi">';
-    h += '<div class="kecil" style="margin:0 4px 10px">Nilai 1 (kurang sekali) sampai 5 (sangat baik). Ketuk angka yang sama sekali lagi untuk mengosongkan butir yang kamu tidak tahu.</div>';
+    h += '<div class="kecil" style="margin:0 4px 10px">Nilai 1 (kurang sekali) sampai 5 (sangat baik). ' + (wajibAktif() ? '<b style="color:var(--teks)">Semua pertanyaan wajib dinilai.</b>' : 'Ketuk angka yang sama sekali lagi untuk mengosongkan butir yang kamu tidak tahu.') + '</div>';
     var aspekLalu = '';
     B.forEach(function (b) {
       if (b.aspek !== aspekLalu) { aspekLalu = b.aspek; h += '<h2 class="bagW" style="margin-top:14px">' + (b.aspek === 'sop' ? '📋 Kepatuhan SOP & administrasi' : '🤝 Sikap & kerja sama') + '</h2>'; }
       var v = Number(x.v[b.id]) || 0;
-      h += '<div class="kartu ksnButir"><b>' + esc(b.nm) + (b.usulan ? ' <i class="tagT k">usulan</i>' : '') + '</b><small>' + esc(b.tanya || '') + '</small><div class="skala" role="radiogroup" aria-label="' + esc(b.nm) + '">' + [1, 2, 3, 4, 5].map(function (n) { return '<button type="button" role="radio" aria-checked="' + (v === n) + '" class="' + (v === n ? 'on n' + n : '') + '" data-butir="' + esc(b.id) + '" data-n="' + n + '">' + n + '</button>'; }).join('') + '</div><em>' + (v ? LABEL[v] : 'belum dinilai / tidak tahu') + '</em></div>';
+      h += '<div class="kartu ksnButir"' + (!v && wajibAktif() ? ' data-kosong="1" style="box-shadow:inset 0 0 0 2px var(--tMerah,#dc2626)"' : '') + '><b>' + esc(b.nm) + (b.usulan ? ' <i class="tagT k">usulan</i>' : '') + '</b><small>' + esc(b.tanya || '') + '</small><div class="skala" role="radiogroup" aria-label="' + esc(b.nm) + '">' + [1, 2, 3, 4, 5].map(function (n) { return '<button type="button" role="radio" aria-checked="' + (v === n) + '" class="' + (v === n ? 'on n' + n : '') + '" data-butir="' + esc(b.id) + '" data-n="' + n + '">' + n + '</button>'; }).join('') + '</div><em' + (!v && wajibAktif() ? ' style="color:var(--tMerah,#b91c1c);font-weight:800"' : '') + '>' + (v ? LABEL[v] : wajibAktif() ? 'belum dinilai (wajib)' : 'belum dinilai / tidak tahu') + '</em></div>';
     });
-    var nilai = B.map(function (b) { return Number(x.v[b.id]) || 0; }).filter(function (n) { return n > 0; }), wajib = nilai.some(function (n) { return n <= 2 || n === 5; });
+    var nilai = B.map(function (b) { return Number(x.v[b.id]) || 0; }).filter(function (n) { return n > 0; }), wajib = nilai.some(function (n) { return n <= 2 || n === 5; }), kosongB = wajibAktif() ? B.filter(function (b) { return !(Number(x.v[b.id]) >= 1); }).map(function (b) { return b.nm; }) : []; /* kuesioner-semua-butir-25nov */
     h += '<div class="kartu"><label class="lb" for="ksnAlasan" style="margin-top:0">Alasan / contoh kejadian' + (wajib ? ' <b style="color:var(--tMerah)">(wajib, karena ada nilai 1–2 atau 5)</b>' : ' (boleh kosong)') + '</label><textarea id="ksnAlasan" class="isian" rows="3" maxlength="300" placeholder="Tulis kejadiannya saja, singkat.">' + esc(x.alasan || '') + '</textarea>'
       + '<div class="ksnInfo kuning" style="margin:10px 0 0">✍️ Tulis kejadiannya saja. Gaya tulisan atau cerita yang terlalu khas bisa membuat orang menebak penulisnya.</div></div>';
-    h += '<div class="pesan" id="ksnPesan" role="alert"></div><div class="duaTombol">' + (wajibAktif() ? '' : '<button type="button" class="tKecil" data-k="tt">Tidak tahu / tidak pernah kerja bareng</button>') + '<button type="button" class="tUtama" style="margin-top:0" data-k="kirim"' + (ST.buka ? '' : ' disabled') + '>' + (x.kirim ? 'Simpan perubahan' : 'Simpan') + '</button></div>';
+    if (statusOrang(o.nik) === 'kurang') h += '<div class="ksnInfo kuning" style="margin:10px 0 0">Penilaianmu untuk rekan ini belum lengkap. Lengkapi semua pertanyaan lalu Simpan.</div>';
+    if (kosongB.length) h += '<div class="ksnInfo kuning" id="ksnKosongInfo" style="margin:10px 0 0"><b>Belum dinilai (' + kosongB.length + '):</b> ' + esc(kosongB.join(', ')) + '</div>';
+    h += '<div class="pesan" id="ksnPesan" role="alert"></div><div class="duaTombol">' + (wajibAktif() ? '' : '<button type="button" class="tKecil" data-k="tt">Tidak tahu / tidak pernah kerja bareng</button>') + '<button type="button" class="tUtama" style="margin-top:0" data-k="kirim"' + (ST.buka && !kosongB.length ? '' : ' disabled') + '>' + (x.kirim ? 'Simpan perubahan' : 'Simpan') + '</button></div>';
     var y = lapisEl ? lapisEl.querySelector('.ksnIsi') : null, gulung = y && lapisEl.getAttribute('data-nik') === o.nik ? y.scrollTop : 0;
     lapis(h + '</div>').setAttribute('data-nik', o.nik);
     if (gulung) lapisEl.querySelector('.ksnIsi').scrollTop = gulung;
@@ -145,7 +154,7 @@
       if (h.login === false) { tutup(); CTX.sesi.tokenKsn = ''; ST = null; mintaMasuk(function () { buka(CTX); }); return; }
       if (!h.ok && h.sudah) { x.kirim = true; simpanIsi(); tb.disabled = false; tb.textContent = 'Simpan'; ps.textContent = h.pesan || 'Rekan ini sudah kamu nilai di periode ini.'; R.bunyi('gagal'); return; } /* v3.6 (T4): 1 penilai = 1 nilai per rekan */
       if (!h.ok) { tb.disabled = false; tb.textContent = 'Simpan'; ps.textContent = h.pesan || 'Gagal menyimpan.'; R.bunyi('gagal'); R.getar('gagal'); return; }
-      x.kirim = true; x.tt = false; simpanIsi(); if (h.terisi != null) ST.terisi = h.terisi;
+      x.kirim = true; x.tt = false; if (ST.kurang) ST.kurang = ST.kurang.filter(function (n) { return n !== o.nik; }); simpanIsi(); if (h.terisi != null) ST.terisi = h.terisi; /* kuesioner-semua-butir-25nov */
       R.getar('sukses'); bukaNik = '';
       if (!sisa()) { gambarDaftar(); R.sukses({ judul: 'Kuesioner selesai', sub: 'Terima kasih. Semua rekan sudah kamu nilai atau tandai tidak tahu.', rinci: [['Periode', ST.periode], ['Jawaban', 'anonim, tersimpan'], ['Bisa diubah', 'dari HP ini, selama periode buka']] }); }
       else { R.bunyi('sukses'); gambarDaftar(); CTX.roti('Tersimpan (anonim). Sisa ' + sisa() + ' rekan.'); }
@@ -202,6 +211,7 @@
     else if (a === 'kirim') {
       var o = rekan().filter(function (z) { return z.nik === bukaNik; })[0], y = ISI[bukaNik], ps = document.getElementById('ksnPesan');
       var nilai = (ST.butir || []).map(function (bt) { return y.v[bt.id] || ''; }), isi = nilai.filter(function (n2) { return n2 !== ''; });
+      if (wajibAktif() && isi.length < (ST.butir || []).length) { ps.textContent = 'Semua pertanyaan wajib dinilai.'; R.bunyi('gagal'); R.getar('awas'); return; } /* kuesioner-semua-butir-25nov */
       if (!isi.length) { ps.textContent = 'Belum ada butir yang dinilai. Kalau tidak pernah kerja bareng, ketuk "Tidak tahu".'; R.bunyi('gagal'); R.getar('awas'); return; }
       if (isi.some(function (n2) { return n2 <= 2 || n2 === 5; }) && String(y.alasan || '').trim().length < 10) { ps.textContent = 'Nilai 1–2 atau 5 wajib diberi alasan singkat (minimal 10 huruf).'; R.bunyi('gagal'); R.getar('awas'); var al = document.getElementById('ksnAlasan'); if (al) al.focus(); return; }
       var sama = isi.length >= 4 && isi.every(function (n2) { return n2 === isi[0]; });

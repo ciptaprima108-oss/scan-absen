@@ -76,7 +76,7 @@
       alasanPilihan: Array.isArray(d.alasanPilihan) && d.alasanPilihan.length ? d.alasanPilihan : ALS, wajib: d.wajib && typeof d.wajib === 'object' ? d.wajib : null };
   }
   function muat() {
-    return panggil(FN.status, [], 45000).then(function (h) { if (habis(h)) return null; ST = norm(h); return ST; });
+    return panggil(FN.status, [], 45000).then(function (h) { if (habis(h)) return null; ST = norm(h); return periksaKurang().then(function () { return ST; }); }); /* kuesioner-semua-butir-25nov */
   }
 
   /* ---------- lapis ---------- */
@@ -121,22 +121,24 @@
   }
   function org(x, sisa) {
     var bisa = ST.buka && ST.boleh, aktif = bisa && (x.sudah || sisa > 0); /* sudah:true masih bisa DIUBAH dari HP yang sama (kunci rahasia) */
-    var st = x.sudah ? '<span class="ksdSt sudah">Sudah ✓' + (bisa ? ' · ubah' : '') + '</span>' : !bisa || sisa <= 0 ? '<span class="ksdSt mati">' + (!ST.buka ? 'Tutup' : !ST.boleh ? 'Terkunci' : 'Maks') + '</span>' : '<span class="ksdSt belum">Nilai</span>';
+    var st = x.sudah && x.kurang && wajibAktif() ? '<span class="ksdSt belum">Lengkapi</span>' : x.sudah ? '<span class="ksdSt sudah">Sudah ✓' + (bisa ? ' · ubah' : '') + '</span>' : !bisa || sisa <= 0 ? '<span class="ksdSt mati">' + (!ST.buka ? 'Tutup' : !ST.boleh ? 'Terkunci' : 'Maks') + '</span>' : '<span class="ksdSt belum">Nilai</span>';
     return '<button type="button" class="ksdOrg"' + (aktif ? ' data-ksd="nilai:' + esc(x.nik) + '"' : ' aria-disabled="true"') + ' data-cari="' + esc((x.nama + ' ' + x.jabatan).toLowerCase()) + '"><span class="av">' + esc(inisial(x.nama)) + '</span><span class="tx"><b>' + esc(pendek(x.nama)) + '</b><small>' + esc([x.jabatan, x.ketPernah].filter(String).join(' · ')) + '</small></span>' + st + '</button>';
   }
   function gambarForm() {
-    var x = PILIH, B = ST.butir, ada1 = B.some(function (b) { return JWB[b.id] === 1; }), lengkap = B.every(function (b) { return JWB[b.id] >= 0; }) && B.some(function (b) { return JWB[b.id] >= 1; });
+    var x = PILIH, B = ST.butir, ada1 = B.some(function (b) { return JWB[b.id] === 1; }), lengkap = wajibAktif() ? B.every(function (b) { return JWB[b.id] >= 1; }) : B.every(function (b) { return JWB[b.id] >= 0; }) && B.some(function (b) { return JWB[b.id] >= 1; }); /* kuesioner-semua-butir-25nov */
     var h = '<div class="kartu"><div class="ksdJd"><b>' + esc(pendek(x.nama)) + (x.jabatan ? ' · ' + esc(x.jabatan) : '') + '</b><span>' + B.length + ' pertanyaan</span></div>'
-      + '<div class="kecil" style="line-height:1.45">Pilih wajah yang paling cocok. Tidak tahu satu pertanyaan? Pilih <b style="color:var(--teks)">Tidak tahu</b>. Tidak kenal orangnya? Tekan <b style="color:var(--teks)">Lewati</b>, tidak ada yang dikirim.</div>';
+      + '<div class="kecil" style="line-height:1.45">Pilih wajah yang paling cocok. ' + (wajibAktif() ? '<b style="color:var(--teks)">Semua pertanyaan wajib dinilai.</b>' : 'Tidak tahu satu pertanyaan? Pilih <b style="color:var(--teks)">Tidak tahu</b>. Tidak kenal orangnya? Tekan <b style="color:var(--teks)">Lewati</b>, tidak ada yang dikirim.') + '</div>';
     B.forEach(function (b) {
-      h += '<div class="ksdRate"><div class="q">' + (b.ic ? esc(b.ic) + ' ' : '') + esc(b.nm || b.id) + (b.tanya ? '<small>' + esc(b.tanya) + '</small>' : '') + '</div><div class="ksdWajah" role="radiogroup" aria-label="' + esc(b.nm || b.id) + '">'
-        + WAJAH.map(function (w, i) { var n = i + 1; return '<button type="button" role="radio" aria-checked="' + (JWB[b.id] === n) + '" class="' + (JWB[b.id] === n ? 'on' : '') + '" data-ksd="n:' + esc(b.id) + ':' + n + '">' + w[0] + '<small>' + n + ' ' + w[1] + '</small></button>'; }).join('') + '</div><div class="ksdCip"><button type="button" class="' + (JWB[b.id] === 0 ? 'on' : '') + '" data-ksd="n:' + esc(b.id) + ':0">Tidak tahu</button></div></div>';
+      h += '<div class="ksdRate"' + (wajibAktif() && !(JWB[b.id] >= 1) ? ' data-kosong="1" style="box-shadow:inset 0 0 0 2px var(--tMerah,#dc2626)"' : '') + '><div class="q">' + (b.ic ? esc(b.ic) + ' ' : '') + esc(b.nm || b.id) + (b.tanya ? '<small>' + esc(b.tanya) + '</small>' : '') + '</div><div class="ksdWajah" role="radiogroup" aria-label="' + esc(b.nm || b.id) + '">'
+        + WAJAH.map(function (w, i) { var n = i + 1; return '<button type="button" role="radio" aria-checked="' + (JWB[b.id] === n) + '" class="' + (JWB[b.id] === n ? 'on' : '') + '" data-ksd="n:' + esc(b.id) + ':' + n + '">' + w[0] + '<small>' + n + ' ' + w[1] + '</small></button>'; }).join('') + '</div>' + (wajibAktif() ? (JWB[b.id] >= 1 ? '' : '<div class="ksdPesan" style="min-height:0;margin-top:6px">Belum dinilai (wajib)</div>') : '<div class="ksdCip"><button type="button" class="' + (JWB[b.id] === 0 ? 'on' : '') + '" data-ksd="n:' + esc(b.id) + ':0">Tidak tahu</button></div>') + '</div>'; /* kuesioner-semua-butir-25nov: tanpa Tidak tahu saat wajib */
     });
     if (ada1) {
       h += '<div class="ksdRate"><div class="q">Nilai 1 wajib pilih alasan</div><div class="ksdCip">' + ST.alasanPilihan.map(function (a) { return '<button type="button" class="' + (ALASAN.indexOf(a) >= 0 ? 'on' : '') + '" role="radio" aria-checked="' + (ALASAN[0] === a) + '" data-ksd="als:' + esc(a) + '">' + esc(a) + '</button>'; }).join('') + '</div>'
         + (ALASAN.indexOf('Lainnya') >= 0 ? '<input class="ksdIn" id="ksdAlasan" maxlength="120" placeholder="Tulis alasan singkat" autocomplete="off">' : '') + '</div>';
     }
-    h += '<div class="ksdPesan" id="ksdPesan"></div><div class="ksdTb"><button type="button" data-ksd="lewati">Lewati</button><button type="button" class="utama" data-ksd="kirim"' + (lengkap && !KIRIM ? '' : ' disabled') + '>' + (KIRIM ? 'Mengirim…' : 'Kirim penilaian') + '</button></div></div>';
+    if (wajibAktif() && x.sudah && x.kurang) h += '<div class="ksdPesan" style="color:var(--teks)">Penilaianmu untuk staf ini belum lengkap. Nilai semua pertanyaan lalu kirim lagi.</div>';
+    if (wajibAktif() && !lengkap) h += '<div class="ksdPesan" id="ksdKosongInfo">Belum dinilai: ' + B.filter(function (b) { return !(JWB[b.id] >= 1); }).map(function (b) { return esc(b.nm || b.id); }).join(', ') + '</div>';
+    h += '<div class="ksdPesan" id="ksdPesan"></div><div class="ksdTb"><button type="button" data-ksd="lewati">' + (wajibAktif() ? 'Kembali ke daftar' : 'Lewati') + '</button><button type="button" class="utama" data-ksd="kirim"' + (lengkap && !KIRIM ? '' : ' disabled') + '>' + (KIRIM ? 'Mengirim…' : 'Kirim penilaian') + '</button></div></div>';
     var simpanTeks = lapisEl && lapisEl.querySelector('#ksdAlasan') ? lapisEl.querySelector('#ksdAlasan').value : '';
     lapis('Kuesioner anonim · ' + (ST.periode || ''), h);
     var el = lapisEl.querySelector('#ksdAlasan'); if (el && simpanTeks) el.value = simpanTeks; /* teks dipertahankan saat layar digambar ulang (tidak diubah tiap ketikan) */
@@ -145,6 +147,7 @@
   function kirim() {
     var x = PILIH, B = ST.butir; if (!x || KIRIM) return;
     var d = B.map(function (b) { return JWB[b.id] == null ? -1 : JWB[b.id]; }); /* 0 = tidak tahu (API-APP.md §4) */
+    if (wajibAktif() && d.some(function (n) { return !(n >= 1 && n <= 5); })) { pesan('Semua pertanyaan wajib dinilai.'); return; } /* kuesioner-semua-butir-25nov */
     if (d.some(function (n) { return !(n >= 0 && n <= 5); }) || !d.some(function (n) { return n >= 1; })) { pesan('Isi semua pertanyaan dulu (boleh Tidak tahu), atau tekan Lewati.'); return; }
     var teks = lapisEl.querySelector('#ksdAlasan') ? String(lapisEl.querySelector('#ksdAlasan').value || '').trim() : '';
     var alasan = '';
@@ -158,18 +161,26 @@
       KIRIM = false; if (habis(h)) return;
       if (!h || h.ok === false) { if (R && R.bunyi) R.bunyi('gagal'); gambarForm(); pesan((h && h.pesan) || 'Belum bisa dikirim. Coba lagi.'); return; }
       if (R && R.bunyi) R.bunyi('sukses'); if (R && R.getar) R.getar('sukses');
-      var lama = x.sudah; ST.staf.forEach(function (s) { if (s.nik === x.nik) s.sudah = true; }); if (h.dapatPoin) ST.dapatPoin = true;
+      var lama = x.sudah; ST.staf.forEach(function (s) { if (s.nik === x.nik) { s.sudah = true; s.kurang = false; } }); if (h.dapatPoin) ST.dapatPoin = true;
       ST.terisi = h.terisi != null ? (Array.isArray(h.terisi) ? h.terisi.length : Number(h.terisi) || ST.terisi) : ST.terisi + (lama ? 0 : 1);
       PILIH = null; JWB = {}; ALASAN = [];
       roti(h.pesan || ('Terkirim. Terima kasih! Sudah ' + ST.terisi + ' staf dinilai' + (ST.terisi >= ST.minPoin ? '.' : ', ' + (ST.minPoin - ST.terisi) + ' lagi untuk +5 poin.')));
       gambar();
     }, function (e) { KIRIM = false; gambarForm(); pesan(e.message); });
   }
+  /* kuesioner-semua-butir-25nov: selama wajib semua butir wajib; penilaian lama yang belum lengkap = "Lengkapi" (dicek server pakai rahasia HP) */
+  function wajibAktif() { return !!(ST && ST.wajib && ST.wajib.aktif); }
+  function periksaKurang() {
+    if (!wajibAktif() || !ST.buka || !ST.boleh) return Promise.resolve();
+    return rahasia().then(function (rhs) { return panggil(FN.kirim, [rhs, { periksa: true }], 45000); }).then(function (h) {
+      if (h && h.ok && h.periksa) { var k = h.kurang || []; ST.staf.forEach(function (s) { s.kurang = k.indexOf(s.nik) >= 0; }); }
+    }, function () { /* server lama / sinyal */ });
+  }
   /* kuesioner-wajib-25nov: kabar ke gerbang wajib (tanpa RPC) */
   function kabar() { setTimeout(function () { try { document.dispatchEvent(new CustomEvent('whl-ksn-berubah', { detail: { jenis: 'driver' } })); } catch (e) { /* */ } }, 0); }
   /** status wajib dari data terakhir: {aktif, selesai, beres, jumlah, periode} atau null (server lama) */
   function wajib() {
-    if (!ST || !ST.wajib) return null; var W = ST.wajib, beres = ST.staf.filter(function (s) { return s.sudah; }).length, target = Number(W.target || W.jumlah) || ST.staf.length; /* hanya yang DINILAI */
+    if (!ST || !ST.wajib) return null; var W = ST.wajib, beres = ST.staf.filter(function (s) { return s.sudah && !s.kurang; }).length, target = Number(W.target || W.jumlah) || ST.staf.length; /* hanya yang DINILAI */
     return { aktif: !!W.aktif && ST.buka && ST.boleh, selesai: beres >= target, beres: Math.min(beres, target), jumlah: target, periode: ST.periode };
   }
   function klik(ev) {
