@@ -53,7 +53,7 @@
     logistik: ['gudang', 'apps'], fuelman: ['solar', 'apps'], kreatif: ['kreatif'], driver: [] };
   var APPS_PERAN = { pimpinan: ['*'], penuh: ['*'], pengawas: ['pos', 'dash'], admin: ['inputdo'], adminhse: ['absensi', 'insiden', 'dash', 'generator'], mekanik: ['pos'], tyreman: ['pos'], hse: ['pos', 'dash', 'analisa'], logistik: ['gudang'], fuelman: ['solar'], kreatif: [], driver: [] };
   var UNIT_PERAN = ['pimpinan', 'penuh', 'pengawas', 'admin', 'adminhse', 'mekanik', 'tyreman', 'hse'];
-  var NAMA_PERAN = { pimpinan: 'Pimpinan', penuh: 'Akses penuh', pengawas: 'Pengawas', mekanik: 'Mekanik', tyreman: 'Tyreman', karyawan: 'Karyawan', admin: 'Admin', adminhse: 'Admin HR & HSE', hse: 'HSE', logistik: 'Logistik', fuelman: 'Fuelman', kreatif: 'Kreatif', driver: 'Driver' };
+  var NAMA_PERAN = { pimpinan: 'Pimpinan', penuh: 'Akses penuh', pengawas: 'Pengawas', mekanik: 'Mekanik', tyreman: 'Tyreman', karyawan: 'Karyawan', hrd: 'HRD', admin: 'Admin', adminhse: 'Admin HR & HSE', hse: 'HSE', logistik: 'Logistik', fuelman: 'Fuelman', kreatif: 'Kreatif', driver: 'Driver' };
 
   function tebakPeran(jabatan) {
     var j = String(jabatan || '').toUpperCase();

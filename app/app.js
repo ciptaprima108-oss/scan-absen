@@ -41,7 +41,7 @@
   function bersihModul() {
     HI = null; /* angka Hari ini */
     try { if (API.Pusat.lupakanSimpanan) API.Pusat.lupakanSimpanan(); } catch (e) { /* */ }
-    ['WHL_DRIVER', 'WHL_P2H', 'WHL_GAJI', 'WHL_KASBON', 'WHL_DOKKAS', 'WHL_LEMBUR', 'WHL_LABA', 'WHL_KATALOG', 'WHL_POIN', 'WHL_PERINGKAT', 'WHL_IZIN', 'WHL_ASISTEN', 'WHL_NOTA', 'WHL_ROSTER', 'WHL_KUIS', 'WHL_KUIS_STAF', 'WHL_POIN_STAF', 'WHL_KSD', 'WHL_KARYAWAN', 'WHL_KU', 'WHL_PDB', 'WHL_PK', 'WHL_KSNW'].forEach(function (n) {
+    ['WHL_HRD' /* app-peran-hrd-26nov */, 'WHL_DRIVER', 'WHL_P2H', 'WHL_GAJI', 'WHL_KASBON', 'WHL_DOKKAS', 'WHL_LEMBUR', 'WHL_LABA', 'WHL_KATALOG', 'WHL_POIN', 'WHL_PERINGKAT', 'WHL_IZIN', 'WHL_ASISTEN', 'WHL_NOTA', 'WHL_ROSTER', 'WHL_KUIS', 'WHL_KUIS_STAF', 'WHL_POIN_STAF', 'WHL_KSD', 'WHL_KARYAWAN', 'WHL_KU', 'WHL_PDB', 'WHL_PK', 'WHL_KSNW'].forEach(function (n) {
       try { var m = window[n]; if (m && typeof m.lupakan === 'function') m.lupakan(); } catch (e) { /* satu modul gagal, yang lain tetap dibersihkan */ }
     });
   }
@@ -240,7 +240,7 @@
     { ic: '🖥️', n: 'Live Monitor Pos Kontrol', k: 'Tiket mekanik live', u: K.DASH + '?mode=monitor', ke: 'posKontrol', sembunyiApp: 1 /* pk-4-jenis-petugas-26nov */ },
     { ic: '📝', n: 'Pengajuan Izin', k: 'Izin / sakit / cuti', u: K.ABSEN + '?mode=izin' }
   ];
-  var INPUT_PERAN = { pimpinan: [6, 5, 4, 0, 1, 2, 3, 7], penuh: [4, 6, 5, 0, 1, 2, 3, 7], pengawas: [6, 5, 7], mekanik: [5, 7], tyreman: [5, 7], karyawan: [7], admin: [4, 7], adminhse: [0, 1, 2, 3, 7], hse: [0, 1, 6, 5, 7], logistik: [7], fuelman: [7], kreatif: [7], driver: [] };
+  var INPUT_PERAN = { pimpinan: [6, 5, 4, 0, 1, 2, 3, 7], penuh: [4, 6, 5, 0, 1, 2, 3, 7], pengawas: [6, 5, 7], mekanik: [5, 7], tyreman: [5, 7], karyawan: [7], hrd: [] /* app-peran-hrd-26nov */, admin: [4, 7], adminhse: [0, 1, 2, 3, 7], hse: [0, 1, 6, 5, 7], logistik: [7], fuelman: [7], kreatif: [7], driver: [] };
   function alamat(a) { return a.u || (a.id ? 'https://script.google.com/macros/s/' + a.id + '/exec' : ''); }
   function appsSaya() { var A = (SESI && SESI.user.apps) || []; return APPS.filter(function (a) { return A.indexOf('*') >= 0 || A.indexOf(a.d) >= 0 || (a.g && A.indexOf(a.g) >= 0); }); }
   function bolehUnit() { return !!SESI && ((SESI.user.rinci || []).indexOf('unit') >= 0 || SESI.user.admin || T.UNIT_PERAN.indexOf(SESI.user.peran) >= 0); }
@@ -276,7 +276,7 @@
     layar('layarApp');
     $('tAkun').textContent = inisial(SESI.namaLengkap || SESI.user.nama);
     $('pitaContoh').classList.toggle('sembunyi', API.Pusat.asli());
-    var navAkt = document.querySelector('.nav button[data-tab="aktivitas"]'); if (navAkt) navAkt.classList.toggle('sembunyi', adalahDriver()); /* v3.29: driver tanpa Aktivitas (unit/absen) */
+    var navAkt = document.querySelector('.nav button[data-tab="aktivitas"]'); if (navAkt) navAkt.classList.toggle('sembunyi', adalahDriver() || !!(window.WHL_HRD && window.WHL_HRD.mode(SESI) && !window.WHL_HRD.pribadi())); /* app-peran-hrd-26nov */ /* v3.29: driver tanpa Aktivitas (unit/absen) */
     if (adalahDriver() && window.WHL_DRIVER) window.WHL_DRIVER.muat(ctxDriver());
     var t0 = ''; try { t0 = sessionStorage.getItem('whlV2Tab') || ''; } catch (e) { /* */ }
     var LT = !t0 && window.WHL_LAYAR ? window.WHL_LAYAR.layarTerakhir() : null; if (LT && LT.tab) t0 = LT.tab; /* v3.33 layar.js: layar terakhir (< 4 jam) walau app dimatikan HP */
@@ -310,6 +310,7 @@
     if (t === 'kehadiran') t = 'absen'; /* v3.15 */
     if (t === 'aktivitas') t = bolehUnit() ? AKT : 'absen'; /* v2.16: Aktivitas = Unit + Absen saya (segmen di atas) */
     if (t === 'unit' && !bolehUnit()) t = 'absen';
+    if (window.WHL_HRD && window.WHL_HRD.mode(SESI)) t = window.WHL_HRD.tabBoleh(t); /* app-peran-hrd-26nov */
     if (t === 'unit' || t === 'absen') AKT = t;
     if (t !== tab && !mundur) { RIWAYAT.push(tab); if (RIWAYAT.length > 20) RIWAYAT.shift(); }
     if (t === 'beranda') RIWAYAT = [];
@@ -417,7 +418,7 @@
   /* v3.32 (Reza 17 Nov): akun full time tanpa kewajiban absen (Pak Fanza WHL-01001) tidak dapat kotak Absen/Lembur di Beranda; menu Kehadiran tetap bisa dibuka.
      Daftar = konfig.js TANPA_KOTAK_ABSEN (NRP/ID, tanda baca diabaikan) ATAU field server opsional user.tanpaKotakAbsen === true. */
   function tanpaKotakAbsen() {
-    var u = SESI && SESI.user; if (!u) return false; if (u.tanpaKotakAbsen === true) return true; if (u.tanpaKotakAbsen === false) return false;
+    var u = SESI && SESI.user; if (!u) return false; if (window.WHL_HRD && window.WHL_HRD.mode(SESI) && !window.WHL_HRD.pribadi()) return true; /* app-peran-hrd-26nov */ if (u.tanpaKotakAbsen === true) return true; if (u.tanpaKotakAbsen === false) return false;
     var R = function (s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }, D = ((window.WHL_KONFIG || {}).TANPA_KOTAK_ABSEN || []).map(R);
     return [SESI.idProfil, SESI.idKetik, u.nrp, u.id, u.nik].some(function (x) { return x && D.indexOf(R(x)) >= 0; });
   }
@@ -663,7 +664,7 @@
     if (!window.WHL_FORUM || !API.Pusat.asli() || (FORUM && (FORUM.ditolak || (FORUM.disiapkan && API.Pusat.dikenal()))) || window.WHL_FORUM.siap()) return '';
     return '<div class="forumSt">' + (FORUM_ST === 'gagal' ? IK('forum') + '<span>Forum belum tersambung (sinyal lemah?). Mencoba lagi otomatis.</span><button type="button" data-aksi="forumUlang">Coba lagi</button>' : '<span class="putar"></span><span>Menyambung ke Forum…</span>') + '</div>';
   }
-  function muatForum() { if (!SESI || !window.WHL_FORUM || !API.Pusat.asli()) return; FORUM_ST = 'menyambung'; window.WHL_FORUM.mulai(ctxForum()).then(function (h) { FORUM = h; FORUM_ST = h && h.ok ? 'ok' : (h && h.disiapkan && !API.Pusat.dikenal()) || !(h && h.disiapkan) ? 'gagal' : 'disiapkan'; if (h && h.ok) { forumCoba = 0; clearTimeout(forumTunda); } else if (!h || (!h.ditolak && !h.disiapkan)) forumUlang(); else if (h.disiapkan) forumUlang(); gambar(); if (h && h.ok && window.WHL_BANNER) window.WHL_BANNER.muat().then(function (ada) { if (ada && tab === 'beranda') gambar(); }); if (h && h.ok && window.WHL_ONLINE) window.WHL_ONLINE.mulai({ sesi: function () { return SESI; }, perbarui: function () { if (tab === 'beranda') gambar(); } }); }); }
+  function muatForum() { if (!SESI || !window.WHL_FORUM || !API.Pusat.asli() || (window.WHL_HRD && window.WHL_HRD.mode(SESI))) return; /* app-peran-hrd-26nov */ FORUM_ST = 'menyambung'; window.WHL_FORUM.mulai(ctxForum()).then(function (h) { FORUM = h; FORUM_ST = h && h.ok ? 'ok' : (h && h.disiapkan && !API.Pusat.dikenal()) || !(h && h.disiapkan) ? 'gagal' : 'disiapkan'; if (h && h.ok) { forumCoba = 0; clearTimeout(forumTunda); } else if (!h || (!h.ditolak && !h.disiapkan)) forumUlang(); else if (h.disiapkan) forumUlang(); gambar(); if (h && h.ok && window.WHL_BANNER) window.WHL_BANNER.muat().then(function (ada) { if (ada && tab === 'beranda') gambar(); }); if (h && h.ok && window.WHL_ONLINE) window.WHL_ONLINE.mulai({ sesi: function () { return SESI; }, perbarui: function () { if (tab === 'beranda') gambar(); } }); }); }
   /* v3.9: nama staf yang sedang bertugas (absen hari ini) untuk mengisi peserta banner — hanya dipakai admin di Kelola banner */
   function bertugasNama() { return API.Pusat.ringkasan(SESI, 'bertugas', true).then(function (r) { var P = (r && r.bertugas && r.bertugas.petugas) || []; return P.map(function (x) { return String(x.nama || '').trim(); }).filter(Boolean); }); }
   function muatAksesGaji() { if (!window.WHL_GAJI || !SESI) return; window.WHL_GAJI.muatAkses(ctxNota()).then(function () { try { if (SESI && tab === 'beranda' && !$('layarApp').classList.contains('sembunyi')) gambar(); } catch (e) { /* */ } }); }
@@ -680,7 +681,7 @@
   function muatLembur() { muatIzin(); if (window.WHL_LEMBUR && SESI) window.WHL_LEMBUR.muat(ctxLembur()); } /* v3.15: status lembur hari ini + jumlah menunggu ACC (kalau server lembur sudah ada) */
   function ctxBanner() { return { bertugas: bertugasNama, roti: roti, perbarui: function () { if (tab === 'beranda') gambar(); }, tab: function (t) { keTab(t); }, web: bukaWeb,
     forum: function (r) { if (window.WHL_FORUM) window.WHL_FORUM.bukaKe(ctxForum(), r); }, aksi: function (n) { if (n === 'ksn' && window.WHL_KSN) window.WHL_KSN.buka(ctxKsn()); } }; }
-  function forumTampil() { return !!window.WHL_FORUM && API.Pusat.asli() && !(FORUM && FORUM.ditolak); }
+  function forumTampil() { return !!window.WHL_FORUM && API.Pusat.asli() && !(FORUM && FORUM.ditolak) && !(window.WHL_HRD && window.WHL_HRD.mode(SESI)); } /* app-peran-hrd-26nov */
   function forumBaru() { return window.WHL_FORUM && window.WHL_FORUM.siap() ? window.WHL_FORUM.totalBaru() : 0; }
 
   /* ---------- muat data ---------- */
@@ -814,6 +815,7 @@
   }
   function lemburTanda() { var L = window.WHL_LEMBUR ? window.WHL_LEMBUR.ringkas() : null, I = window.WHL_IZIN ? window.WHL_IZIN.ringkas() : null; return (L && L.bolehAcc ? L.menunggu : 0) + (I && I.bolehAcc ? I.menungguAcc : 0); } /* v3.19: + izin menunggu ACC */
   function kandidatLayanan() {
+    if (window.WHL_HRD && window.WHL_HRD.mode(SESI)) return window.WHL_HRD.layanan(); /* app-peran-hrd-26nov */
     var L = [], tambah = function (x) { if (!L.some(function (y) { return y[4] === x[4]; })) L.push(x); };
     if (SESI.user.peran !== 'driver') tambah(['absen', 'Kehadiran', 'tab:absen', lemburTanda(), 'kehadiran']); /* v3.15 (Reza): menu Absen diganti hub Kehadiran (absen, izin/cuti, lembur) */
     if (bolehUnit()) tambah(['truk', 'Unit', 'tab:unit', daftarTindak().total, 'unit']);
@@ -1052,7 +1054,7 @@
     if (u.peran !== 'driver' && ABSEN && ABSEN.ok) { var c = ABSEN.hari || [], m = c.filter(function (x) { return x.tipe === 'Masuk'; })[0], pl = c.filter(function (x) { return /^Pulang/.test(x.tipe); })[0]; pil += '<button type="button" class="pill' + (m ? ' hijau' : '') + '" data-ke="tab:absen">' + (m ? '✅ Masuk ' + esc(String(m.jam).replace(':', '.')) + (m.status === 'Telat' ? ' · telat' : '') : '🕘 Belum absen masuk') + (pl ? ' · pulang ' + esc(String(pl.jam).replace(':', '.')) : '') + '</button>'; }
     var NS = nilaiSaya(); if (NS && NS.nilai != null) pil += '<button type="button" class="pill" data-ke="tab:akun">🏅 Nilai ' + esc(NS.nilai) + ' · ' + esc(NS.kategori || '') + (NS.label ? ' (sementara)' : '') + '</button>';
     $('pills').innerHTML = pil;
-    $('kpDiri').innerHTML = '<button type="button" class="diriChip" data-ke="tab:akun">' + ((T.NAMA_PERAN[u.peran] && { pimpinan: '⭐', penuh: '🔓', pengawas: '🦺', mekanik: '🔧', tyreman: '⚙️', admin: '🗂️', adminhse: '🧑‍💼', hse: '⛑️', logistik: '📦', fuelman: '⛽', kreatif: '🎬', driver: '🚚' }[u.peran]) || '👤') + ' ' + esc(nama.toUpperCase()) + (window.WHL_ULTAH && window.WHL_ULTAH.saya() ? ' 🎂' : '') + ' · ' + esc(T.NAMA_PERAN[u.peran] || u.peran) + '</button>';
+    $('kpDiri').innerHTML = '<button type="button" class="diriChip" data-ke="tab:akun">' + ((T.NAMA_PERAN[u.peran] && { pimpinan: '⭐', penuh: '🔓', pengawas: '🦺', mekanik: '🔧', tyreman: '⚙️', hrd: '🗃️', admin: '🗂️', adminhse: '🧑‍💼', hse: '⛑️', logistik: '📦', fuelman: '⛽', kreatif: '🎬', driver: '🚚' }[u.peran]) || '👤') + ' ' + esc(nama.toUpperCase()) + (window.WHL_ULTAH && window.WHL_ULTAH.saya() ? ' 🎂' : '') + ' · ' + esc(T.NAMA_PERAN[u.peran] || u.peran) + '</button>';
   }
   /* ---------- tahap1-16nov KARTU "HARI INI" RINGKAS (pengawas/staf): 1 strip, 4 angka kecil. Data RPC pusatHariIniPengawas(token) (Armand,
      kontrak Upgrade\app-tahap12-16nov\KONTRAK-APP.md). Server belum punya fungsi itu (pusatPing) / menolak / gagal tanpa data lama = kartu TIDAK tampil.
@@ -1084,6 +1086,7 @@
       + '<div class="hiStrip" style="grid-template-columns:repeat(' + L.length + ',1fr)">' + L.map(function (a) { var n = a.v == null || a.v === '' ? NaN : Number(a.v), ada = isFinite(n); return '<div class="hs ' + esc(a.w) + '"><small>' + esc(a.l) + '</small><b>' + (ada ? esc(n.toLocaleString('id-ID')) : '–') + (ada && a.dari != null && a.dari !== '' ? '<em>/' + esc(a.dari) + '</em>' : '') + '</b></div>'; }).join('') + '</div></div>';
   }
   function gambarBeranda() {
+    if (window.WHL_HRD && window.WHL_HRD.mode(SESI)) return window.WHL_HRD.berandaHtml(ctxDriver()); /* app-peran-hrd-26nov: peran HRD lihat saja */
     var u = SESI.user, kartu = u.kartu || [], h = '';
     /* v2.16 pola super-app: grid layanan -> kartu sorotan geser -> ringkasan. Perlu ditindak ada di kartu sorotan + Aktivitas + Kotak masuk. */
     if (D.serverJam && (D.dariCache || D.segarGagal || D.menyegar)) h += '<div class="pitaData' + (D.segarGagal ? ' gagal' : '') + '">' + (D.segarGagal ? IK('alarm') + '<span>Belum bisa menyegarkan data (' + esc(D.segarGagal) + '). Yang tampil data jam ' + esc(String(D.serverJam).slice(-5).replace(':', '.')) + '.</span><button type="button" data-aksi="segar">Coba lagi</button>' : '<span class="putar"></span><span>Menyegarkan… yang tampil data jam ' + esc(String(D.serverJam).slice(-5).replace(':', '.')) + '</span>') + '</div>';
@@ -1357,6 +1360,7 @@
   }
 
   function gambarApps() {
+    if (window.WHL_HRD && window.WHL_HRD.mode(SESI)) return window.WHL_HRD.berandaHtml(ctxDriver()); /* app-peran-hrd-26nov */
     var A = appsSaya(), q = cariApp.toLowerCase();
     var h = '<div class="cariBaris">' + IK('cari') + '<input id="cariApp" type="search" placeholder="Cari aplikasi atau menu..." value="' + esc(cariApp) + '" autocomplete="off"></div>';
     var L = A.filter(function (a) { return !q || (a.n + ' ' + a.k).toLowerCase().indexOf(q) >= 0; });
