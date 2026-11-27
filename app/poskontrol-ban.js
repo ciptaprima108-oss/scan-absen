@@ -160,7 +160,7 @@
     if (t.g === 'menunggu' && s.proses) ak = b('mu', 'gbTunjukBuka', '🛞 Tunjuk tyreman') + b('bt', 'batal', '❌');
     if (t.g === 'dikerjakan' && bisaKerja()) ak = b('sl', 'gbSelesaiBuka', '✅ Selesaikan ganti ban') + b('pd', 'gbPendingBuka', '⏸ Tunggu ban') + (s.proses ? b('bt', 'batal', '❌') : '');
     if (t.g === 'pending' && bisaKerja()) ak = b('ln', 'gbLanjut', '▶ Lanjutkan') + b('sl', 'gbSelesaiBuka', '✅ Selesaikan') + (s.proses ? b('bt', 'batal', '❌') : '');
-    if (t.g === 'selesai') ak = b('', 'cetak', '🖨️ Cetak tiket');
+    if (t.g === 'selesai') ak = stN() ? b('', 'cetak', '🖼️ Gambar tiket') : ''; /* pk-app-setara-web-26nov: tombol cetak tiket ban dulu buntu (Bugi #2) */
     if (ak) h += '<div class="pkaAk">' + ak + '</div>';
     return h + '</div>';
   }
@@ -189,7 +189,7 @@
     if (t.g === 'dikerjakan' && bisaKerja()) X += b('hj', 'gbSelesaiBuka', '✅ Selesaikan ganti ban') + b('ung', 'gbPendingBuka', '⏸ Tunggu ban');
     if (t.g === 'pending' && bisaKerja()) X += b('', 'gbLanjut', '▶ Lanjutkan', true) + b('hj', 'gbSelesaiBuka', '✅ Selesaikan', true);
     if ((t.g === 'dikerjakan' || t.g === 'pending') && renAktif()) X += b('abu', 'gbTunjukBuka', '📝 Pilih ban yang diganti (no seri)', true); /* pk-4-jenis-petugas-26nov */
-    X += b('abu', 'cetak', '🖨️ Cetak tiket (halaman lama)', true);
+    if (stN()) X += b('abu', 'cetak', '🖼️ Gambar tiket (simpan / bagikan)', true); /* pk-app-setara-web-26nov (Bugi #2) */
     if (s.proses && t.g !== 'selesai') X += b('abu', 'batal', '❌ Batalkan tiket', true);
     return h + '<div class="pkaAksiD">' + X + '</div><div class="pkaMsg"></div>';
   }
@@ -400,7 +400,7 @@
         : '<div class="li">⚠️ <div>' + e(s.pesan || '') + '<br>Tiket sudah SELESAI. Pengawas bisa tekan "Sambungkan ulang" di papan (⚠️ tindak lanjut).</div></div>')
       + '<div class="li">📊 <div><b>KPI</b>: ' + String(r.nilai).replace('.', ',') + ' ban' + (r.jumlahOrang > 1 ? ' dibagi ' + r.jumlahOrang + ' orang = ' + String(r.perOrang).replace('.', ',') + ' per orang' : '') + ' (' + e(r.idPengerja) + ').</div></div>'
       + (cek ? '<div class="li">⚠️ <div>' + cek + ' seri lama beda dengan Data Ban → ditandai <b>PERLU CEK</b> untuk pengawas.</div></div>' : '') + '</div>';
-    return h + '<div class="pkaAksiD"><button type="button" class="pkaTombol abu" data-p="cetak:' + e(r.armada + '|' + r.id) + '">🖨️ Cetak tiket</button><button type="button" class="pkaTombol" data-p="tutupModal">Kembali ke papan</button></div><div class="pkaMsg"></div>';
+    return h + '<div class="pkaAksiD">' + (stN() ? '<button type="button" class="pkaTombol abu" data-p="cetak:' + e(r.armada + '|' + r.id) + '">🖼️ Gambar tiket</button>' : '') /* pk-app-setara-web-26nov (Bugi #2) */ + '<button type="button" class="pkaTombol" data-p="tutupModal">Kembali ke papan</button></div><div class="pkaMsg"></div>';
   }
   function htmlTindak() {
     var m = M(), h = '<h3>⚠️ Ganti ban: tindak lanjut<button type="button" class="tutupX" data-p="tutupModal" aria-label="Tutup">✕</button></h3><div class="sb">Seri lama yang beda dengan Data Ban (cek fisik / foto, betulkan di Form Ban kalau perlu) dan tiket yang belum tersambung ke Data Ban.</div>';
@@ -611,6 +611,7 @@
   }
   function lupakan() { P = null; CHS = {}; TTD = {}; SARING = 'semua'; }
 
+  function stN() { var s = window.WHL_PK_SETARA; return !!(s && s.nyala && s.nyala()); } /* pk-app-setara-web-26nov */
   window.WHL_PK_BAN = { pasang: function (api) { A = api; }, atas: atas, saringHtml: saringHtml, saring: saring, kartu: kartu, html: html, sesudahModal: sesudahModal, klik: klik, ubah: ubah, menu: menu, lupakan: lupakan,
     _uji: { cekSeri: cekSeri, baku: baku, singkat: singkat, petaHtml: function (ch, p, o) { return petaHtml(ch, p, o); } } };
 })();

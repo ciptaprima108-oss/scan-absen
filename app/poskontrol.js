@@ -201,9 +201,11 @@
     h += '<div class="pkaSaya"><span class="tt' + (s.aktif ? '' : ' mati') + '"></span><div class="tx"><b>' + esc(s.nama) + '</b> · ' + esc(namaGrup(s.g)) + ' · ' + esc(s.ket || '') + '<br>'
       + (s.proses ? 'Kamu bisa tunjuk mekanik, selesaikan, pending & batalkan tiket.' : s.mekanik ? 'Tampil tiket yang ditunjuk ke kamu. Kamu bisa selesaikan / pending tiket milikmu.' : s.g === 'pengawas' ? 'Absen masuk dulu di menu Kehadiran supaya bisa memproses tiket.' : 'Lihat saja.') + '</div></div>';
     if (ban()) h += ban().atas(); /* poskontrol-ganti-ban-25nov */
+    if (str()) h += str().atas(); /* pk-app-setara-web-26nov */
     if (galat) h += '<div class="pkaPita mrh">⚠️ ' + esc(galat) + ' · data terakhir ditampilkan.</div>';
     if (D.galat) h += '<div class="pkaPita">Sebagian data server: ' + esc(D.galat) + '</div>';
     if (!s.semua && D.jml && D.jml.menunggu) h += '<div class="pkaPita br">👷 ' + D.jml.menunggu + ' unit menunggu ditunjuk pengawas.</div>';
+    if (str() && str().papanLebar()) return h + str().htmlLebar({ kartu: kartu, tiketDi: tiketDi, tabTampil: tabTampil, menuBawah: menuBawah }); /* pk-app-setara-web-26nov: layar lebar = kolom */
     var TT = tabTampil();
     if (!TT.some(function (x) { return x[0] === TAB; })) TAB = TT[0][0];
     h += '<div class="pkaTab" style="grid-template-columns:repeat(' + TT.length + ',minmax(0,1fr))">' + TT.map(function (x) {
@@ -212,18 +214,21 @@
     }).join('') + '</div>';
     var T = TABS.filter(function (x) { return x[0] === TAB; })[0], l = tiketDi(TAB);
     if (ban()) { h += ban().saringHtml(l); l = ban().saring(l); } /* poskontrol-ganti-ban-25nov: saring Semua / Perbaikan / Ganti ban */
+    if (str()) l = str().saring(l); /* pk-app-setara-web-26nov: cari unit + saring armada */
     if (TAB === 'pending') l.sort(function (a, b) { return (a.jamUpdateEpoch || 0) - (b.jamUpdateEpoch || 0); });
-    var ket = { menunggu: 'tunjuk mekanik', dikerjakan: 'selesaikan / pending', pending: 'lanjutkan / selesaikan', standby: 'tunjuk & ready lewat halaman lama', selesai: 'selesai hari ini (06.00–06.00)' }[TAB];
+    var ket = { menunggu: 'tunjuk mekanik', dikerjakan: 'selesaikan / pending', pending: 'lanjutkan / selesaikan', standby: str() && str().nyala() ? 'tunjuk mekanik / akhiri → Ready' : 'tunjuk & ready lewat halaman lama', selesai: 'selesai hari ini (06.00–06.00)' }[TAB];
     h += '<div class="pkaJd" style="--c:' + T[3] + '"><b>' + T[2] + ' ' + T[1].toUpperCase() + '</b>' + esc(ket) + '</div>';
     h += l.length ? '<div class="pkaGrid">' + l.map(kartu).join('') + '</div>' : '<div class="pkaKosong">' + (TAB === 'pending' ? 'Tidak ada tiket pending 👍' : TAB === 'selesai' ? 'Belum ada yang selesai hari ini.' : 'Kosong — tidak ada yang perlu ditindak di sini.') + '</div>';
-    if (s.semua && D.jml && D.jml.cekSelip) h += '<div class="pkaPita" style="margin-top:12px">📦 <b>' + D.jml.cekSelip + ' cek selip</b> (barang keluar gudang tanpa tiket) — diproses di halaman lama.</div>';
+    if (str() && str().nyala()) h += str().bawahPapan(); /* pk-app-setara-web-26nov: cek selip bisa diproses */
+    else if (s.semua && D.jml && D.jml.cekSelip) h += '<div class="pkaPita" style="margin-top:12px">📦 <b>' + D.jml.cekSelip + ' cek selip</b> (barang keluar gudang tanpa tiket) — diproses di halaman lama.</div>';
     h += menuBawah();
     h += '<div class="pkaKecil">Data server ' + esc(D.serverJam || '') + ' · muat ulang otomatis tiap 20 dtk. Cetak tiket thermal & kwitansi dot matrix tetap lewat halaman lama.</div>';
     return h;
   }
   function menuBawah() {
-    var s = saya(), b = '<div class="pkaMenu"' + (s.kwitansi ? '' : ' style="grid-template-columns:1fr"') + '>';
-    if (s.kwitansi) b += '<button type="button" data-p="kwitansi">🧾 Kwitansi storing<small>info · cetak di halaman lama</small></button>';
+    var s = saya(), b = '<div class="pkaMenu"' + (s.kwitansi || (str() && str().tahapB()) ? '' : ' style="grid-template-columns:1fr"') + '>';
+    if (s.kwitansi) b += '<button type="button" data-p="kwitansi">🧾 Kwitansi storing<small>' + (str() && str().tahapB() ? 'buat · rekap · batal' : 'info · cetak di halaman lama') + '</small></button>';
+    if (str()) b += str().menu(); /* pk-app-setara-web-26nov */
     b += '<button type="button" data-p="lama">🖥️ Pakai halaman lama<small>form Pos Kontrol web</small></button>';
     return b + '</div>';
   }
@@ -251,8 +256,8 @@
     if (t.g === 'menunggu') return s.proses ? b('tj', 'tunjuk', '👷 Tunjuk mekanik') + b('bt', 'batal', '❌') : '';
     if (t.g === 'dikerjakan') return bisaKerja(t) ? b('sl', 'selesai', '✅ Selesaikan') + b('pd', 'pending', '⏸ Pending') + (s.proses ? b('bt', 'batal', '❌') : '') : '';
     if (t.g === 'pending') return bisaKerja(t) ? b('ln', 'lanjut', '▶ Lanjutkan') + b('sl', 'selesai', '✅ Selesaikan') + (s.proses ? b('bt', 'batal', '❌') : '') : '';
-    if (t.g === 'standby') return s.proses ? b('', 'lamaT', '🖥️ Tunjuk / Ready (halaman lama)') + b('bt', 'batal', '❌') : '';
-    if (t.g === 'selesai') return (s.proses ? b('', 'revisi', '✏️ Revisi') : '') + b('', 'cetak', '🖨️ Cetak tiket');
+    if (t.g === 'standby') return s.proses ? (str() && str().nyala() ? b('tj', 'sbTunjuk', '👷 Tunjuk') + b('sl', 'sbReady', '🟢 Ready') : b('', 'lamaT', '🖥️ Tunjuk / Ready (halaman lama)')) + b('bt', 'batal', '❌') : ''; /* pk-app-setara-web-26nov */
+    if (t.g === 'selesai') return (s.proses ? b('', 'revisi', '✏️ Revisi') : '') + (str() && str().nyala() ? b('', 'cetak', '🖼️ Gambar tiket') : ''); /* pk-app-setara-web-26nov: tombol cetak tiket selesai dulu buntu (Bugi #1) */
     return '';
   }
   function cariT(k) { var p = String(k || '').split('|'); return ((D && D.tiket) || []).filter(function (t) { return t.ar === p[0] && String(t.id) === p[1]; })[0] || null; }
@@ -275,6 +280,7 @@
     w.innerHTML = '<div class="kt">' + htmlModal() + '</div>';
     el.appendChild(w);
     if (jenis === 'selesai') pasangSelesai(w);
+    if (str() && /^st/.test(jenis)) str().sesudahModal(w, jenis); /* pk-app-setara-web-26nov */
     if (ban() && /^gb/.test(jenis)) ban().sesudahModal(w, jenis); /* poskontrol-ganti-ban-25nov */
   }
   function tutupModal() { M = null; var w = el && el.querySelector('.pkaModal'); if (w) w.remove(); if (el) lapis(); }
@@ -287,6 +293,7 @@
   function htmlModal() {
     var t = M.t, j = M.jenis;
     if (ban() && (/^gb/.test(j) || (j === 'detail' && t && t.gb))) return ban().html(j, t); /* poskontrol-ganti-ban-25nov */
+    if (str() && /^st/.test(j)) return str().html(j, t); /* pk-app-setara-web-26nov */
     if (j === 'detail') return htmlDetail(t);
     if (j === 'tunjuk') return htmlTunjuk(t);
     if (j === 'selesai') return htmlSelesai(t);
@@ -310,9 +317,9 @@
       A += b('hj', 'selesai', '✅ Selesaikan') + b('ung', 'pending', '⏸ Pending');
       if (s.proses) A += b('abu', 'ganti', '👷 Tambah / ganti mekanik', true);
     }
-    if (t.g === 'standby' && s.proses) A += b('abu', 'lamaT', '🖥️ Tunjuk / Ready di halaman lama', true);
+    if (t.g === 'standby' && s.proses) A += str() && str().nyala() ? b('kn', 'sbTunjuk', '👷 Tunjuk mekanik') + b('hj', 'sbReady', '🟢 Akhiri → Ready') : b('abu', 'lamaT', '🖥️ Tunjuk / Ready di halaman lama', true); /* pk-app-setara-web-26nov */
     if (t.g === 'selesai' && s.proses) A += b('abu', 'revisi', '✏️ Revisi pekerjaan / mekanik', true);
-    A += b('abu', 'cetak', '🖨️ Cetak tiket (halaman lama)', t.g === 'selesai' || !s.proses);
+    A += str() && str().nyala() ? str().tombolDetail(t, b) : (t.g === 'selesai' ? '' : b('abu', 'cetak', '🖨️ Cetak tiket (halaman lama)', !s.proses)); /* pk-app-setara-web-26nov (Bugi #1) */
     if (s.proses && t.g !== 'selesai') A += b('abu', 'batal', '❌ Batalkan tiket');
     return h + '<div class="pkaAksiD">' + A + '</div><div class="pkaMsg"></div>';
   }
@@ -418,7 +425,7 @@
   function jamKiniLokal() { var d = new Date(), p = function (n) { return n < 10 ? '0' + n : '' + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); }
   function htmlSelesai(t) {
     var h = kepalaModal('✅ Selesaikan', t);
-    if (t.jenis === 'STORING') h += '<div class="pkaPita br">🆘 Tiket STORING: kategori pekerjaan storing (untuk tarif kwitansi) bisa dikoreksi nanti di panel kwitansi halaman lama.</div>';
+    if (t.jenis === 'STORING') h += str() && str().tahapB() ? str().kotakStoring(t) /* pk-app-setara-web-26nov */ : '<div class="pkaPita br">🆘 Tiket STORING: kategori pekerjaan storing (untuk tarif kwitansi) bisa dikoreksi nanti di panel kwitansi halaman lama.</div>';
     h += '<div class="pkaLbl">🧰 Pekerjaan yang dikerjakan <span class="w">wajib</span><small>ketuk atau tulis</small></div><div class="pkaChips">' + PEK_UMUM.map(function (p) { return '<button type="button" data-p="pek:' + esc(p) + '" class="' + (M.pek.indexOf(p) >= 0 ? 'on' : '') + '">' + esc(p) + '</button>'; }).join('') + '</div>'
       + '<textarea class="pkaIn" id="pkaPekLain" style="margin-top:8px" placeholder="detail perbaikan (mis. ganti kampas rem roda belakang kiri)">' + esc(M.pekLain || '') + '</textarea>';
     h += '<div class="pkaLbl">🔩 Sparepart dipakai <span class="w">wajib</span><small>boleh "Tidak ada"</small></div><div class="pkaChips" id="pkaSp">' + chipsSp() + '</div>'
@@ -511,7 +518,7 @@
     var salah = !pek ? 'Isi pekerjaan yang dikerjakan (ketuk atau tulis).' : !M.sp.length ? 'Pilih sparepart yang dipakai (atau "Tidak ada").' : (t.jenis === 'SERVICE' && !km) ? 'KM wajib untuk ganti oli.'
       : !M.foto ? '📷 Foto hasil pekerjaan wajib — ketuk "Foto kamera".' : !dD ? 'Tanda tangan DRIVER wajib.' : !dM ? 'Tanda tangan MEKANIK wajib.' : '';
     if (salah) { msg(salah, 'err'); if (!M.foto) { var f = el.querySelector('#pkaFotoSt'); if (f) { f.className = 'pkaFotoSt err'; f.scrollIntoView({ block: 'center', behavior: 'smooth' }); } } return; }
-    kirim('selesai', { armada: t.ar, id: t.id, pekerjaan: pek, sparepart: M.sp.slice(), km: km, jamSelesai: jam, foto: M.foto, ttdDriver: dD, ttdMekanik: dM });
+    kirim('selesai', { armada: t.ar, id: t.id, pekerjaan: pek, sparepart: M.sp.slice(), km: km, jamSelesai: jam, foto: M.foto, ttdDriver: dD, ttdMekanik: dM }, str() && str().tahapB() ? function (h) { str().sesudahSelesai(t, h, M); } : null); /* pk-app-setara-web-26nov: pekerjaan storing disimpan sesudah tiket selesai */
   }
   function kirimPending() {
     var t = M.t, cat = String((el.querySelector('#pkaCat') || {}).value || '').trim();
@@ -547,7 +554,7 @@
 
   /* ---------- ketukan ---------- */
   function ubah(ev) {
-    var x = ev.target; if (ban() && ban().ubah(ev)) return; if (!M) return; /* poskontrol-ganti-ban-25nov */
+    var x = ev.target; if (str() && str().ubah(ev)) return; /* pk-app-setara-web-26nov */ if (ban() && ban().ubah(ev)) return; if (!M) return; /* poskontrol-ganti-ban-25nov */
     if (x.id === 'pkaBk' && ev.type === 'change') { M.bk = x.value; var w = el.querySelector('#pkaBkW'); if (w) { w.innerHTML = htmlBengkel(); var i = el.querySelector('#pkaBkTulis'); if (i) i.focus(); } }
     if (x.id === 'pkaBkTulis') M.bkTulis = x.value;
   }
@@ -560,8 +567,9 @@
     if (n === 'tutupModal') { tutupModal(); return; }
     if (n === 'segar') { muat(); return; }
     if (n === 'tab') { TAB = v; lapis(); return; }
+    if (str() && str().klik(n, v, b, ev)) return; /* pk-app-setara-web-26nov */
     if (n === 'lama') { bukaLama(); return; }
-    if (n === 'lamaKws') { bukaLama(); return; }
+    if (n === 'lamaKws') { if (CTX && CTX.bukaWeb) CTX.bukaWeb(K.DASH + '?mode=maintenance&buka=kws'); return; } /* pk-app-setara-web-26nov: langsung panel Kwitansi storing (Bugi #3) */
     if (n === 'kwitansi') { bukaKwitansi(); return; }
     if (ban() && ban().klik(n, v, b, ev)) return; /* poskontrol-ganti-ban-25nov */
     var bi = ev.target.closest('.pkaK button[data-p]');
@@ -609,7 +617,7 @@
   function lepasSiap() { if (!el) return; Array.prototype.slice.call(el.querySelectorAll('.pkaSiap')).forEach(function (b) { b.removeAttribute('data-siap'); b.classList.remove('pkaSiap'); if (b.getAttribute('data-asli')) b.textContent = b.getAttribute('data-asli'); }); }
 
   /** Keluar / ganti akun: buang semua data dari memori. */
-  function lupakan() { if (BAN && BAN.lupakan) BAN.lupakan(); urut++; berhentiPoll(); D = null; M = null; TAB = ''; galat = ''; BENGKEL = null; KWS = null; TTD = {}; if (el) { try { el.remove(); } catch (e) { /* */ } el = null; } }
+  function lupakan() { if (STR && STR.lupakan) STR.lupakan(); /* pk-app-setara-web-26nov */ if (BAN && BAN.lupakan) BAN.lupakan(); urut++; berhentiPoll(); D = null; M = null; TAB = ''; galat = ''; BENGKEL = null; KWS = null; TTD = {}; if (el) { try { el.remove(); } catch (e) { /* */ } el = null; } }
 
   /* poskontrol-ganti-ban-25nov: jembatan ke poskontrol-ban.js (tiket GANTI BAN). Tanpa berkas itu = layar seperti sebelumnya. */
   var BAN = null;
@@ -621,6 +629,18 @@
         cariT: cariT, jamKiniLokal: jamKiniLokal, chipsJenis: chipsJenis /* pk-4-jenis-petugas-26nov */, setTab: function (x) { TAB = x; }, gambarPapan: function () { lapis(); } });
     }
     return BAN;
+  }
+  /* pk-app-setara-web-26nov: jembatan ke poskontrol-setara.js (fitur setara web). Tanpa berkas itu / saklar server pksSaklar('MATI') = layar seperti sebelumnya. */
+  var STR = null;
+  function str() {
+    if (!STR && window.WHL_PK_SETARA && window.WHL_PK_SETARA.pasang) {
+      STR = window.WHL_PK_SETARA;
+      STR.pasang({ esc: esc, panggil: panggil, roti: roti, umur: umur, lbPendek: lbPendek, saya: saya, data: function () { return D; }, modal: function () { return M; }, el: function () { return el; }, ctx: function () { return CTX; },
+        bukaModal: bukaModal, tutupModal: tutupModal, gambarModal: gambarModal, msg: msg, kunci: kunci, kirim: kirim, muat: muat, duaKali: duaKali, lepasSiap: lepasSiap, kepalaModal: kepalaModal, baris: baris, cariT: cariT,
+        jamKiniLokal: jamKiniLokal, chipsJenis: chipsJenis, chipsMekanik: chipsMekanik, htmlBengkel: htmlBengkel, namaTerpilih: namaTerpilih, bukaSelesai: bukaSelesai, bukaLama: bukaLama, ban: ban,
+        setTab: function (x) { TAB = x; }, gambarPapan: function () { lapis(); } });
+    }
+    return STR;
   }
   window.WHL_PK = { boleh: boleh, buka: buka, kembali: kembali, lupakan: lupakan, urlLama: urlLama,
     _uji: { isi: function (d) { D = d; TAB = ''; }, papan: function () { return isiPapan(); }, kartu: kartu, kelompok: kelompokPetugas, tab: function (t) { TAB = t; }, modal: function () { return M; }, nama: function () { return M ? namaTerpilih() : ''; } } };
