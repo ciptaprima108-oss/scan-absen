@@ -9,7 +9,7 @@
  *  saat dirakit (dulu ?v= lama per berkas -> 42/44 skrip lewat jaringan tiap buka, ±1,4 MB). Sekarang tiap buka = salinan HP (instan);
  *  unduh ulang hanya sekali saat versi app berubah (service worker baru dipasang).
  */
-const VERSI = '36c00e3c98', CACHE = 'whl-cangkang-' + VERSI, APPV = '3.64';
+const VERSI = '41b3ff5911', CACHE = 'whl-cangkang-' + VERSI, APPV = '3.65';
 /* WEB PUSH (iPhone iOS 16.4+ dari Layar Utama, Chrome Android): Firebase Cloud Messaging. Pesan ber-"notification" ditampilkan otomatis
  * oleh pustaka Firebase; ketuk -> fcm_options.link (app web, ?buka=forum:ruang / tiket:lambung). */
 try {

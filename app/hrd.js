@@ -35,16 +35,16 @@
 
   /* ---------- hak ---------- */
   function mode(S) { S = S || sesi(); return !!(S && S.user && S.user.peran === 'hrd'); }
-  function pribadi() { return !!(MENU && MENU.saklar && MENU.saklar.pribadi); }
+  function pribadi() { return true; } /* app-hrd-seperti-karyawan-27nov: hrd = staf biasa (absen, izin, lembur sendiri), tidak lagi bergantung saklar */
   /** tab yang boleh dibuka peran hrd (dipakai keTab di app.js). Kehadiran pribadi hanya kalau saklar server "pribadi" NYALA. */
-  function tabBoleh(t) { if (t === 'akun' || t === 'kotak' || t === 'beranda') return t; if (t === 'absen' && pribadi()) return t; return 'beranda'; }
+  function tabBoleh(t) { return t; } /* app-hrd-seperti-karyawan-27nov */
 
   /** tombol bawah: Aktivitas (unit / kehadiran) hanya kalau saklar pribadi NYALA; Forum tidak dibuka untuk peran hrd (server menolak). */
   function aturNav() {
     try {
       var h = mode(), a = document.querySelector('.nav button[data-tab="aktivitas"]'), f = document.getElementById('navForum');
-      if (a && h) a.classList.toggle('sembunyi', !pribadi());
-      if (f) f.classList.toggle('sembunyi', h);
+      if (a && h) a.classList.remove('sembunyi'); /* app-hrd-seperti-karyawan-27nov: tombol bawah lengkap seperti staf lain */
+      if (f && h) f.classList.remove('sembunyi');
     } catch (e) { /* */ }
   }
 
@@ -53,6 +53,9 @@
     if (document.getElementById('hrdGaya')) return;
     var st = document.createElement('style'); st.id = 'hrdGaya';
     st.textContent = [
+      '.hrdRuang{border:1.5px solid var(--utama);box-shadow:var(--bayang)}.hrdRuangKp{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.hrdRuangKp b{font-size:16px;font-weight:900}',
+      '.hrdMini{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}.hrdMn{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;padding:9px 2px;border-radius:14px;background:var(--panel2);color:var(--teks);min-width:0;min-height:64px}',
+      '.hrdMn span{font-size:22px;line-height:1}.hrdMn b{font-size:11px;font-weight:800;line-height:1.2;text-align:center;overflow-wrap:anywhere}.hrdMn.mati{opacity:.5}.hrdRuang .hrdBag{margin:0;border:0;padding:0;background:none}.hrdRuang .hrdBag h3{margin-top:2px}',
       '.hrdSapa{background:var(--panel);border:1px solid var(--garis);border-radius:20px;padding:16px;margin-bottom:12px;box-shadow:var(--bayang)}',
       '.hrdSapa b{display:block;font-size:19px;font-weight:900;letter-spacing:-.3px}.hrdSapa span{display:block;font-size:13px;color:var(--redup);margin-top:3px;line-height:1.45}',
       '.hrdPita{display:flex;gap:9px;align-items:flex-start;background:var(--tint,var(--panel2));border:1px solid var(--garis);border-radius:14px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;line-height:1.45;color:var(--teks)}',
@@ -106,18 +109,16 @@
   }
   function berandaHtml(ctx) {
     CTX = ctx || CTX; pasangGaya(); pasangKlik(); aturNav();
-    var S = sesi(), nama = S ? (S.namaLengkap || (S.user && S.user.nama) || '') : '';
     if (!MENU && !menuMuat && !menuGalat) muatMenu(false);
-    var h = '<div class="hrdSapa"><b>Halo, ' + esc(String(nama).split(/\s+/)[0] || 'HRD') + '</b><span>Ruang HRD · PT. Whale Holder Logistic</span></div>'
-      + '<div class="hrdPita"><i>👁️</i><span><b>Mode lihat saja.</b> Semua data di sini hanya bisa dibaca. Perubahan data tetap lewat admin / pimpinan.</span></div>';
-    if (menuGalat) return h + '<div class="hrdGalat">' + esc(menuGalat) + '<button type="button" data-hrd="ulangMenu">Coba lagi</button></div>';
-    if (!MENU) return h + '<div class="hrdMuat"><i></i><span>Memuat menu HRD…</span></div>';
-    h += '<div class="hrdGrid">' + MENU.bagian.map(function (b) {
-      return '<button type="button" class="hrdKt' + (b.siap ? '' : ' mati') + '" data-hrd="buka:' + esc(b.id) + '"><span class="ik">' + (IKON[b.id] || '📁') + '</span><b>' + esc(b.judul) + '</b><small>' + esc(b.ket) + '</small>' + (b.siap ? '' : '<em>belum tersedia</em>') + '</button>';
+    /* app-hrd-seperti-karyawan-27nov: kartu menonjol di Beranda staf biasa (banner, layanan, forum, kuis tetap ada di bawahnya) */
+    var h = '<div class="kartu hrdRuang"><div class="hrdRuangKp"><b>🗃️ Ruang HRD</b><span class="hrdCp">👁️ lihat saja</span></div>';
+    if (menuGalat) return h + '<div class="hrdGalat">' + esc(menuGalat) + '<button type="button" data-hrd="ulangMenu">Coba lagi</button></div></div>';
+    if (!MENU) return h + '<div class="hrdMuat"><i></i><span>Memuat Ruang HRD…</span></div></div>';
+    var PENDEK = { karyawan: 'Karyawan', absen: 'Absensi', dokumen: 'Dokumen', kpi: 'KPI', insiden: 'Insiden', hutang: 'Kasbon', ultah: 'Ultah & poin', kuesioner: 'Kuesioner' };
+    h += '<div class="hrdMini">' + MENU.bagian.map(function (b) {
+      return '<button type="button" class="hrdMn' + (b.siap ? '' : ' mati') + '" data-hrd="buka:' + esc(b.id) + '" aria-label="' + esc(b.judul) + '"><span>' + (IKON[b.id] || '📁') + '</span><b>' + esc(PENDEK[b.id] || b.judul) + '</b></button>';
     }).join('') + '</div>';
-    h += adminHtml();
-    if (MENU.tahap2 && MENU.tahap2.length) h += '<div class="hrdT2"><b>Menyusul (tahap 2)</b><ul>' + MENU.tahap2.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>';
-    return h;
+    return h + adminHtml() + '</div>';
   }
   /* Administrasi (Pak Fanza 27 Nov: Adel juga perwakilan HO administrasi, "Input DO uang jalan kasih tampil").
      Kartu ini HANYA membuka halaman web Input DO yang sama dengan kartu "Administrasi WHL" peran lain. Login di sana pakai akun Input DO sendiri;
