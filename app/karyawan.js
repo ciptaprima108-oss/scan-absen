@@ -202,7 +202,7 @@
       + '<div class="kbChips"><button type="button" class="kbChip mrh' + (F.kurang ? ' on' : '') + '" data-l="kurang">' + (F.kurang ? '✓ ' : '') + 'Belum lengkap · ' + (Rg.total - Rg.lengkap) + '</button>'
       + '<button type="button" class="kbChip' + (!F.divisi ? ' on' : '') + '" data-l="divisi:">Semua divisi</button>'
       + div.map(function (d) { return '<button type="button" class="kbChip' + (F.divisi === d ? ' on' : '') + '" data-l="divisi:' + esc(d) + '">' + esc(d) + ' · ' + Rg.divisi[d] + '</button>'; }).join('') + '</div>'
-      + '<div class="kbChips"><button type="button" class="kbChip" data-l="ekspor:idcard">🪪 Paket ID card</button><button type="button" class="kbChip" data-l="ekspor:kimper">📋 Baris DATA KIMPER</button></div>';
+      + '<div class="kbChips">' + (window.WHL_IDCETAK && window.WHL_IDCETAK.boleh() ? '<button type="button" class="kbChip on" data-l="cetakId">🖨️ Cetak ID card</button>' : '') /* app-cetak-idcard-27nov */ + '<button type="button" class="kbChip" data-l="ekspor:idcard">🪪 Paket ID card</button><button type="button" class="kbChip" data-l="ekspor:kimper">📋 Baris DATA KIMPER</button></div>';
     return h + '<div id="kbGrid">' + htmlGrid() + '</div>';
   }
 
@@ -499,13 +499,14 @@
     if (n === 'lihatKartu') { var kk = U && KARTU[U.id]; if (kk && kk[v]) { if (window.WHL_ZOOM) WHL_ZOOM.lupakan(); LIHAT = { src: kk[v], judul: 'ID card ' + v }; lapis(); } return; }
     if (n === 'simpanKartu') { simpanKartu(v); return; }
     if (n === 'simpan') { simpan(); return; }
+    if (n === 'cetakId') { if (window.WHL_IDCETAK) window.WHL_IDCETAK.buka(CTX); return; } /* app-cetak-idcard-27nov */
     if (n === 'ekspor') { bukaEkspor(v); return; }
     if (n === 'jalanEkspor') { jalankanEkspor(); return; }
     if (n === 'bukaZip') { if (EK && EK.hasil && EK.hasil.url && CTX && CTX.bukaWeb) CTX.bukaWeb(EK.hasil.url); return; }
     if (n === 'salin') { var t = lapisEl.querySelector('#kbTsv'); if (!t) return; var ok = function () { roti('Disalin. Tempel di sel A baris kosong DATA KIMPER.'); }; if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(ok, function () { t.select(); document.execCommand('copy'); ok(); }); else { t.select(); document.execCommand('copy'); ok(); } return; }
   }
   /** Keluar / ganti akun: buang semua data pribadi dari memori. */
-  function lupakan() { if (window.WHL_SIDIK) window.WHL_SIDIK.lupakan(); D = null; OPSI = null; U = null; FORM = null; EK = null; FOTO = {}; LIHAT = null; ATUR = null; KARTU = {}; if (lapisEl) { try { lapisEl.remove(); } catch (e) { /* */ } lapisEl = null; } }
+  function lupakan() { if (window.WHL_IDCETAK) window.WHL_IDCETAK.lupakan(); /* app-cetak-idcard-27nov */ if (window.WHL_SIDIK) window.WHL_SIDIK.lupakan(); D = null; OPSI = null; U = null; FORM = null; EK = null; FOTO = {}; LIHAT = null; ATUR = null; KARTU = {}; if (lapisEl) { try { lapisEl.remove(); } catch (e) { /* */ } lapisEl = null; } }
 
   window.WHL_KARYAWAN = { boleh: boleh, buka: buka, kembali: kembali, lupakan: lupakan, _uji: { sayaBoleh: sayaBoleh, cocok: cocok, F: F } };
 })();

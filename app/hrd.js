@@ -241,6 +241,10 @@
       return h + catatan(D);
     }
     h += seg('jenis', [['SEMUA', 'Semua'], ['STAF', 'Staf'], ['DRIVER', 'Driver']]);
+    if (window.WHL_IDCETAK) { /* app-cetak-idcard-27nov (peran HRD) */
+      if (window.WHL_IDCETAK.hrdBoleh()) h += '<button type="button" class="tKecil" data-h="cetakId" style="margin:0 0 8px">🖨️ Cetak ID card</button>';
+      else if (!isiKaryawan._idc) { isiKaryawan._idc = true; window.WHL_IDCETAK.cekHrd(CTX).then(function (ya) { if (ya && lapisEl && layar === 'karyawan') lapis(); }); }
+    }
     var L = (D.orang || []).filter(function (o) { return (F.kary !== 'baru' || o.baru) && (F.jenis === 'SEMUA' || o.jenis === F.jenis) && cocok(o.nama + ' ' + o.jabatan + ' ' + o.id + ' ' + o.divisi + ' ' + o.lambung); });
     h += '<div class="hrdJml">' + L.length + ' orang</div>';
     h += L.length ? L.map(function (o) {
@@ -421,6 +425,7 @@
     var b = e.target.closest('[data-h]'); if (!b || b.disabled) return;
     var a = b.getAttribute('data-h'), p = a.split(':');
     if (a === 'kembali') { kembali(); return; }
+    if (a === 'cetakId') { if (window.WHL_IDCETAK) window.WHL_IDCETAK.buka(CTX, { hrd: true }); return; } /* app-cetak-idcard-27nov (peran HRD) */
     if (a === 'segar') { if (layar === 'orang') { if (ORANG) bukaOrang(ORANG.id, true); } else muat(true); return; }
     if (p[0] === 'seg') { F[p[1]] = p.slice(2).join(':'); lapis(); muat(false); return; }
     if (p[0] === 'bulan') { F.bulan = geserBulan(F.bulan || (MENU && MENU.bulan) || new Date().toISOString().slice(0, 7), +p[1]); lapis(); muat(false); return; }
