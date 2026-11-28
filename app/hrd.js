@@ -212,7 +212,7 @@
       MUAT[k] = false;
       if (h && h.ok) DATA[k] = h; else GALAT[k] = (h && h.pesan) || 'Belum bisa dimuat.';
       if (lapisEl) lapis();
-    });
+    }).catch(function () { MUAT[k] = false; if (!DATA[k]) GALAT[k] = 'Belum bisa dimuat. Coba lagi.'; try { if (lapisEl) lapis(); } catch (e2) { /* */ } }); /* hrd-orang-cepat-27nov */
   }
   function keadaan() {
     var k = kunciData();
@@ -384,27 +384,39 @@
   }
 
   /* ---------- detail 1 orang ---------- */
+  /* hrd-orang-cepat-27nov: nama + jabatan dari daftar yang sudah ada di HP tampil dulu; data dasar (cepat) lalu bagian berat menyusul; galat apa pun = pesan + Coba lagi */
+  function orangDariDaftar(id) { var r = null; try { Object.keys(DATA).forEach(function (k) { var L = DATA[k] && DATA[k].orang; if (!r && Array.isArray(L)) L.some(function (x) { if (x && x.id === id) { r = x; return true; } return false; }); }); } catch (e) { r = null; } return r || {}; }
   function bukaOrang(id, paksa) {
-    if (!paksa) { dariLayar = layar === 'orang' ? dariLayar : layar; ORANG = { id: id, nama: '' }; }
+    if (!paksa) dariLayar = layar === 'orang' ? dariLayar : layar;
+    var kenal = orangDariDaftar(id), lama = ORANG && ORANG.id === id ? ORANG : {};
+    ORANG = { id: id, nama: kenal.nama || lama.nama || '', jabatan: kenal.jabatan || lama.jabatan || '' };
     layar = 'orang'; orangMuat = true; orangGalat = ''; lapis();
-    panggil('orang', { id: id }, 90000).then(function (h) {
-      orangMuat = false;
-      if (!ORANG || ORANG.id !== id) return;
-      if (h && h.ok) ORANG = h; else orangGalat = (h && h.pesan) || 'Belum bisa dimuat.';
-      if (lapisEl && layar === 'orang') lapis();
-    });
+    var gagal = function (pesan) { orangMuat = false; if (!ORANG || ORANG.id !== id) return; if (ORANG.ok && ORANG.dasar) ORANG.lanjutGalat = pesan; else orangGalat = pesan; try { if (lapisEl && layar === 'orang') lapis(); } catch (e2) { /* */ } };
+    var lengkap = function () {
+      panggil('orang', { id: id }, 90000).then(function (h) {
+        if (!ORANG || ORANG.id !== id) { orangMuat = false; return; }
+        if (h && h.ok) { orangMuat = false; ORANG = h; if (lapisEl && layar === 'orang') lapis(); } else gagal((h && h.pesan) || 'Belum bisa dimuat.');
+      }).catch(function () { gagal('Belum bisa dimuat. Coba lagi.'); });
+    };
+    panggil('orang', { id: id, dasar: 1 }, 45000).then(function (h) {
+      if (!ORANG || ORANG.id !== id) { orangMuat = false; return; }
+      if (h && h.ok && h.dasar) { ORANG = h; if (lapisEl && layar === 'orang') lapis(); lengkap(); return; }
+      if (h && h.ok) { orangMuat = false; ORANG = h; if (lapisEl && layar === 'orang') lapis(); return; } /* server lama: jawabannya sudah lengkap */
+      lengkap(); /* data dasar gagal: tetap coba yang lengkap, galatnya ditampilkan di sana */
+    }).catch(function () { gagal('Belum bisa dimuat. Coba lagi.'); });
   }
   function muatKpi(id) {
     if (kpiMuat) return; kpiMuat = id; if (lapisEl) lapis();
-    panggil('kpi', { id: id }, 60000).then(function (h) { kpiMuat = ''; KPI[id] = h || { ok: false, pesan: 'belum tersedia' }; if (lapisEl) lapis(); });
+    panggil('kpi', { id: id }, 60000).then(function (h) { kpiMuat = ''; KPI[id] = h || { ok: false, pesan: 'belum tersedia' }; if (lapisEl) lapis(); }).catch(function () { kpiMuat = ''; KPI[id] = KPI[id] || { ok: false, pesan: 'belum tersedia' }; try { if (lapisEl) lapis(); } catch (e2) { /* */ } }); /* hrd-orang-cepat-27nov */
   }
   function dl(L) { return '<dl class="hrdDl">' + L.filter(function (x) { return x[1] !== '' && x[1] != null; }).map(function (x) { return '<dt>' + esc(x[0]) + '</dt><dd>' + esc(x[1]) + '</dd>'; }).join('') + '</dl>'; }
   function isiOrang() {
     if (orangGalat) return '<div class="hrdGalat">' + esc(orangGalat) + '<button type="button" data-h="segar">Coba lagi</button></div>';
-    var o = ORANG; if (!o || !o.ok) return '<div class="hrdMuat"><i></i><span>Memuat data orang…</span></div>';
+    var o = ORANG; if (!o || !o.ok) return (o && o.nama ? '<div class="hrdKepala"><span class="av">' + esc(inisial(o.nama)) + '</span><div><b>' + esc(o.nama) + '</b><small>' + esc(o.jabatan || '') + '</small></div></div>' : '') + '<div class="hrdMuat"><i></i><span>Memuat data orang… Bisa sampai 1 menit kalau datanya belum dibuka hari ini.</span></div>'; /* hrd-orang-cepat-27nov */
     var P = o.pribadi || {}, h = '<div class="hrdKepala"><span class="av">' + (o.mini && /^data:image\//.test(o.mini) ? '<img alt="" src="' + esc(o.mini) + '">' : esc(inisial(o.nama))) + '</span><div><b>' + esc(o.nama) + '</b><small>' + esc(o.jabatan) + ' · ' + esc(o.divisi || o.jenis) + '</small><span class="hrdCp h">' + esc(o.status) + '</span>' + (o.baru ? '<span class="hrdCp b">karyawan baru</span>' : '') + '</div></div>';
     h += '<div class="hrdBag"><h3>Kepegawaian</h3>' + dl([['ID permanen', o.id], ['ID kartu', o.kartu], ['Jenis', o.jenis], ['Jabatan', o.jabatan], ['Divisi', o.divisi], ['Lambung', o.lambung], ['Vendor', o.vendor], ['Tgl masuk', o.tglMasuk], ['Masa kerja', o.masaKerja]]) + (o.dataKurang && o.dataKurang.length ? '<div class="hrdKet">Data belum lengkap: ' + esc(o.dataKurang.join(', ')) + '</div>' : '') + '</div>';
     h += '<div class="hrdBag"><h3>Data pribadi' + (P.samar ? ' <span class="hrdCp">disamarkan</span>' : '') + '</h3>' + dl([['NIK KTP', P.nikKtp], ['Tempat lahir', P.tempatLahir], ['Tgl lahir', P.tglLahir], ['Umur', P.umur ? P.umur + ' th' : ''], ['Jenis kelamin', P.jk], ['Status', P.kawin], ['Agama', P.agama], ['Gol darah', P.golDarah], ['No HP', P.hp], ['Alamat', P.alamat], ['No SIM', P.noSim]]) + (P.samar ? '<div class="hrdKet">NIK, alamat, no HP dan no SIM disamarkan sebagian. Tahun lahir tidak ditampilkan.</div>' : '') + '</div>';
+    if (o.dasar) return h + (o.lanjutGalat ? '<div class="hrdGalat">Dokumen, absensi, insiden, kasbon dan kuesioner belum bisa dimuat: ' + esc(o.lanjutGalat) + '<button type="button" data-h="segar">Coba lagi</button></div>' : '<div class="hrdMuat"><i></i><span>Memuat dokumen, absensi, insiden, kasbon dan kuesioner… Bisa sampai 1 menit.</span></div>'); /* hrd-orang-cepat-27nov */
     var d = o.dokumen || {}; h += '<div class="hrdBag"><h3>Masa berlaku dokumen</h3>' + (d.galat ? '<div class="hrdKet">' + esc(d.galat) + '</div>' : (d.dok && d.dok.length ? d.dok.map(chipDok).join('') : '<div class="hrdKet">Tidak ada dokumen bertanggal untuk orang ini.</div>')) + '<div class="hrdKet">MCU, surat sehat, SIMPER MIP: menyusul (tahap 2).</div></div>';
     if (o.absen) { var a = o.absen; h += '<div class="hrdBag"><h3>Absensi ' + esc(bulanLabel(a.bulan)) + '</h3>' + (a.galat ? '<div class="hrdKet">' + esc(a.galat) + '</div>' : a.kosong ? '<div class="hrdKet">Belum ada catatan absen bulan ini.</div>' : '<div class="hrdRk"><div class="h"><b>' + a.hadir + '</b><span>hadir</span></div><div class="k"><b>' + a.telat + '</b><span>telat</span></div><div class="m"><b>' + (a.tanpaScan == null ? '–' : a.tanpaScan) + '</b><span>tanpa scan</span></div><div><b>' + String(a.lemburJam).replace('.', ',') + '</b><span>jam lembur</span></div></div>') + '</div>'; }
     h += '<div class="hrdBag"><h3>KPI bulan berjalan</h3>' + (KPI[o.id] ? kotakKpi(KPI[o.id]) : o.kpiBisa ? '<button type="button" class="tKecil" data-h="kpi:' + esc(o.id) + '">' + (kpiMuat === o.id ? 'Memuat…' : 'Tampilkan nilai KPI') + '</button>' : '<div class="hrdKet">Nomor orang ini belum dikenali sistem penilaian.</div>') + '</div>';

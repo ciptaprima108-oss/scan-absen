@@ -965,9 +965,9 @@
     A.push(['akun', 'Akun', 'tab:akun']);
     if (window.WHL_BANNER && window.WHL_BANNER.admin()) A.push(['kreatif', 'Kelola banner', 'kelolaBanner', 0, 'kelolaBanner']);
     var W = appsSaya().filter(function (a) { return !(a.ke === 'posKontrol' && window.WHL_PK && window.WHL_PK.boleh(SESI)); }) /* pk-4-jenis-petugas-26nov */.map(function (a) { return [a.ik || IKON_DIV[a.d] || 'web', a.n.replace(/ WHL$/, '').replace(/^Live Monitor /, ''), 'web:' + alamat(a), 0, 'app:' + a.n]; });
-    if (!adalahDriver()) W.push(['rumahWeb', 'Pusat WHL web', 'web:' + K.DASH + '?mode=pusat']);
+    /* app-ubin-pusatweb-27nov: ubin "Pusat WHL web" DIBUANG untuk semua peran (halaman webnya sendiri tidak diubah) */
     bukaLembar('<div class="lembarLy"><div class="atrBaris"><button type="button" class="atrTombol" data-ke="aturBeranda">✏️ Atur ikon Beranda</button></div><h3>Layanan WHL</h3><div class="layanan">' + (window.WHL_HUB ? window.WHL_HUB.gabung(A) : A).map(petakLy).join('') + '</div>'
-      + '<h3>Aplikasi WHL</h3><div class="kecil" style="margin:-4px 0 10px">Halaman web, dibuka di dalam app. Tombol Kembali membawa kamu ke sini lagi.</div><div class="layanan">' + W.map(petakLy).join('') + '</div></div>');
+      + (W.length ? '<h3>Aplikasi WHL</h3><div class="kecil" style="margin:-4px 0 10px">Halaman web, dibuka di dalam app. Tombol Kembali membawa kamu ke sini lagi.</div><div class="layanan">' + W.map(petakLy).join('') + '</div>' : '') /* app-ubin-pusatweb-27nov: tanpa ubin = tanpa judul */ + '</div>');
   }
 
   /* ---------- Beranda: susunan & istilah mengikuti Pusat WHL web (pusat.html) ---------- */
@@ -1366,7 +1366,7 @@
       + '<button type="button" class="app" data-ke="lapor"><span class="ik">' + window.WHL_ILUS('input') + '</span><span class="tx"><b>Input cepat</b><small>Form lapangan sesuai peranmu</small></span>' + IK('kanan', 'kmP') + '</button></div>';
     h += '<h2 class="bagW">Aplikasi web <span>' + L.length + '</span></h2><div class="kecil bingkaiKet">' + IK('web') + '<span>Belum punya tampilan asli. Dibuka sebagai halaman web di dalam app; tombol Kembali membawa kamu ke sini lagi.</span></div>';
     h += L.length ? '<div class="bingkai">' + L.map(kartuApp).join('') + '</div>' : R.kosong(A.length ? 'Tidak ketemu' : 'Belum ada aplikasi untuk peranmu', A.length ? 'Coba kata lain.' : 'Aplikasi muncul sesuai peran di Pusat WHL.');
-    h += '<div class="bingkai" style="margin-top:12px">' + kartuApp({ n: 'Pusat WHL versi web', ikn: 'rumahWeb', k: 'Halaman Pusat WHL lengkap (login PIN lagi di sana)', u: K.DASH + '?mode=pusat' }) + '</div>';
+    /* app-ubin-pusatweb-27nov: kartu "Pusat WHL versi web" DIBUANG */
     return h;
   }
 

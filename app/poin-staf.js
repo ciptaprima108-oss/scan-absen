@@ -175,6 +175,7 @@
   function kurangHtml(d) {
     if (!d.kurang.length) return '';
     return '<div class="pstKurang"><b>Akan dikurangi (masa sanggah 48 jam)</b>' + d.kurang.map(function (x) {
+      if (x && x.jelas && x.jelas.judul && window.WHL_POIN_JELAS) return window.WHL_POIN_JELAS.akan(x); /* poin-pengurang-jelas-27nov */
       return '<div style="margin-top:6px">' + tgl(x.hari || x.tgl) + ' · ' + esc(x.label || x.kode || '') + ' · <b style="color:var(--tMerah)">−' + ang(Math.abs(Number(x.poin) || 0), 0) + '</b>' + (x.alasan ? '<br><span style="color:var(--teks)">' + esc(x.alasan) + '</span>' : '')
         + (x.sanggahSampai ? '<br>Bisa disanggah sampai <b>' + tgl(x.sanggahSampai) + '</b>' : '') + '</div>';
     }).join('') + '<div style="margin-top:8px">' + esc(d.caraSanggah || 'Ada izin/alasan? Ajukan izin di Kehadiran atau hubungi admin sebelum batas sanggah. Izin yang disetujui membatalkan pengurang otomatis.') + '</div><button type="button" class="pstTb" data-ke="poinSanggah" style="background:var(--panel)">Sanggah ke admin ›</button></div>';

@@ -314,12 +314,13 @@
     if (galatRiw && !RIW) return '<div class="p2aPita mrh"><b>Daftar belum bisa dimuat</b>' + esc(galatRiw) + '<div class="brs"><button type="button" class="p2aKc utama" data-a="muatRiw">Coba lagi</button></div></div>';
     if (!RIW) return '';
     var L = RIW.list || [], tl = L.filter(function (x) { return x.hasil === HASIL.TIDAK; }).length;
-    h += '<div class="p2aPita br"><b>' + (s.g === 'driver' ? 'P2H saya' : 'P2H semua unit') + ' · hari tambang ' + esc(tglId(RIW.hari)) + '</b>' + L.length + ' P2H diisi driver lewat app' + (tl ? ' · ' + tl + ' tidak layak jalan' : '') + '. P2H yang diisi di tablet GASPOL tidak tampil di daftar ini.'
+    h += '<div class="p2aPita br"><b>' + (s.g === 'driver' ? 'P2H saya' : 'P2H semua unit') + ' · hari tambang ' + esc(tglId(RIW.hari)) + '</b>' + (RIW.gabung ? L.length + ' unit sudah P2H · ' + ((RIW.asal || {}).gaspol || 0) + ' P2H dari tablet GASPOL, ' + ((RIW.asal || {}).app || 0) + ' dari app' + (tl ? ' · ' + tl + ' tidak layak jalan' : '') + '. Satu baris per unit (P2H terakhirnya).' : L.length + ' P2H diisi driver lewat app' + (tl ? ' · ' + tl + ' tidak layak jalan' : '') + '. ' + esc(RIW.gaspolGalat || 'P2H yang diisi di tablet GASPOL tidak tampil di daftar ini.')) /* app-p2h-lengkap-26nov */
       + '<div class="brs"><button type="button" class="p2aKc" data-a="muatRiw">⟳ Muat ulang</button></div></div>';
-    if (!L.length) return h + '<div class="p2aKosong">Belum ada P2H dari app hari ini.</div>';
+    if (!L.length) return h + '<div class="p2aKosong">' + (RIW.gabung ? 'Belum ada P2H hari ini (tablet GASPOL maupun app).' : 'Belum ada P2H dari app hari ini.') + '</div>'; /* app-p2h-lengkap-26nov */
     L.forEach(function (x) {
-      h += '<div class="p2aKartu p2aR ' + kelasHasil(x.hasil) + '"><div class="a"><span class="lb">' + esc(x.lambung) + '</span><small>' + esc(x.armada === 'TRONTON' ? 'Tronton' : 'Trintin') + ' · ' + esc(x.shift) + '</small><span class="jm">' + esc(String(x.jam || '').replace(':', '.')) + '</span></div>'
-        + '<span class="hs">' + esc(x.hasil) + '</span>' + (x.temuan ? '<div class="inf"><b>Temuan:</b> ' + esc(x.temuan) + '</div>' : '')
+      var asalG = x.asal === 'GASPOL', ketUnit = [x.armada === 'TRONTON' ? 'Tronton' : x.armada === 'TRINTIN' || !asalG ? 'Trintin' : '', x.shift].filter(Boolean).join(' · '); /* app-p2h-lengkap-26nov */
+      h += '<div class="p2aKartu p2aR ' + (kelasHasil(x.hasil) || (asalG ? (x.jmlTidakBaik ? 'kng' : 'hij') : '')) + '"><div class="a"><span class="lb">' + esc(x.lambung) + '</span><small>' + esc(ketUnit) + '</small><span class="jm">' + esc(String(x.jam || '').replace(':', '.')) + '</span></div>'
+        + '<span class="hs">' + esc(x.hasil) + '</span>' + (x.asal ? ' <span class="hs" style="background:rgba(148,163,184,.2);color:inherit">' + (asalG ? '📟 tablet GASPOL' : '📱 app') + (x.kali > 1 ? ' · ' + x.kali + '× hari ini' + (x.asalLain ? ' (juga ' + esc(x.asalLain === 'GASPOL' ? 'tablet GASPOL' : 'app') + ')' : '') : '') + '</span>' : '') + (x.temuan ? '<div class="inf"><b>Temuan:</b> ' + esc(x.temuan) + '</div>' : '')
         + '<div class="inf">Driver <b>' + esc(x.driver || '-') + '</b></div>' + (x.catatan ? '<div class="inf">Catatan: ' + esc(x.catatan) + '</div>' : '') + '</div>';
     });
     return h;

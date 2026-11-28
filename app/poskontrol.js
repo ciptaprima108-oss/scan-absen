@@ -387,7 +387,7 @@
       + '<div class="pkaMsg"></div>';
   }
   function htmlPending(t) {
-    var A = M.ganti ? ['Ganti mekanik'] : ALASAN_P;
+    var A = M.ganti ? ['Ganti mekanik'] : ((D && D.alasanPending && D.alasanPending.length) ? D.alasanPending : ALASAN_P); /* pk-ganti-shift-pending-27nov */
     var h = kepalaModal(M.ganti ? '👷 Ganti mekanik' : '⏸ Pending', t);
     if (M.ganti) h += '<div class="pkaLbl">Mekanik tiket ini <small>ketuk untuk tambah / lepas · nama lama tetap terpilih</small></div>' + chipsMekanik(M.pilih) + '<div id="pkaBkW">' + htmlBengkel() + '</div>';
     else h += '<div class="pkaLbl">Alasan pending <span class="w">wajib</span></div><div class="pkaChips">' + A.map(function (a) { return '<button type="button" data-p="al:' + esc(a) + '" class="' + (M.alasan === a ? 'on' : '') + '">' + esc(a) + '</button>'; }).join('') + '</div>';

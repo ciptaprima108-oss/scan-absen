@@ -98,6 +98,20 @@
   /* v3.36 (Reza 17 Nov malam): pengurang poin NYALA untuk staf & driver. Baris minus di riwayat = merah + alasan (catatan) + tanggal + 'Pengurang final'.
      Pengurang baru ditulis server SESUDAH masa sanggah 48 jam habis (QA Bugi #5), jadi masa sanggah + tombol Sanggah hanya di kartu 'Akan dikurangi' (poin-staf.js).
      Sanggah = lewat orang (izin di Kehadiran / admin); tombol kartu membuka Forum. */
+  /* poin-pengurang-jelas-27nov: baris pengurang menjelaskan dirinya sendiri (teks dari server, field jelas). Judul pendek, ketuk = rincian. Tanpa field jelas = tampilan lama. */
+  function jelasGaya() { if (document.getElementById('pnJlGaya')) return; var st = document.createElement('style'); st.id = 'pnJlGaya';
+    st.textContent = '.pnJl{display:block;border-top:1px solid var(--garis)}.kartu>.pnJl:first-child{border-top:0}.pnJl>summary{list-style:none;cursor:pointer;border-top:0!important}.pnJl>summary::-webkit-details-marker{display:none}'
+      + '.pnJl>summary .tx small i{font-style:normal;color:var(--utama);font-weight:700}.pnJl[open]>summary .tx small i{display:none}.pnJlIsi{margin:0 0 12px 46px;padding:10px 12px;border-radius:12px;background:var(--panel2);font-size:13px;line-height:1.5}'
+      + '.pnJlIsi p{margin:0 0 8px}.pnJlIsi p:last-child{margin-bottom:0}.pnJlIsi p b{display:block;font-size:11.5px;letter-spacing:.02em;text-transform:uppercase;color:var(--redup);margin-bottom:1px}.pnJlIsi p.rd{color:var(--redup);font-size:12px}'
+      + '.pstKurang .pnJl{border-top:0;margin-top:8px}.pstKurang .pnJl>summary{display:block}.pstKurang .pnJlIsi{margin:6px 0 4px;background:var(--panel)}';
+    document.head.appendChild(st); }
+  function jelasIsi(j) { var bar = function (jd, t) { return t ? '<p><b>' + jd + '</b>' + esc(t) + '</p>' : ''; };
+    return '<div class="pnJlIsi">' + bar('Apa yang terjadi', j.apa) + (j.kurangRujukan ? '<p class="rd">' + esc(j.kurangRujukan) + '</p>' : '') + bar('Kenapa dikurangi', j.kenapa) + bar('Kena batas', j.batas) + bar('Sanggah', j.status) + (j.dicatat ? '<p class="rd">' + esc(j.dicatat) + '</p>' : '') + '</div>'; }
+  function barisJelas(x) { jelasGaya(); var j = x.jelas, p = Math.abs(Number(x.poin) || 0);
+    return '<details class="pnJl"><summary class="pnBrs"><span class="em">⛔</span><div class="tx"><b>' + esc(j.judul || x.label || x.sumber) + '</b><small>Kejadian ' + waktu(x.hari) + (j.batas ? ' · kena batas' : '') + ' · sudah final <i>· ketuk untuk rincian</i></small></div><span class="pnNil min">−' + ang(p) + '</span></summary>' + jelasIsi(j) + '</details>'; }
+  function akanJelas(x) { jelasGaya(); var j = x.jelas, p = Math.abs(Number(x.poin) || 0);
+    return '<details class="pnJl"><summary><span class="tx"><b style="color:var(--teks)">' + esc(j.judul || x.label || '') + '</b> · kejadian ' + waktu(x.hari || x.tgl) + ' · <b style="color:var(--tMerah)">−' + ang(p) + '</b><small style="display:block">' + (x.sanggahSampai ? 'Bisa disanggah sampai ' + esc(x.sanggahSampai) : 'Belum dipotong') + ' <i>· ketuk untuk rincian</i></small></span></summary>' + jelasIsi(j) + '</details>'; }
+  window.WHL_POIN_JELAS = { baris: barisJelas, akan: akanJelas };
   function bisaSanggah(x, p) {
     if (!(p < 0) || x.sumber === 'TUKAR' || x.sumber === 'CABUT') return '';
     return '<small style="color:var(--tMerah)">Pengurang final (masa sanggah sudah lewat)</small>';
@@ -292,6 +306,7 @@
     h += '<h2 class="bagW" id="pnTukarSaya">Tukar saya <span>' + T.length + '</span></h2><div class="kartu">' + (T.length ? T.map(kartuTukarSaya).join('') : '<div class="kecil">Belum pernah menukar poin.' + (LABEL_HARI ? ' Hadiah bisa ditukar tiap ' + esc(LABEL_HARI) + '.' : '') + '</div>') + '</div>';
     var Rw = Array.isArray(d.riwayat) ? d.riwayat : [];
     h += '<h2 class="bagW">Riwayat poin <span>' + (Rw.length ? Rw.length + ' terakhir' : '') + '</span></h2><div class="kartu">' + (Rw.length ? Rw.map(function (x) {
+      if (x && x.jelas && x.jelas.judul && Number(x.poin) < 0) return barisJelas(x); /* poin-pengurang-jelas-27nov */
       var p = Number(x.poin) || 0, kls = p > 0 ? 'plus' : p < 0 ? 'min' : 'nol', ket = [waktu(x.waktu || x.hari)];
       if (x.catatan) ket.push(esc(String(x.catatan).split(' · ').map(function (s) { return s.split('|')[0]; }).filter(String).join(' · '))); /* P2H: "lambung|waktu" -> lambung */
       if (p > 0 && x.hangus) ket.push('hangus ' + waktu(x.hangus));

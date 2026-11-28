@@ -92,7 +92,7 @@
         h += '</div>';
       }
     }
-    return h;
+    return h + gsAtas(); /* pk-ganti-shift-pending-27nov */
   }
   function saring(l) {
     if (!tahapB()) return l;
@@ -157,7 +157,7 @@
     A.roti(ok ? '✅ Teks tersalin — tinggal tempel di WhatsApp' : 'Gagal menyalin otomatis');
   }
   function tombolDetail(t, b) {
-    var k = e(t.ar + '|' + t.id), h = '';
+    var k = e(t.ar + '|' + t.id), h = gsTombol(t, k); /* pk-ganti-shift-pending-27nov */
     h += b('abu', 'cetak', t.g === 'selesai' ? '🖼️ Gambar tiket selesai (JPG)' : '🖨️ Tiket: gambar / cetak', t.g === 'selesai' || !S().proses);
     if (tahapB()) h += '<button type="button" class="pkaTombol abu" data-p="stWa:' + k + '">📤 Bagikan WhatsApp</button><button type="button" class="pkaTombol abu" data-p="stSalin:' + k + '">📋 Salin teks</button>';
     return h;
@@ -549,6 +549,7 @@
     if (j === 'stRwDet') return htmlRwDet();
     if (j === 'stRevisi') return htmlRevisi();
     if (j === 'stKws') return htmlKws();
+    if (/^stGs/.test(j)) return gsHtml(j, t); /* pk-ganti-shift-pending-27nov */
     return '';
   }
   function sesudahModal(w, j) {
@@ -571,6 +572,7 @@
   function klik(n, v, b) {
     var m = M(), t, me = S();
     if (!A || !nyala()) return false;
+    if (gsKlik(n, v, b)) return true; /* pk-ganti-shift-pending-27nov */
     /* --- papan --- */
     if (n === 'stBuat') { bukaBuat(null); return true; }
     if (n === 'stAntreKirim') { kirimAntre(false); return true; }
@@ -664,6 +666,93 @@
     if (n === 'stKwBatal') { baca(); m.batalNo = m.batalNo === v ? '' : v; m.batalAl = ''; segar(); return true; }
     if (n === 'stKwBatalYa') { baca(); if (String(m.batalAl || '').trim().length < 5) { A.msg('Alasan batal wajib (min. 5 huruf).', 'err'); return true; } A.duaKali(b, function () { A.kirim('pksKwsBatal', { no: m.batalNo, alasan: String(m.batalAl).trim() }, function (h) { A.roti('✅ ' + h.pesan); m.batalNo = ''; muatRekap(); segar(); }); }); return true; }
     return false;
+  }
+
+  /* ---------- pk-ganti-shift-pending-27nov (Posko, 27 Nov 2026): ganti shift, serah-terima, mekanik penuh, sparepart > 3 hari.
+     Server = DASHBOARD PkGantiShift.gs (aksi pgs*). Data = D().gs (hanya ada kalau saklar server PK_GANTI_SHIFT nyala; tanpa itu semua fungsi di bawah diam). ---------- */
+  function gsD() { var g = A && D().gs; return g && typeof g === 'object' ? g : null; }
+  function gsUmur(m) { m = Math.max(0, Math.round(Number(m) || 0)); var h = Math.floor(m / 1440), j = Math.floor(m % 1440 / 60); return h ? h + ' hari ' + j + ' jam' : (j ? j + ' jam ' + (m % 60) + ' mnt' : m + ' mnt'); }
+  function gsCari(k) { var g = gsD(), out = null; if (!g) return null; ['wajib', 'segera', 'serah', 'penuh', 'bolehPenuh'].forEach(function (n) { (g[n] || []).forEach(function (t) { if (!out && (t.ar + '|' + t.id) === k) out = t; }); }); return out; }
+  function gsGaya() {
+    if (document.getElementById('gsGaya')) return;
+    var st = document.createElement('style'); st.id = 'gsGaya';
+    st.textContent = '.gsSek{border:1px solid var(--garis);border-left:6px solid var(--c,#64748b);border-radius:14px;padding:9px 11px;margin-bottom:10px;background:var(--panel)}.gsSek>b{display:block;font-size:14px;font-weight:900}.gsSek>small{display:block;font-size:11.5px;color:var(--redup);margin:1px 0 7px;line-height:1.4}'
+      + '.gsK{border-top:1px solid var(--garis);padding:8px 0 4px;font-size:12.5px;line-height:1.45}.gsK b.lb{font-size:16px}.gsK .bd{display:inline-block;border-radius:999px;padding:1px 8px;font-size:10.5px;font-weight:900;color:#fff;background:#dc2626;margin-left:4px}'
+      + '.gsK button,.gsKc{display:inline-block;margin:6px 6px 0 0;min-height:44px;border-radius:12px;border:1px solid var(--garis);background:var(--panel2);color:var(--teks);font-size:13px;font-weight:800;padding:0 12px}.gsK button.ut{background:#9333ea;border-color:#9333ea;color:#fff}.gsK button.kn{background:#f59e0b;border-color:#f59e0b;color:#1a1000}';
+    document.head.appendChild(st);
+  }
+  function gsKartu(t, inf, tombol) { return '<div class="gsK"><b class="lb">' + e(A.lbPendek(t.lb)) + '</b>' + (t.ar === 'TRONTON' ? ' <span class="bd" style="background:#64748b">TRONTON</span>' : '') + ' <b>' + e(t.jenis || '') + '</b><br>' + inf + (tombol ? '<br>' + tombol : '') + '</div>'; }
+  function gsSek(c, judul, kecil, isi) { return '<div class="gsSek" style="--c:' + c + '"><b>' + judul + '</b><small>' + kecil + '</small>' + isi + '</div>'; }
+  function gsAtas() {
+    var g = gsD(); if (!g) return '';
+    gsGaya();
+    var h = '', bl = !!g.boleh, k = function (t) { return e(t.ar + '|' + t.id); }, bebas = (g.bebas || []).length ? e(g.bebas.join(', ')) : 'tidak ada';
+    var a = (g.wajib || []).map(function (t) { return gsKartu(t, '🔧 ' + e(t.mek) + '<br>' + e(t.ket), bl ? '<button type="button" class="ut" data-p="gsShift:' + k(t) + '">⏸ Pending · ' + e(t.usul || 'Lanjut shift') + '</button>' : ''); }).join('');
+    if (a) h += gsSek('#dc2626', '🔴 Wajib Pending — ganti shift', 'mekaniknya sudah tidak bertugas, tiket masih "Sedang dikerjakan"', a);
+    a = (g.segera || []).map(function (t) { return gsKartu(t, '🔧 ' + e(t.mek) + '<br>' + e(t.ket), bl ? '<button type="button" data-p="gsShift:' + k(t) + '">⏸ Pending · ' + e(t.usul || 'Lanjut shift') + '</button>' : ''); }).join('');
+    if (a) h += gsSek('#f59e0b', '🟡 Shift mekanik hampir habis', 'kalau belum selesai, Pending "Lanjut shift" sebelum pulang', a);
+    a = (g.serah || []).map(function (t) { return gsKartu(t, '⏸ <b>' + e(t.alasan) + '</b> sejak ' + e(String(t.sejak || '').slice(0, 5) + ' ' + String(t.sejak || '').slice(11, 16)) + ' (' + gsUmur(t.mnt) + ')' + (t.oleh ? ' · oleh ' + e(t.oleh) : '') + '<br>mekanik sebelumnya: ' + e(t.mek || '-') + (t.cat ? '<br>' + e(t.cat) : ''), bl ? '<button type="button" class="kn" data-p="gsLanjut:' + k(t) + '">👷 Tunjuk mekanik &amp; Lanjut</button>' : ''); }).join('');
+    if (a) h += gsSek('#9333ea', '🔁 Serah-terima shift', 'tiket dari shift sebelumnya — tunjuk mekanik untuk melanjutkan', a);
+    a = (g.penuh || []).map(function (t) { return gsKartu(t, '⏸ <b>Mekanik penuh</b> sejak ' + e(String(t.sejak || '').slice(11, 16)) + ' (' + gsUmur(t.mnt) + ')' + (t.oleh ? ' · oleh ' + e(t.oleh) : '') + '<br>' + e(t.ker) + (t.cat ? '<br><i>' + e(t.cat) + '</i>' : ''), bl ? '<button type="button" class="kn" data-p="gsLanjut:' + k(t) + '">👷 Tunjuk mekanik &amp; Lanjut</button><button type="button" data-p="gsLepas:' + k(t) + '">Lepas pending</button>' : ''); }).join('');
+    if (a) h += gsSek('#0ea5e9', '⏸ Pending · Mekanik penuh', 'belum ditunjuk karena semua mekanik sedang pegang unit · mekanik bebas sekarang: ' + bebas, a);
+    a = (g.part || []).map(function (t) { return gsKartu(t, '📦 tunggu sparepart total <b>' + gsUmur(t.mnt) + '</b>' + (t.logistik ? '<span class="bd">TANGGUNG JAWAB LOGISTIK</span>' : ' · ' + gsUmur(t.sisa) + ' lagi sebelum ' + e(g.batasHari) + ' hari') + '<br>🔧 ' + e(t.mek || '-') + (t.cat ? '<br>' + e(t.cat) : ''), ''); }).join('');
+    if (a) h += gsSek('#b45309', '📦 Tunggu sparepart', 'lebih dari ' + e(g.batasHari) + ' x 24 jam = tanggung jawab Logistik (waktu tunggu tidak dibebankan ke mekanik)', a);
+    if (bl && (g.bolehPenuh || []).length) h += gsSek('#64748b', '⏳ Menunggu penunjukan', 'mekanik sedang penuh? ketuk unitnya untuk Pending dulu · mekanik bebas sekarang: ' + bebas, (g.bolehPenuh || []).map(function (t) { return '<button type="button" class="gsKc" data-p="gsPenuh:' + k(t) + '">⏸ ' + e(A.lbPendek(t.lb)) + ' · mekanik penuh</button>'; }).join(''));
+    return h;
+  }
+  function gsTombol(t, k) {
+    var g = gsD(); if (!g || !g.boleh || t.g !== 'menunggu') return '';
+    return t.gsPenuh ? '<button type="button" class="pkaTombol kn" data-p="gsLanjut:' + k + '">👷 Tunjuk mekanik &amp; Lanjut (pending mekanik penuh)</button>' : '<button type="button" class="pkaTombol ung" data-p="gsPenuh:' + k + '">⏸ Pending dulu · mekanik penuh</button>';
+  }
+  function gsHtml(j, t) {
+    var m = M(), g = gsD() || {}, h = '';
+    if (j === 'stGsShift') {
+      h = A.kepalaModal('⏸ Pending ganti shift', t) + '<div class="sb">Tiket pindah ke <b>Pending</b> dan masuk antrean <b>Serah-terima shift</b>. Pengawas shift berikutnya menunjuk mekanik untuk melanjutkan.</div>'
+        + '<div class="pkaLbl">Lanjut ke shift mana? <span class="w">wajib</span></div><div class="pkaChips">' + (g.alasanShift || []).map(function (a) { return '<button type="button" data-p="gsAl:' + e(a) + '" class="' + (m.alasan === a ? 'on' : '') + '">' + e(a) + '</button>'; }).join('') + '</div>'
+        + '<div class="pkaLbl">Catatan <small>opsional, mis. tinggal pasang kampas</small></div><textarea class="pkaIn" id="gsCat">' + e(m.catatan || '') + '</textarea>'
+        + '<button type="button" class="pkaTombol ung" data-p="gsYa">⏸ SIMPAN PENDING</button><div class="pkaMsg"></div>';
+    } else if (j === 'stGsLanjut') {
+      h = A.kepalaModal('👷 Tunjuk mekanik & Lanjut', t) + (t.g === 'menunggu' || !t.mek ? '' : '<div class="sb">Mekanik sebelumnya (<b>' + e(t.mek) + '</b>) tetap tercatat di tiket; jam kerjanya berhenti dihitung sejak Pending.</div>')
+        + '<div class="pkaLbl">Mekanik yang melanjutkan <span class="w">wajib</span><small>boleh lebih dari 1</small></div>' + A.chipsMekanik(m.pilih) + '<div id="pkaBkW">' + A.htmlBengkel() + '</div>'
+        + '<button type="button" class="pkaTombol kn" data-p="gsYa">👷 TUNJUK &amp; LANJUTKAN</button><div class="pkaMsg"></div>';
+    } else if (j === 'stGsPenuh') {
+      h = A.kepalaModal('⏸ Pending · Mekanik penuh', t) + '<div class="sb">Tiket tetap <b>Menunggu penunjukan</b>, tapi jam tunggunya dicatat sebagai Pending "Mekanik penuh" (terlihat sebagai kekurangan mekanik). Mekanik bebas sekarang: <b>' + ((g.bebas || []).length ? e(g.bebas.join(', ')) : 'tidak ada') + '</b>.</div>'
+        + '<div class="pkaLbl">Catatan <small>opsional</small></div><textarea class="pkaIn" id="gsCat">' + e(m.catatan || '') + '</textarea>'
+        + '<button type="button" class="pkaTombol ung" data-p="gsYa">⏸ SIMPAN PENDING MEKANIK PENUH</button><div class="pkaMsg"></div>';
+    } else if (j === 'stGsLepas') {
+      h = A.kepalaModal('Lepas Pending mekanik penuh', t) + '<div class="sb">Tiket kembali menunggu penunjukan biasa; jam pending yang sudah berjalan tetap tercatat.</div><button type="button" class="pkaTombol abu" data-p="gsYa">LEPAS PENDING</button><div class="pkaMsg"></div>';
+    }
+    return h;
+  }
+  function gsKlik(n, v, b) {
+    if (!/^gs[A-Z]/.test(n)) return false;
+    var m = M(), t, x;
+    if (n === 'gsShift' || n === 'gsLanjut' || n === 'gsPenuh' || n === 'gsLepas') {
+      t = gsCari(v); if (!t && (n === 'gsPenuh' || n === 'gsLanjut')) { x = A.cariT(v); if (x) t = { id: x.id, ar: x.ar, lb: x.lb, jenis: x.jenis, ker: x.ker, mek: x.mek, jamMasuk: x.jamMasuk, g: x.g }; }
+      if (!t) { A.roti('Tiket sudah berubah. Papan dimuat ulang.'); A.muat(true); return true; }
+      A.bukaModal({ gsShift: 'stGsShift', gsLanjut: 'stGsLanjut', gsPenuh: 'stGsPenuh', gsLepas: 'stGsLepas' }[n], t, { alasan: t.usul || '', catatan: '', pilih: [], bk: '', bkTulis: '', yakin: false });
+      return true;
+    }
+    if (!m || !/^stGs/.test(m.jenis || '')) return true;
+    x = q('#gsCat'); if (x) m.catatan = String(x.value || '');
+    if (n === 'gsAl') { m.alasan = v; A.gambarModal(); return true; }
+    if (n === 'gsYa') {
+      var dasar = { armada: m.t.ar, id: m.t.id, catatan: m.catatan || '' };
+      if (m.jenis === 'stGsShift') { if (!m.alasan) { A.msg('Pilih "Lanjut shift 2" atau "Lanjut shift 1".', 'err'); return true; } dasar.alasan = m.alasan; A.duaKali(b, function () { A.kirim('pgsPendingShift', dasar); }); return true; }
+      if (m.jenis === 'stGsLanjut') { var mk = A.namaTerpilih(); if (!mk) { A.msg(m.pilih.length ? 'Isi nama bengkel luarnya.' : 'Ketuk dulu nama mekanik yang melanjutkan.', 'err'); return true; } dasar.mekanik = mk; A.duaKali(b, function () { A.kirim('pgsLanjutTunjuk', dasar, function (h) { A.roti('✅ ' + h.pesan); A.tutupModal(); A.setTab('dikerjakan'); A.muat(true); }); }); return true; }
+      if (m.jenis === 'stGsLepas') { A.duaKali(b, function () { A.kirim('pgsLepasPenuh', dasar); }); return true; }
+      A.duaKali(b, function () {
+        dasar.yakin = !!m.yakin; A.kunci(true); A.msg('Menyimpan…');
+        A.panggil('pgsPendingPenuh', dasar, 45000).then(function (h) {
+          if (M() !== m) return; A.kunci(false);
+          if (h && h.perluYakin) { m.yakin = true; A.msg(h.pesan, 'err'); return; }
+          if (!h || !h.ok) { A.msg((h && h.pesan) || 'Gagal menyimpan.', 'err'); if (h && h.hilang) A.muat(true); return; }
+          A.roti('✅ ' + h.pesan); A.tutupModal(); A.muat(true);
+        }, function () { if (M() !== m) return; A.kunci(false); A.msg('Tidak ada sinyal — belum tersimpan, coba lagi.', 'err'); });
+      });
+      return true;
+    }
+    return true;
   }
 
   function lupakan() { PIL = null; PILmuat = false; CARI = ''; ARMF = ''; PT = null; RW = null; KW = null; RK = null; }
