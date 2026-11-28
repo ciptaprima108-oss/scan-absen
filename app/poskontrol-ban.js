@@ -300,7 +300,7 @@
     var ok = f && f.url, sibuk = f && f.st === 'unggah', gagal = f && f.st === 'gagal';
     return '<div class="gbFt"><div class="th' + (f && f.data ? '' : ' kosong') + '">' + (f && f.data ? '<img alt="" src="' + f.data + '">' + (ok ? '<em>✓</em>' : '') : '📷') + '</div><div>'
       + '<button type="button" class="' + (ok ? '' : 'utama') + '" data-p="gbFoto:' + i + '|' + sisi + '">📷 ' + (ok ? 'Foto ulang' : 'Foto') + ' ban ' + (sisi === 'LAMA' ? 'lama' : 'baru') + '</button>'
-      + '<div class="gbCat"' + (gagal ? ' style="color:#dc2626;font-weight:800"' : ok ? ' style="color:var(--tHijau,#0f7a45);font-weight:800"' : '') + '>' + (sibuk ? '⏳ Mengunggah…' : gagal ? '⚠️ ' + e(f.pesan || 'Gagal unggah') + ' — ketuk untuk ulang' : ok ? 'Terunggah ✓' : 'Wajib — no seri kelihatan') + '</div>'
+      + '<div class="gbCat"' + (gagal ? ' style="color:#dc2626;font-weight:800"' : ok ? ' style="color:var(--tHijau,#0f7a45);font-weight:800"' : '') + '>' + (sibuk ? '⏳ Mengunggah…' : gagal ? '⚠️ ' + e(f.pesan || 'Gagal unggah') + ' — ketuk untuk ulang' : ok ? 'Terunggah ✓' : 'Wajib foto ban · no seri sebaiknya kelihatan (tidak harus)') + '</div>'
       + '<button type="button" style="min-height:34px;margin-top:4px;font-size:12px" data-p="gbGaleri:' + i + '|' + sisi + '">🖼️ dari galeri</button></div></div>';
   }
   /* Revisi Pak Fanza 25 Nov: form per BAGIAN — (1) Ganti/Tukar semua posisi, (2) BAN LAMA semua posisi, (3) BAN BARU semua posisi. */
@@ -319,7 +319,7 @@
   function blokLama(i) {
     var m = M(), it = m.item[m.urut[i]];
     if (it.aksi !== 'GANTI') return '';
-    var h = '<div class="gbSisi lm" id="gbL' + i + '">' + noPos(i, it.posisi) + '</div><input class="pkaIn gbSeri" data-gb="lama:' + i + '" value="' + e(it.seriLama) + '" placeholder="no seri ban lama" autocomplete="off">';
+    var h = '<div class="gbSisi lm" id="gbL' + i + '">' + noPos(i, it.posisi) + '</div><input class="pkaIn gbSeri" data-gb="lama:' + i + '" value="' + e(it.seriLama) + '" placeholder="no seri ban lama (wajib Ban Baru · Lelesan boleh kosong)" autocomplete="off">';
     h += '<div id="gbCekL' + i + '">' + cekLamaHtml(i) + '</div>' + fotoHtml(i, 'LAMA', it.fl);
     h += '<div class="pkaLbl" style="margin-top:8px">Alasan dilepas <span class="w">wajib</span></div><div class="pkaChips">' + P.alasan.map(function (a) { return '<button type="button" data-p="gbAlS:' + i + '|' + e(a) + '" class="' + (it.alasan === a ? 'on' : '') + '">' + e(a) + '</button>'; }).join('') + '</div>';
     return h + '</div>';
@@ -327,7 +327,7 @@
   function blokBaru(i) {
     var m = M(), it = m.item[m.urut[i]];
     if (it.aksi !== 'GANTI') return '';
-    var h = '<div class="gbSisi br" id="gbB' + i + '">' + noPos(i, it.posisi) + '</div><input class="pkaIn gbSeri" data-gb="baru:' + i + '" value="' + e(it.seriBaru) + '" placeholder="no seri ban baru" autocomplete="off">';
+    var h = '<div class="gbSisi br" id="gbB' + i + '">' + noPos(i, it.posisi) + '</div><input class="pkaIn gbSeri" data-gb="baru:' + i + '" value="' + e(it.seriBaru) + '" placeholder="no seri ban baru (wajib Ban Baru · Lelesan boleh kosong)" autocomplete="off">';
     h += '<div id="gbCekB' + i + '">' + cekBaruHtml(i) + '</div>' + fotoHtml(i, 'BARU', it.fb);
     h += '<div class="pkaLbl" style="margin-top:8px">Jenis ban <span class="w">wajib</span></div><div class="gbDua2"><button type="button" data-p="gbJenis:' + i + '|BARU" class="' + (it.jenis === 'BARU' ? 'on b' : '') + '">🆕 Ban Baru<small>baru dari gudang</small></button><button type="button" data-p="gbJenis:' + i + '|LELESAN" class="' + (it.jenis === 'LELESAN' ? 'on l' : '') + '">♻️ Ban Lelesan<small>vulkanisir / bekas</small></button></div>';
     var mk = (P.merk || []).slice(); if (it.merk && mk.indexOf(it.merk) < 0 && it.merk !== '__lain') mk.push(it.merk);
@@ -366,13 +366,14 @@
   function kurangItem(it) {
     var k = [];
     if (it.aksi === 'TUKAR') { if (!it.tukar) k.push('pasangan tukar'); return k; }
+    var lel = it.jenis === 'LELESAN'; /* pk-ban-lelesan-28nov: Ban Baru = seri lama + baru wajib; Lelesan boleh kosong */
     if (it.seriData || baku(it.seriLama)) {
-      if (!baku(it.seriLama)) k.push('seri lama');
+      if (!baku(it.seriLama) && !lel) k.push('seri lama');
       if (!(it.fl && it.fl.url)) k.push('foto ban lama');
       if (it.seriData && baku(it.seriLama) && baku(it.seriLama) !== baku(it.seriData) && it.lamaBeda !== 'fisik') k.push('konfirmasi seri lama');
     }
     if (!it.alasan) k.push('alasan dilepas');
-    if (!cekSeri(it.seriBaru).ok) k.push('seri baru');
+    if (!(lel && !baku(it.seriBaru)) && !cekSeri(it.seriBaru).ok) k.push('seri baru'); /* pk-ban-lelesan-28nov */
     if (!(it.fb && it.fb.url)) k.push('foto ban baru');
     if (!it.jenis) k.push('Baru / Lelesan');
     if (!it.merk || (it.merk === '__lain' && !String(it.merkLain || '').trim())) k.push('merk');
