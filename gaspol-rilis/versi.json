@@ -1,16 +1,15 @@
 {
- "versi": "1.2.1",
- "versionCode": 4,
+ "versi": "1.2.2",
+ "versionCode": 5,
  "minVersionCode": 1,
  "wajib": false,
  "catatan": [
-  "GASPOL WHL 1.2.1: sekarang bisa update langsung dari dalam app (tidak perlu buka Google Drive lagi)",
-  "Ada versi baru: tombol hijau 'Pembaruan GASPOL tersedia' muncul di layar depan, ketuk lalu Perbarui",
-  "Unduhan yang putus karena sinyal dilanjutkan, tidak mengulang dari awal",
-  "Tablet yang sudah terdaftar tidak perlu daftar ulang"
+  "Kotak halangan (Foto DO dulu / Isi data DO dulu / Wajib service): tombol hijau Mau PERBAIKAN / SERVICE? Lapor langsung ke Pos Kontrol",
+  "Jenis lapor ke-4: BAN / TYRE; layar akhir menyebut petugas dari Pos Kontrol",
+  "Tanda tangan driver di kwitansi / voucher cetak dibuat tebal & jelas"
  ],
- "apk": "GASPOL-WHL-v1.2.1.apk",
- "ukuran": 19689806,
- "sha256": "8ca99fd22fe93905fe46ca23a372323cff67d9a12acbb09c3a11a4c2a0b01b1c",
- "dibuat": "2026-11-26 06:23"
+ "apk": "GASPOL-WHL-v1.2.2.apk",
+ "ukuran": 19691963,
+ "sha256": "a4fc249111baa0cd0add9195a151eb1c5a9d0b2729564fe58565dd64f3338b0c",
+ "dibuat": "2026-11-28 12:06"
 }
